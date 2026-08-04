@@ -1,0 +1,202 @@
+networks:
+  tengan-mall-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  nacos_data:
+  rabbitmq_data:
+  es_data:
+  minio_data:
+
+services:
+  # ------------------------------------------------------------------
+  # 核心基礎設施（預設一律啟動）
+  # ------------------------------------------------------------------
+
+  mysql:
+    image: mysql:8.4
+    container_name: tengan-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-tengan123}
+      TZ: Asia/Taipei
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./infra/mysql-init:/docker-entrypoint-initdb.d
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    networks:
+      - tengan-mall-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-tengan123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.2.5
+    container_name: tengan-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-tengan123} --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - tengan-mall-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-tengan123}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  nacos:
+    image: nacos/nacos-server:v2.4.3
+    container_name: tengan-nacos
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      MODE: standalone
+      SPRING_DATASOURCE_PLATFORM: mysql
+      MYSQL_SERVICE_HOST: mysql
+      MYSQL_SERVICE_PORT: 3306
+      MYSQL_SERVICE_DB_NAME: nacos_config
+      MYSQL_SERVICE_USER: root
+      MYSQL_SERVICE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-tengan123}
+      MYSQL_SERVICE_DB_PARAM: characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useUnicode=true&useSSL=false&serverTimezone=Asia/Taipei&allowPublicKeyRetrieval=true
+      NACOS_AUTH_ENABLE: "true"
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN:-ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg==}
+      NACOS_AUTH_IDENTITY_KEY: ${NACOS_AUTH_IDENTITY_KEY:-tengan-nacos}
+      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE:-tengan123}
+      TZ: Asia/Taipei
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    volumes:
+      - nacos_data:/home/nacos/logs
+    networks:
+      - tengan-mall-net
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: tengan-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-tengan}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-tengan123}
+      TZ: Asia/Taipei
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - tengan-mall-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: tengan-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - tengan-mall-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: tengan-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-tengan}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-tengan123456}
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - tengan-mall-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  zipkin:
+    image: openzipkin/zipkin:3.4
+    container_name: tengan-zipkin
+    restart: unless-stopped
+    ports:
+      - "9411:9411"
+    networks:
+      - tengan-mall-net
+
+  # ------------------------------------------------------------------
+  # 可選服務：預設不啟動，需要時加 --profile full 一起帶起來
+  # 例：docker compose --profile full up -d
+  # ------------------------------------------------------------------
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    container_name: tengan-kibana
+    restart: unless-stopped
+    profiles: ["full"]
+    depends_on:
+      - elasticsearch
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - tengan-mall-net
+
+  sentinel-dashboard:
+    image: bladex/sentinel-dashboard:1.8.8
+    container_name: tengan-sentinel
+    restart: unless-stopped
+    profiles: ["full"]
+    ports:
+      - "8858:8858"
+    networks:
+      - tengan-mall-net
+
+  xxl-job-admin:
+    image: xuxueli/xxl-job-admin:2.4.1
+    container_name: tengan-xxl-job
+    restart: unless-stopped
+    profiles: ["full"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PARAMS: >-
+        --spring.datasource.url=jdbc:mysql://mysql:3306/xxl_job?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai
+        --spring.datasource.username=root
+        --spring.datasource.password=${MYSQL_ROOT_PASSWORD:-tengan123}
+    ports:
+      - "8080:8080"
+    networks:
+      - tengan-mall-net

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.tengan.mall</groupId>
+    <artifactId>tengan-mall-backend</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>tengan-gateway</artifactId>
+  <packaging>jar</packaging>
+
+  <!--
+    對外唯一入口（docs/JWT設計.md 核心原則 1）：只做路由轉發 + 使用者 JWT 快速過濾（簽章+exp），
+    不做業務邏輯、不注入身份 header（zero-trust，見該文件第一節）。
+    基於 Spring Cloud Gateway，架構上是 WebFlux/Reactor Netty，不可加 spring-boot-starter-web，
+    兩者的 Servlet/Reactive 堆疊會衝突導致啟動失敗。
+  -->
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-gateway</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba.cloud</groupId>
+      <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba.cloud</groupId>
+      <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+    </dependency>
+    <!--
+      spring-cloud-starter-gateway 不會自動帶這個——lb:// URI 靠它才能把邏輯服務名
+      解析成 Nacos 裡實際的實例位址，沒有這個依賴，路由會直接 503。
+    -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+    </dependency>
+    <!--
+      只要這個 starter 帶出來的 JwtDecoder（住在 spring-security-oauth2-jose），不要它
+      transitively 帶進來的 spring-boot-starter-oauth2-resource-server——那個 starter 會
+      連帶拉 spring-boot-starter-security，只要它在 classpath 上，Spring Boot 就會自動裝一條
+      「全部要求登入」的 SecurityWebFilterChain，擋住 Gateway 自己 UserJwtFilter 的判斷邏輯。
+      Servlet 型的網域服務不用排除，它們就是要用完整的 Resource Server 機制。
+    -->
+    <dependency>
+      <groupId>com.tengan.mall</groupId>
+      <artifactId>tengan-jwt-verification-starter</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-jose</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

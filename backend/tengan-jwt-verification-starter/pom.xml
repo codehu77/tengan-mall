@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.tengan.mall</groupId>
+    <artifactId>tengan-mall-backend</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>tengan-jwt-verification-starter</artifactId>
+  <packaging>jar</packaging>
+
+  <!--
+    唯一允許的共用模組（cross-cutting 技術碼：JWT codec，見 docs/ddd-standards.md 第九節例外條款）。
+    提供兩顆獨立的 JwtDecoder：
+      - userJwtDecoder：驗證 Gateway zero-trust 轉發過來的使用者/管理員原始 JWT（/api/customer/**、/api/admin/** 用）
+      - serviceJwtDecoder：驗證 Service JWT（/internal/** 用，Spring Authorization Server 核發）
+    兩者簽章金鑰各自獨立（見 docs/JWT設計.md「使用者身份驗證」與「服務間身份驗證」兩章），
+    不共用同一個 JwtDecoder。
+  -->
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
+
+</project>

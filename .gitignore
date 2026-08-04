@@ -1,0 +1,32 @@
+# 個人學習資料
+/.docs/
+
+# 環境變數（含密碼），複製 .env.example 後產生的實際 .env 不該進版控
+.env
+
+# 常見系統/編輯器雜訊
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+*.iml
+
+# Maven build 產物
+target/
+
+# Node/pnpm 相依套件與 build 產物
+node_modules/
+dist/
+.output/
+.nuxt/
+.vite/
+
+# log 檔
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# .env 的其他變體（.env 本身已在上面擋掉）
+.env.local
+.env.*.local

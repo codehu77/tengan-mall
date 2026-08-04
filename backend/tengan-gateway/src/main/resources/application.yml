@@ -1,0 +1,25 @@
+server:
+  port: 88
+
+spring:
+  application:
+    name: tengan-mall-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_ADMIN_USERNAME:nacos}
+        password: ${NACOS_ADMIN_PASSWORD:tengan123}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_ADMIN_USERNAME:nacos}
+        password: ${NACOS_ADMIN_PASSWORD:tengan123}
+        file-extension: yaml
+  config:
+    import: optional:nacos:${spring.application.name}.yaml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

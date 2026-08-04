@@ -1,0 +1,20 @@
+package com.tengan.mall.auth.application.logout;
+
+import com.tengan.mall.auth.application.port.RefreshTokenStorePort;
+import org.springframework.stereotype.Service;
+
+/** 只刪除這一顆 refresh token（單一裝置登出），不動同帳號其他裝置的 session。 */
+@Service
+public class LogoutService implements LogoutUseCase {
+
+    private final RefreshTokenStorePort refreshTokenStorePort;
+
+    public LogoutService(RefreshTokenStorePort refreshTokenStorePort) {
+        this.refreshTokenStorePort = refreshTokenStorePort;
+    }
+
+    @Override
+    public void logout(LogoutCommand command) {
+        refreshTokenStorePort.delete(command.refreshToken());
+    }
+}
