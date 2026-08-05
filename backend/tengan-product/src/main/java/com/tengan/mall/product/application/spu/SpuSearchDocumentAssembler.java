@@ -66,9 +66,9 @@ class SpuSearchDocumentAssembler {
                     .forEach(attrs::add);
 
             result.add(new SkuSearchDocumentPayload(sku.getId(), spu.getId(), sku.getName(), spu.getName(),
-                    sku.getPrice(), sku.getMainImage(), sku.getSaleCount(), spu.getBrandId(), brandName,
-                    idOrNull(ancestors[0]), nameOrNull(ancestors[0]), idOrNull(ancestors[1]), nameOrNull(ancestors[1]),
-                    idOrNull(ancestors[2]), nameOrNull(ancestors[2]), attrs));
+                    sku.getPrice(), sku.getMainImage(), spu.getMainImage(), sku.getSaleCount(), spu.getBrandId(),
+                    brandName, idOrNull(ancestors[0]), nameOrNull(ancestors[0]), idOrNull(ancestors[1]),
+                    nameOrNull(ancestors[1]), idOrNull(ancestors[2]), nameOrNull(ancestors[2]), attrs));
         }
         return result;
     }

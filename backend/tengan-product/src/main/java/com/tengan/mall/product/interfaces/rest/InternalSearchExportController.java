@@ -32,8 +32,8 @@ public class InternalSearchExportController {
         var result = searchExportSpusUseCase.export(pageNum, pageSize);
         var skus = result.skus().stream()
                 .map(s -> new SkuSearchDocumentResponse(s.skuId(), s.spuId(), s.skuName(), s.spuName(), s.price(),
-                        s.mainImage(), s.saleCount(), s.brandId(), s.brandName(), s.catalog1Id(), s.catalog1Name(),
-                        s.catalog2Id(), s.catalog2Name(), s.catalog3Id(), s.catalog3Name(),
+                        s.mainImage(), s.spuMainImage(), s.saleCount(), s.brandId(), s.brandName(), s.catalog1Id(),
+                        s.catalog1Name(), s.catalog2Id(), s.catalog2Name(), s.catalog3Id(), s.catalog3Name(),
                         s.attrs().stream()
                                 .map(a -> new SearchAttrResponse(a.attrId(), a.attrType(), a.attrName(), a.attrValue()))
                                 .toList()))

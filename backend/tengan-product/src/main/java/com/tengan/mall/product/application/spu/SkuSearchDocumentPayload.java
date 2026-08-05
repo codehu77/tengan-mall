@@ -8,6 +8,7 @@ import java.util.List;
  * 只含 searchable=true 的屬性值），tengan-search 收到後直接 upsert 進 ES，不用回頭查任何其他服務。
  */
 public record SkuSearchDocumentPayload(Long skuId, Long spuId, String skuName, String spuName, BigDecimal price,
-        String mainImage, int saleCount, Long brandId, String brandName, Long catalog1Id, String catalog1Name,
-        Long catalog2Id, String catalog2Name, Long catalog3Id, String catalog3Name, List<SearchAttrPayload> attrs) {
+        String mainImage, String spuMainImage, int saleCount, Long brandId, String brandName, Long catalog1Id,
+        String catalog1Name, Long catalog2Id, String catalog2Name, Long catalog3Id, String catalog3Name,
+        List<SearchAttrPayload> attrs) {
 }

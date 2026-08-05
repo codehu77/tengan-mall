@@ -35,6 +35,10 @@ public class SkuSearchDocument {
     @Field(type = FieldType.Keyword)
     private String mainImage;
 
+    /** SPU 層級的主圖——搜尋列表卡片是 collapse 後的商品層級呈現，圖片要用這顆而不是 mainImage（某顆代表 SKU 的圖）。 */
+    @Field(type = FieldType.Keyword)
+    private String spuMainImage;
+
     @Field(type = FieldType.Integer)
     private Integer saleCount;
 
@@ -69,14 +73,16 @@ public class SkuSearchDocument {
     }
 
     public SkuSearchDocument(Long skuId, Long spuId, String skuName, String spuName, Double price, String mainImage,
-            Integer saleCount, Long brandId, String brandName, Long catalog1Id, String catalog1Name, Long catalog2Id,
-            String catalog2Name, Long catalog3Id, String catalog3Name, List<SkuSearchAttrValue> attrs) {
+            String spuMainImage, Integer saleCount, Long brandId, String brandName, Long catalog1Id,
+            String catalog1Name, Long catalog2Id, String catalog2Name, Long catalog3Id, String catalog3Name,
+            List<SkuSearchAttrValue> attrs) {
         this.skuId = skuId;
         this.spuId = spuId;
         this.skuName = skuName;
         this.spuName = spuName;
         this.price = price;
         this.mainImage = mainImage;
+        this.spuMainImage = spuMainImage;
         this.saleCount = saleCount;
         this.brandId = brandId;
         this.brandName = brandName;
@@ -135,6 +141,14 @@ public class SkuSearchDocument {
 
     public void setMainImage(String mainImage) {
         this.mainImage = mainImage;
+    }
+
+    public String getSpuMainImage() {
+        return spuMainImage;
+    }
+
+    public void setSpuMainImage(String spuMainImage) {
+        this.spuMainImage = spuMainImage;
     }
 
     public Integer getSaleCount() {

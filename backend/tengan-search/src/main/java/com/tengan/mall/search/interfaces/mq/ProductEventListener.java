@@ -41,7 +41,7 @@ public class ProductEventListener {
                         .toList();
         Double price = p.price() == null ? null : p.price().doubleValue();
         return new SkuSearchDocument(p.skuId(), p.spuId(), p.skuName(), p.spuName(), price, p.mainImage(),
-                p.saleCount(), p.brandId(), p.brandName(), p.catalog1Id(), p.catalog1Name(), p.catalog2Id(),
-                p.catalog2Name(), p.catalog3Id(), p.catalog3Name(), attrs);
+                p.spuMainImage(), p.saleCount(), p.brandId(), p.brandName(), p.catalog1Id(), p.catalog1Name(),
+                p.catalog2Id(), p.catalog2Name(), p.catalog3Id(), p.catalog3Name(), attrs);
     }
 }
