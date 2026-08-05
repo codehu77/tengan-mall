@@ -10,9 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class UnlistSpuService implements UnlistSpuUseCase {
 
     private final SpuRepository spuRepository;
+    private final ProductSearchEventPublisherPort searchEventPublisher;
 
-    public UnlistSpuService(SpuRepository spuRepository) {
+    public UnlistSpuService(SpuRepository spuRepository, ProductSearchEventPublisherPort searchEventPublisher) {
         this.spuRepository = spuRepository;
+        this.searchEventPublisher = searchEventPublisher;
     }
 
     @Override
@@ -22,5 +24,6 @@ public class UnlistSpuService implements UnlistSpuUseCase {
                 .orElseThrow(() -> new SpuNotFoundException(command.spuId()));
         spu.unlist();
         spuRepository.save(spu);
+        searchEventPublisher.publishRemoved(spu.getId(), spu.getSkus().stream().map(sku -> sku.getId()).toList());
     }
 }

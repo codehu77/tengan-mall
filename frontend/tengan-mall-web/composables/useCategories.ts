@@ -1,9 +1,33 @@
-import { MOCK_CATEGORY_TREE } from '~/mocks/products'
 import type { CategoryTree } from '~/mocks/products'
 
+interface CategoryTreeNodeResponse {
+  id: number
+  name: string
+  icon: string
+  sort: number
+  status: number
+  children: CategoryTreeNodeResponse[]
+}
+
+interface CategoryTreeResponse {
+  items: CategoryTreeNodeResponse[]
+}
+
+function toCategoryTree(node: CategoryTreeNodeResponse): CategoryTree {
+  return {
+    catId: node.id,
+    name: node.name,
+    icon: node.icon,
+    children: node.children?.map(toCategoryTree),
+  }
+}
+
 export function useCategories() {
-  // P7 串接後替換為:
-  // const { data: categories } = useFetch<CategoryTree[]>('/api/product/category/list/tree')
-  const categories = ref<CategoryTree[]>(MOCK_CATEGORY_TREE)
+  const { data } = useFetch<CategoryTreeResponse>('/api/public/products/categories/tree')
+
+  const categories = computed<CategoryTree[]>(() =>
+    data.value?.items.map(toCategoryTree) ?? []
+  )
+
   return { categories }
 }

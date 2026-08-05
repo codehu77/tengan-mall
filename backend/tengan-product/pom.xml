@@ -14,8 +14,7 @@
   <packaging>jar</packaging>
 
   <!--
-    商品網域（開發順序與清單.md Phase 2）：這個切片只做 Category（商品分類）。
-    不含 redis/amqp——等 SPU/SKU 切片要發 product.updated MQ 事件時再補 amqp starter。
+    商品網域（開發順序與清單.md Phase 2）。
   -->
 
   <dependencies>
@@ -34,6 +33,10 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-amqp</artifactId>
     </dependency>
     <dependency>
       <groupId>com.alibaba.cloud</groupId>

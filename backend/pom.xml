@@ -94,6 +94,7 @@
     <module>tengan-auth</module>
     <module>tengan-admin</module>
     <module>tengan-product</module>
+    <module>tengan-search</module>
   </modules>
 
 </project>

@@ -1,0 +1,32 @@
+server:
+  port: 9040
+
+spring:
+  application:
+    name: tengan-mall-search
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: ${RABBITMQ_USER:tengan}
+    password: ${RABBITMQ_PASSWORD:tengan123}
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_ADMIN_USERNAME:nacos}
+        password: ${NACOS_ADMIN_PASSWORD:tengan123}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_ADMIN_USERNAME:nacos}
+        password: ${NACOS_ADMIN_PASSWORD:tengan123}
+        file-extension: yaml
+  config:
+    import: optional:nacos:${spring.application.name}.yaml
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

@@ -10,9 +10,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class PublishSpuService implements PublishSpuUseCase {
 
     private final SpuRepository spuRepository;
+    private final SpuSearchDocumentAssembler searchDocumentAssembler;
+    private final ProductSearchEventPublisherPort searchEventPublisher;
 
-    public PublishSpuService(SpuRepository spuRepository) {
+    public PublishSpuService(SpuRepository spuRepository, SpuSearchDocumentAssembler searchDocumentAssembler,
+            ProductSearchEventPublisherPort searchEventPublisher) {
         this.spuRepository = spuRepository;
+        this.searchDocumentAssembler = searchDocumentAssembler;
+        this.searchEventPublisher = searchEventPublisher;
     }
 
     @Override
@@ -22,5 +27,6 @@ public class PublishSpuService implements PublishSpuUseCase {
                 .orElseThrow(() -> new SpuNotFoundException(command.spuId()));
         spu.publish();
         spuRepository.save(spu);
+        searchEventPublisher.publishUpserted(searchDocumentAssembler.assemble(spu));
     }
 }
