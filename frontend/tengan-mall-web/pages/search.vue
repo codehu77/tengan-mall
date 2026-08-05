@@ -171,6 +171,7 @@ const totalPages = computed(() => Math.max(1, Math.ceil(total.value / itemsPerPa
 function toProduct(item: SearchItem): Product {
   return {
     skuId: item.skuId,
+    spuId: item.spuId,
     skuName: item.skuName,
     price: item.price,
     skuDefaultImg: item.mainImage,

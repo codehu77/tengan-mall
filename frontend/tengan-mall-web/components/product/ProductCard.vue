@@ -1,5 +1,5 @@
 <template>
-  <NuxtLink :to="`/item/${product.skuId}`" class="block">
+  <NuxtLink :to="`/item/${product.spuId ?? product.skuId}`" class="block">
     <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group">
 
       <!-- 商品圖片 -->

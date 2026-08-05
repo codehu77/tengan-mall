@@ -6,11 +6,11 @@
       <nav class="text-xs text-gray-400 flex items-center gap-1">
         <NuxtLink to="/" class="hover:text-red-500">首頁</NuxtLink>
         <span>/</span>
-        <span class="text-gray-600 truncate max-w-xs">{{ product?.skuName }}</span>
+        <span class="text-gray-600 truncate max-w-xs">{{ spu?.name }}</span>
       </nav>
     </div>
 
-    <div v-if="product" class="max-w-7xl mx-auto px-6 space-y-4 pb-12">
+    <div v-if="spu && currentSku" class="max-w-7xl mx-auto px-6 space-y-4 pb-12">
 
       <!-- 主區塊：圖片 + 資訊並排 -->
       <div class="bg-white rounded-lg p-8">
@@ -20,14 +20,14 @@
           <div class="space-y-3">
             <div class="w-full aspect-square rounded-lg overflow-hidden bg-gray-50 border border-gray-100">
               <img
-                :src="product.images[activeImg]"
-                :alt="product.skuName"
+                :src="images[activeImg]"
+                :alt="currentSku.name"
                 class="w-full h-full object-cover"
               />
             </div>
             <div class="flex gap-2">
               <button
-                v-for="(img, i) in product.images"
+                v-for="(img, i) in images"
                 :key="i"
                 class="w-20 h-20 rounded border-2 overflow-hidden transition shrink-0"
                 :class="activeImg === i ? 'border-red-500' : 'border-gray-200 hover:border-gray-400'"
@@ -41,28 +41,27 @@
           <!-- 資訊區 -->
           <div class="flex flex-col gap-5">
 
-            <!-- 名稱 -->
+            <!-- 名稱：SPU 標題固定，不隨規格切換而變 -->
             <h1 class="text-2xl font-medium text-gray-800 leading-snug">
-              {{ product.skuName }}
+              {{ spu.name }}
             </h1>
 
             <!-- 銷量 -->
             <div class="flex items-center gap-6 text-base text-gray-400 pb-4 border-b border-gray-100">
-              <span>已售出 <b class="text-gray-600">{{ product.saleCount.toLocaleString() }}</b> 件</span>
-              <span>庫存 <b class="text-gray-600">{{ product.stock }}</b> 件</span>
+              <span>已售出 <b class="text-gray-600">{{ currentSku.saleCount.toLocaleString() }}</b> 件</span>
             </div>
 
             <!-- 價格（淡橘底） -->
             <div class="bg-orange-50 rounded-lg px-5 py-4 flex items-baseline gap-2">
               <span class="text-sm text-gray-400">優惠價</span>
               <span class="text-3xl font-bold text-red-600">
-                NT$ {{ product.price.toLocaleString() }}
+                NT$ {{ currentSku.price.toLocaleString() }}
               </span>
             </div>
 
-            <!-- 規格選擇 -->
+            <!-- 規格選擇：純前端狀態切換，不會導覽到新網址 -->
             <div
-              v-for="attr in product.attrs"
+              v-for="attr in attrOptions"
               :key="attr.attrName"
               class="flex gap-4"
             >
@@ -75,7 +74,7 @@
                   :class="selectedAttrs[attr.attrName] === opt
                     ? 'border-red-500 bg-red-50 text-red-600'
                     : 'border-gray-200 text-gray-700 hover:border-red-300'"
-                  @click="selectedAttrs[attr.attrName] = opt"
+                  @click="selectAttr(attr.attrName, opt)"
                 >
                   {{ opt }}
                 </button>
@@ -93,7 +92,7 @@
                 <span class="w-12 text-center text-sm">{{ qty }}</span>
                 <button
                   class="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
-                  @click="qty = Math.min(product.stock, qty + 1)"
+                  @click="qty = qty + 1"
                 >＋</button>
               </div>
             </div>
@@ -122,10 +121,10 @@
       <!-- 規格與描述 -->
       <div class="bg-white rounded-lg p-8 space-y-8">
 
-        <div>
+        <div v-if="specs.length > 0">
           <h2 class="text-base font-semibold text-gray-800 mb-5 pb-3 border-b border-gray-100">商品規格</h2>
           <div class="grid grid-cols-2 gap-x-16 gap-y-3">
-            <div v-for="spec in product.specs" :key="spec.label" class="flex gap-3 text-base">
+            <div v-for="spec in specs" :key="spec.label" class="flex gap-3 text-base">
               <span class="text-gray-400 w-16 shrink-0">{{ spec.label }}</span>
               <span class="text-gray-700">{{ spec.value }}</span>
             </div>
@@ -134,7 +133,7 @@
 
         <div>
           <h2 class="text-base font-semibold text-gray-800 mb-4 pb-3 border-b border-gray-100">商品介紹</h2>
-          <p class="text-base text-gray-600 leading-8">{{ product.description }}</p>
+          <div class="text-base text-gray-600 leading-8" v-html="sanitizedDescription" />
         </div>
 
       </div>
@@ -149,39 +148,93 @@
 </template>
 
 <script setup lang="ts">
-import { getMockProductDetail } from '~/mocks/products'
+import DOMPurify from 'isomorphic-dompurify'
+import { useProductDetail } from '~/composables/useProductDetail'
 
 const route = useRoute()
 const toast = useToast()
 const cartStore = useCartStore()
 const { addToCart } = useCart()
 
-const skuId = Number(route.params.skuId)
-const product = getMockProductDetail(skuId)
+const spuId = Number(route.params.spuId)
+const { data: spu } = await useProductDetail(spuId)
 
 const activeImg = ref(0)
 const qty = ref(1)
-const selectedAttrs = ref<Record<string, string>>({})
+
+const skus = computed(() => spu.value?.skus ?? [])
+
+// 預設變體：sort 值最小的那顆（後台精靈本來就有的排序欄位，跟管理端的預設呈現順序一致）
+const defaultSkuId = skus.value.length > 0
+  ? skus.value.reduce((min, s) => (s.sort < min.sort ? s : min)).id
+  : null
+const selectedSkuId = ref(defaultSkuId)
+
+const currentSku = computed(() => skus.value.find(s => s.id === selectedSkuId.value) ?? skus.value[0])
+
+// spu 共通圖 + 目前這顆 sku 的專屬圖，切換 sku 時 activeImg 歸零，等同大圖/縮圖跳到對應 sku 的圖
+const images = computed(() => {
+  const sku = currentSku.value
+  if (!sku) return []
+  const urls = [sku.mainImage, ...sku.images.map(i => i.imageUrl), ...(spu.value?.images.map(i => i.imageUrl) ?? [])]
+  return Array.from(new Set(urls)).filter(Boolean)
+})
+
+// 銷售屬性（顏色/容量...）的可選值，彙整同一顆 spu 底下所有 sku 出現過的組合
+const attrOptions = computed(() => {
+  const map = new Map<string, string[]>()
+  for (const sku of skus.value) {
+    for (const av of sku.saleAttrValues) {
+      const options = map.get(av.attrName) ?? []
+      if (!options.includes(av.attrValue)) options.push(av.attrValue)
+      map.set(av.attrName, options)
+    }
+  }
+  return Array.from(map.entries()).map(([attrName, options]) => ({ attrName, options }))
+})
+
+const selectedAttrs = computed<Record<string, string>>(() => {
+  const result: Record<string, string> = {}
+  for (const av of currentSku.value?.saleAttrValues ?? []) result[av.attrName] = av.attrValue
+  return result
+})
+
+// 純前端狀態切換，不 router.replace——MOMO 那種「選規格不換網址」的體驗
+function selectAttr(attrName: string, value: string) {
+  const target = { ...selectedAttrs.value, [attrName]: value }
+  const match = skus.value.find(sku =>
+    sku.saleAttrValues.length === Object.keys(target).length
+    && sku.saleAttrValues.every(av => target[av.attrName] === av.attrValue)
+  )
+  if (!match) return
+  selectedSkuId.value = match.id
+  activeImg.value = 0
+}
+
+const specs = computed(() => (spu.value?.attrValues ?? []).map(v => ({ label: v.attrName, value: v.attrValue })))
+const sanitizedDescription = computed(() => DOMPurify.sanitize(spu.value?.description ?? ''))
 
 async function handleAddToCart() {
-  if (!product) return
+  const sku = currentSku.value
+  if (!sku) return
   const newCount = await addToCart(
-    { skuId: product.skuId, skuName: product.skuName, price: product.price, image: product.images[0] },
+    { skuId: sku.id, skuName: sku.name, price: sku.price, image: images.value[0] ?? sku.mainImage },
     qty.value
   )
   cartStore.setCount(newCount)
   toast.add({
     title: '已加入購物車',
-    description: product.skuName,
+    description: sku.name,
     color: 'green',
     timeout: 2000,
   })
 }
 
 async function handleBuyNow() {
-  if (!product) return
+  const sku = currentSku.value
+  if (!sku) return
   const newCount = await addToCart(
-    { skuId: product.skuId, skuName: product.skuName, price: product.price, image: product.images[0] },
+    { skuId: sku.id, skuName: sku.name, price: sku.price, image: images.value[0] ?? sku.mainImage },
     qty.value
   )
   cartStore.setCount(newCount)

@@ -13,24 +13,12 @@ export interface CategoryTree {
 
 export interface Product {
   skuId: number
+  spuId?: number
   skuName: string
   price: number
   skuDefaultImg: string
   saleCount: number
   categoryId: number
-}
-
-export interface SkuAttr {
-  attrName: string
-  options: string[]
-}
-
-export interface ProductDetail extends Product {
-  images: string[]
-  attrs: SkuAttr[]
-  description: string
-  specs: { label: string; value: string }[]
-  stock: number
 }
 
 export const MOCK_CATEGORIES: Category[] = [
@@ -61,73 +49,3 @@ export const MOCK_PRODUCTS: Product[] = [
   { skuId: 12, skuName: 'Panasonic 國際牌 變頻冷暖分離式冷氣 CS-UX22BDA2', price: 31900, skuDefaultImg: 'https://placehold.co/300x300?text=Panasonic+AC', saleCount: 567, categoryId: 3 },
 ]
 
-export const MOCK_PRODUCT_DETAILS: Record<number, ProductDetail> = {
-  1: {
-    skuId: 1,
-    skuName: 'Apple iPhone 15 Pro 256GB 原色鈦金屬',
-    price: 39900,
-    skuDefaultImg: 'https://placehold.co/600x600?text=iPhone+15+Pro',
-    saleCount: 1823,
-    categoryId: 1,
-    stock: 99,
-    images: [
-      'https://placehold.co/600x600?text=iPhone+15+Pro+正面',
-      'https://placehold.co/600x600?text=iPhone+15+Pro+背面',
-      'https://placehold.co/600x600?text=iPhone+15+Pro+側面',
-      'https://placehold.co/600x600?text=iPhone+15+Pro+盒裝',
-    ],
-    attrs: [
-      { attrName: '顏色', options: ['原色鈦金屬', '黑色鈦金屬', '白色鈦金屬', '藍色鈦金屬'] },
-      { attrName: '容量', options: ['128GB', '256GB', '512GB', '1TB'] },
-    ],
-    specs: [
-      { label: '螢幕', value: '6.1 吋 Super Retina XDR' },
-      { label: '晶片', value: 'A17 Pro' },
-      { label: '相機', value: '4800 萬畫素主鏡頭' },
-      { label: '電池', value: '最長 23 小時影片播放' },
-      { label: '防水', value: 'IP68（最深 6 公尺，30 分鐘）' },
-      { label: '重量', value: '187 公克' },
-    ],
-    description: 'iPhone 15 Pro 搭載 A17 Pro 晶片，採用航太級鈦金屬設計，配備 USB 3 連接埠，支援 Action 按鈕，是 Apple 最先進的智慧型手機。',
-  },
-  4: {
-    skuId: 4,
-    skuName: 'MacBook Air 13吋 M3 晶片 8GB / 256GB',
-    price: 37900,
-    skuDefaultImg: 'https://placehold.co/600x600?text=MacBook+Air+M3',
-    saleCount: 782,
-    categoryId: 2,
-    stock: 45,
-    images: [
-      'https://placehold.co/600x600?text=MacBook+Air+M3+正面',
-      'https://placehold.co/600x600?text=MacBook+Air+M3+側面',
-      'https://placehold.co/600x600?text=MacBook+Air+M3+鍵盤',
-      'https://placehold.co/600x600?text=MacBook+Air+M3+連接埠',
-    ],
-    attrs: [
-      { attrName: '顏色', options: ['午夜色', '星光色', '太空灰', '天藍色'] },
-      { attrName: '記憶體', options: ['8GB', '16GB', '24GB'] },
-      { attrName: '儲存空間', options: ['256GB', '512GB', '1TB', '2TB'] },
-    ],
-    specs: [
-      { label: '螢幕', value: '13.6 吋 Liquid Retina' },
-      { label: '晶片', value: 'Apple M3' },
-      { label: 'CPU', value: '8 核心' },
-      { label: 'GPU', value: '10 核心' },
-      { label: '電池', value: '最長 18 小時' },
-      { label: '重量', value: '1.24 公斤' },
-    ],
-    description: 'MacBook Air 搭載 Apple M3 晶片，輕薄設計，無風扇靜音運作，提供卓越的效能與長達 18 小時的電池續航力。',
-  },
-}
-
-export function getMockProductDetail(skuId: number): ProductDetail | null {
-  return MOCK_PRODUCT_DETAILS[skuId] ?? {
-    ...MOCK_PRODUCTS.find(p => p.skuId === skuId),
-    stock: 50,
-    images: [`https://placehold.co/600x600?text=Product+${skuId}`],
-    attrs: [{ attrName: '規格', options: ['標準版'] }],
-    specs: [{ label: '品牌', value: '天願商城' }],
-    description: '這是一個商品描述範例，實際串接後端 API 後將顯示真實資料。',
-  } as ProductDetail
-}
