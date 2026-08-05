@@ -111,4 +111,15 @@ public class ProductSpuAdapter implements ProductSpuPort {
                 .retrieve()
                 .toBodilessEntity();
     }
+
+    @Override
+    public Long duplicateSpu(Long id, String operatorToken) {
+        IdEnvelope envelope = productRestClient.post()
+                .uri(BASE_PATH + "/{id}/duplicate", id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .header("X-Identity-Assertion", "Bearer " + operatorToken)
+                .retrieve()
+                .body(IdEnvelope.class);
+        return envelope.id();
+    }
 }

@@ -39,6 +39,8 @@ const spuId = computed(() => Number(route.params.id));
 
 const currentStep = ref(0);
 const loading = ref(false);
+/** 複製出來、還沒被人工編輯確認過的草稿——後端在 Step1「保存」成功後會轉成 NEW，這裡存的是進來時的初始狀態。 */
+const isDuplicateDraft = ref(false);
 
 /** 貫穿三步的單一份表單物件，Step 只是這份資料的不同視圖（v-show 切換），不是三個獨立表單。 */
 const form = reactive<{
@@ -354,6 +356,7 @@ async function saveSpu(): Promise<boolean> {
     } else {
       await updateSpu(spuId.value, payload);
       message("修改成功", { type: "success" });
+      isDuplicateDraft.value = false;
     }
     return true;
   } catch (error: any) {
@@ -390,6 +393,7 @@ onMounted(async () => {
 
   if (mode.value === "edit") {
     const detail = await getSpuDetail(spuId.value);
+    isDuplicateDraft.value = detail.status === 3;
     form.categoryId = detail.categoryId;
     form.brandId = detail.brandId;
     form.name = detail.name;
@@ -428,6 +432,16 @@ onMounted(async () => {
       <el-step title="規格參數" />
       <el-step title="銷售屬性與 SKU" />
     </el-steps>
+
+    <el-alert
+      v-if="isDuplicateDraft"
+      title="這是複製出來的草稿，尚未被編輯確認，無法直接上架"
+      description="請檢查各步驟內容（尤其名稱與價格），確認無誤後按「保存」，狀態會轉為草稿，才能上架。"
+      type="warning"
+      show-icon
+      :closable="false"
+      class="mb-4"
+    />
 
     <div v-if="mode === 'edit'" class="mb-4 flex justify-center gap-2">
       <el-button link type="primary" @click="jumpTo(0)">跳至基本資訊</el-button>

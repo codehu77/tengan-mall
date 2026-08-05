@@ -19,4 +19,6 @@ public interface ProductSpuPort {
     void unlistSpu(Long id, String operatorToken);
 
     void deleteSpu(Long id, String operatorToken);
+
+    Long duplicateSpu(Long id, String operatorToken);
 }

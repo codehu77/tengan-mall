@@ -119,6 +119,13 @@ public class ProductSpuController {
         productSpuPort.deleteSpu(id, operatorJwt.getTokenValue());
     }
 
+    @PostMapping("/{id}/duplicate")
+    @PreAuthorize("hasAuthority('product:spu:write')")
+    public CreateSpuResponse duplicate(@AuthenticationPrincipal Jwt operatorJwt, @PathVariable Long id) {
+        Long newId = productSpuPort.duplicateSpu(id, operatorJwt.getTokenValue());
+        return new CreateSpuResponse(newId);
+    }
+
     private List<SpuBaseAttrValuePayload> toAttrValuePayloads(List<SpuBaseAttrValueRequest> requests) {
         return requests == null ? List.of()
                 : requests.stream().map(r -> new SpuBaseAttrValuePayload(r.attrId(), r.attrValue())).toList();

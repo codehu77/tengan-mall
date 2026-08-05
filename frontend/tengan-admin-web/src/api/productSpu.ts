@@ -146,3 +146,11 @@ export const unlistSpu = (id: number) => {
 export const deleteSpu = (id: number) => {
   return http.request<void>("delete", `/api/admin/products/spus/${id}`);
 };
+
+/** 整份複製一個新 SPU 草稿（狀態=複製草稿），回傳新 spu id，前端拿去直接導到編輯頁。 */
+export const duplicateSpu = (id: number) => {
+  return http.request<{ id: number }>(
+    "post",
+    `/api/admin/products/spus/${id}/duplicate`
+  );
+};

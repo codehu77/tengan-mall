@@ -13,6 +13,7 @@ import com.tengan.mall.product.domain.exception.SaleAttrCategoryMismatchExceptio
 import com.tengan.mall.product.domain.exception.SaleAttrNotFoundException;
 import com.tengan.mall.product.domain.exception.SkuNotFoundException;
 import com.tengan.mall.product.domain.exception.SpuHasNoSkuException;
+import com.tengan.mall.product.domain.exception.SpuIsDuplicateException;
 import com.tengan.mall.product.domain.exception.SpuNotFoundException;
 import com.tengan.mall.product.domain.exception.SpuNotOnShelfException;
 import com.tengan.mall.product.domain.exception.SpuOnShelfException;
@@ -42,7 +43,7 @@ public class ProductExceptionHandler {
     @ExceptionHandler({CategoryHasChildrenException.class, CategoryLevelLimitExceededException.class,
             BaseAttrGroupCategoryMismatchException.class, BaseAttrCategoryMismatchException.class,
             SaleAttrCategoryMismatchException.class, SpuHasNoSkuException.class, SpuNotOnShelfException.class,
-            SpuOnShelfException.class})
+            SpuOnShelfException.class, SpuIsDuplicateException.class})
     public ResponseEntity<Map<String, String>> handleConflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }

@@ -4,6 +4,7 @@ import com.tengan.mall.product.application.spu.CreateSpuCommand;
 import com.tengan.mall.product.application.spu.CreateSpuUseCase;
 import com.tengan.mall.product.application.spu.DeleteSpuCommand;
 import com.tengan.mall.product.application.spu.DeleteSpuUseCase;
+import com.tengan.mall.product.application.spu.DuplicateSpuUseCase;
 import com.tengan.mall.product.application.spu.GetSpuDetailResult;
 import com.tengan.mall.product.application.spu.GetSpuDetailUseCase;
 import com.tengan.mall.product.application.spu.ListSpusUseCase;
@@ -61,11 +62,12 @@ public class InternalSpuController {
     private final PublishSpuUseCase publishSpuUseCase;
     private final UnlistSpuUseCase unlistSpuUseCase;
     private final DeleteSpuUseCase deleteSpuUseCase;
+    private final DuplicateSpuUseCase duplicateSpuUseCase;
 
     public InternalSpuController(ListSpusUseCase listSpusUseCase, GetSpuDetailUseCase getSpuDetailUseCase,
             CreateSpuUseCase createSpuUseCase, UpdateSpuUseCase updateSpuUseCase,
             PublishSpuUseCase publishSpuUseCase, UnlistSpuUseCase unlistSpuUseCase,
-            DeleteSpuUseCase deleteSpuUseCase) {
+            DeleteSpuUseCase deleteSpuUseCase, DuplicateSpuUseCase duplicateSpuUseCase) {
         this.listSpusUseCase = listSpusUseCase;
         this.getSpuDetailUseCase = getSpuDetailUseCase;
         this.createSpuUseCase = createSpuUseCase;
@@ -73,6 +75,7 @@ public class InternalSpuController {
         this.publishSpuUseCase = publishSpuUseCase;
         this.unlistSpuUseCase = unlistSpuUseCase;
         this.deleteSpuUseCase = deleteSpuUseCase;
+        this.duplicateSpuUseCase = duplicateSpuUseCase;
     }
 
     @GetMapping
@@ -136,6 +139,13 @@ public class InternalSpuController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         deleteSpuUseCase.delete(new DeleteSpuCommand(id));
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/duplicate")
+    @PreAuthorize("hasAuthority('SCOPE_product.write')")
+    public ResponseEntity<CreateSpuResponse> duplicate(@PathVariable Long id) {
+        var result = duplicateSpuUseCase.duplicate(id);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new CreateSpuResponse(result.id()));
     }
 
     private List<SpuBaseAttrValueCommand> toAttrValueCommands(List<SpuBaseAttrValueRequest> requests) {

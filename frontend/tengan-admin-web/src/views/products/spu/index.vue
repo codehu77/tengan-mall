@@ -12,7 +12,8 @@ import {
   searchSpus,
   publishSpu,
   unlistSpu,
-  deleteSpu
+  deleteSpu,
+  duplicateSpu
 } from "@/api/productSpu";
 
 defineOptions({
@@ -54,16 +55,18 @@ const brandNameMap = computed(() => {
 const statusOptions = [
   { label: "草稿", value: 0 },
   { label: "上架中", value: 1 },
-  { label: "已下架", value: 2 }
+  { label: "已下架", value: 2 },
+  { label: "複製草稿", value: 3 }
 ];
 
 function statusLabel(status: number) {
   return statusOptions.find(o => o.value === status)?.label ?? "未知";
 }
 
-function statusTagType(status: number): "info" | "success" | "warning" {
+function statusTagType(status: number): "info" | "success" | "warning" | "danger" {
   if (status === 1) return "success";
   if (status === 2) return "info";
+  if (status === 3) return "danger";
   return "warning";
 }
 
@@ -86,7 +89,7 @@ const columns: TableColumns[] = [
   { label: "品牌", prop: "brandId", minWidth: 120, slot: "brand" },
   { label: "SKU數量", prop: "skuCount", width: 100 },
   { label: "狀態", prop: "status", width: 100, slot: "status" },
-  { label: "操作", fixed: "right", width: 220, slot: "operation" }
+  { label: "操作", fixed: "right", width: 280, slot: "operation" }
 ];
 
 async function loadFilters() {
@@ -165,6 +168,25 @@ function onUnlist(row: SpuSummaryItem) {
       message("下架成功", { type: "success" });
       onSearch();
     });
+  });
+}
+
+function onDuplicate(row: SpuSummaryItem) {
+  ElMessageBox.confirm(
+    `確定要複製「${row.name}」嗎？會產生一份需要編輯確認後才能上架的草稿。`,
+    "提示",
+    { type: "warning" }
+  ).then(() => {
+    duplicateSpu(row.id)
+      .then(({ id }) => {
+        message("複製成功，請編輯調整內容", { type: "success" });
+        router.push(`/products/spu/edit/${id}`);
+      })
+      .catch((error: any) => {
+        message(error?.response?.data?.message ?? "複製失敗", {
+          type: "error"
+        });
+      });
   });
 }
 
@@ -290,8 +312,18 @@ onMounted(async () => {
           </template>
           <template #operation="{ row }">
             <el-button link type="primary" @click="onEdit(row)">編輯</el-button>
+            <el-button link type="info" @click="onDuplicate(row)">
+              複製
+            </el-button>
+            <el-tooltip
+              v-if="row.status === 3"
+              content="複製草稿需先編輯儲存才能上架"
+              placement="top"
+            >
+              <el-button link type="success" disabled>上架</el-button>
+            </el-tooltip>
             <el-button
-              v-if="row.status !== 1"
+              v-else-if="row.status !== 1"
               link
               type="success"
               @click="onPublish(row)"
