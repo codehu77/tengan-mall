@@ -2,6 +2,7 @@
 import { ref, reactive, computed, shallowRef, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
+import { Picture } from "@element-plus/icons-vue";
 import DOMPurify from "dompurify";
 import "@wangeditor/editor/dist/css/style.css";
 import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
@@ -468,7 +469,23 @@ onMounted(async () => {
         <el-input v-model="form.name" placeholder="請輸入商品名稱" style="width: 480px" />
       </el-form-item>
       <el-form-item label="主圖">
-        <el-input v-model="form.mainImage" placeholder="圖片網址" style="width: 480px" />
+        <div class="flex items-center gap-2">
+          <el-input v-model="form.mainImage" placeholder="圖片網址" style="width: 480px" />
+          <el-image
+            v-if="form.mainImage"
+            :src="form.mainImage"
+            :preview-src-list="[form.mainImage]"
+            preview-teleported
+            class="img-thumb"
+            fit="cover"
+          >
+            <template #error>
+              <div class="img-thumb-error">
+                <el-icon><Picture /></el-icon>
+              </div>
+            </template>
+          </el-image>
+        </div>
       </el-form-item>
       <el-form-item label="共通圖片">
         <div class="w-full">
@@ -479,6 +496,20 @@ onMounted(async () => {
           >
             <el-input v-model="img.imageUrl" placeholder="圖片網址" style="width: 320px" />
             <el-input-number v-model="img.sort" :min="0" style="width: 110px" />
+            <el-image
+              v-if="img.imageUrl"
+              :src="img.imageUrl"
+              :preview-src-list="[img.imageUrl]"
+              preview-teleported
+              class="img-thumb"
+              fit="cover"
+            >
+              <template #error>
+                <div class="img-thumb-error">
+                  <el-icon><Picture /></el-icon>
+                </div>
+              </template>
+            </el-image>
             <el-button link type="danger" @click="removeSpuImage(imgIdx)">移除</el-button>
           </div>
           <el-button link type="primary" @click="addSpuImage">新增圖片</el-button>
@@ -557,7 +588,23 @@ onMounted(async () => {
             <el-input-number v-model="sku.price" :min="0" :precision="2" style="width: 200px" />
           </el-form-item>
           <el-form-item label="主圖">
-            <el-input v-model="sku.mainImage" placeholder="圖片網址" style="width: 320px" />
+            <div class="flex items-center gap-2">
+              <el-input v-model="sku.mainImage" placeholder="圖片網址" style="width: 320px" />
+              <el-image
+                v-if="sku.mainImage"
+                :src="sku.mainImage"
+                :preview-src-list="[sku.mainImage]"
+                preview-teleported
+                class="img-thumb"
+                fit="cover"
+              >
+                <template #error>
+                  <div class="img-thumb-error">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+            </div>
           </el-form-item>
           <el-form-item label="排序">
             <el-input-number v-model="sku.sort" :min="0" style="width: 140px" />
@@ -568,6 +615,20 @@ onMounted(async () => {
               <div v-for="(img, imgIdx) in sku.images" :key="imgIdx" class="mb-2 flex items-center gap-2">
                 <el-input v-model="img.imageUrl" placeholder="圖片網址" style="width: 280px" />
                 <el-input-number v-model="img.sort" :min="0" style="width: 110px" />
+                <el-image
+                  v-if="img.imageUrl"
+                  :src="img.imageUrl"
+                  :preview-src-list="[img.imageUrl]"
+                  preview-teleported
+                  class="img-thumb"
+                  fit="cover"
+                >
+                  <template #error>
+                    <div class="img-thumb-error">
+                      <el-icon><Picture /></el-icon>
+                    </div>
+                  </template>
+                </el-image>
                 <el-button link type="danger" @click="removeSkuImage(sku, imgIdx)">移除</el-button>
               </div>
               <el-button link type="primary" @click="addSkuImage(sku)">新增圖片</el-button>
@@ -704,4 +765,22 @@ onMounted(async () => {
   display: none !important;
 }
 
+.img-thumb {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1px solid #dcdfe6;
+  cursor: pointer;
+}
+.img-thumb-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+  background: #f5f7fa;
+  font-size: 20px;
+}
 </style>
