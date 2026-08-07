@@ -6,6 +6,7 @@ import com.tengan.mall.auth.domain.model.AccountId;
 import com.tengan.mall.auth.domain.model.Phone;
 import com.tengan.mall.auth.domain.model.Username;
 import com.tengan.mall.auth.domain.repository.AccountRepository;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -21,8 +22,12 @@ public class AccountRepositoryImpl implements AccountRepository {
     @Override
     public Account save(Account account) {
         AccountPO po = toPO(account);
-        accountMapper.insert(po);
-        account.assignId(new AccountId(po.getId()));
+        if (account.getId() == null) {
+            accountMapper.insert(po);
+            account.assignId(new AccountId(po.getId()));
+        } else {
+            accountMapper.updateById(po);
+        }
         return account;
     }
 
@@ -49,10 +54,19 @@ public class AccountRepositoryImpl implements AccountRepository {
         return accountMapper.exists(Wrappers.<AccountPO>lambdaQuery().eq(AccountPO::getPhone, phone));
     }
 
+    @Override
+    public List<Account> findAllById(List<Long> ids) {
+        return accountMapper.selectBatchIds(ids).stream().map(this::toDomain).toList();
+    }
+
     private AccountPO toPO(Account account) {
         AccountPO po = new AccountPO();
+        if (account.getId() != null) {
+            po.setId(account.getId().value());
+        }
         po.setUsername(account.getUsername().value());
-        po.setPhone(account.getPhone().value());
+        po.setPhone(account.getPhone() != null ? account.getPhone().value() : null);
+        po.setEmail(account.getEmail());
         po.setPasswordHash(account.getPasswordHash());
         po.setStatus(account.getStatus());
         return po;
@@ -62,7 +76,8 @@ public class AccountRepositoryImpl implements AccountRepository {
         return Account.reconstitute(
                 new AccountId(po.getId()),
                 new Username(po.getUsername()),
-                new Phone(po.getPhone()),
+                po.getPhone() != null ? new Phone(po.getPhone()) : null,
+                po.getEmail(),
                 po.getPasswordHash(),
                 po.getStatus());
     }

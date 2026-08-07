@@ -9,24 +9,28 @@ public class Account {
     private AccountId id;
     private final Username username;
     private final Phone phone;
+    private final String email;
     private final String passwordHash;
     private AccountStatus status;
 
-    private Account(AccountId id, Username username, Phone phone, String passwordHash, AccountStatus status) {
+    private Account(AccountId id, Username username, Phone phone, String email, String passwordHash,
+            AccountStatus status) {
         this.id = id;
         this.username = username;
         this.phone = phone;
+        this.email = email;
         this.passwordHash = passwordHash;
         this.status = status;
     }
 
+    /** 本地密碼註冊用，phone/passwordHash 必填；email 目前的註冊流程沒有收集，固定 null。 */
     public static Account create(Username username, Phone phone, String passwordHash) {
-        return new Account(null, username, phone, passwordHash, AccountStatus.ACTIVE);
+        return new Account(null, username, phone, null, passwordHash, AccountStatus.ACTIVE);
     }
 
-    public static Account reconstitute(AccountId id, Username username, Phone phone, String passwordHash,
-            AccountStatus status) {
-        return new Account(id, username, phone, passwordHash, status);
+    public static Account reconstitute(AccountId id, Username username, Phone phone, String email,
+            String passwordHash, AccountStatus status) {
+        return new Account(id, username, phone, email, passwordHash, status);
     }
 
     public void assignId(AccountId id) {
@@ -40,6 +44,14 @@ public class Account {
         return status == AccountStatus.ACTIVE;
     }
 
+    public void disable() {
+        this.status = AccountStatus.DISABLED;
+    }
+
+    public void enable() {
+        this.status = AccountStatus.ACTIVE;
+    }
+
     public AccountId getId() {
         return id;
     }
@@ -50,6 +62,10 @@ public class Account {
 
     public Phone getPhone() {
         return phone;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     public String getPasswordHash() {

@@ -22,9 +22,11 @@ import org.springframework.stereotype.Component;
  * 序列化格式，用官方 builder + repository.save() 讓函式庫自己序列化，不要自己猜格式。
  *
  * <p>scope 只給每個 client 實際會用到的：tengan-admin 需要 product.read/write（呼叫 tengan-product）
- * + search.write（觸發 tengan-search 重建索引）；tengan-search 只需要 product.read（拉全量匯出資料，
- * 不會寫 tengan-product 任何東西）。之後每加一個服務的 internal 端點，就幫需要呼叫它的 client
- * 多加一組 scope，不用這次就把後台清單裡列的全部 scope 一次註冊完。</p>
+ * + search.write（觸發 tengan-search 重建索引）+ member.read（呼叫 tengan-member，member 只有
+ * 唯讀端點，沒有 write scope）+ account.read/write（呼叫 tengan-auth 自己的 /internal/accounts，
+ * 停權會員時同步停用登入帳號、後台列表即時組裝顯示狀態）；tengan-search 只需要 product.read
+ * （拉全量匯出資料，不會寫 tengan-product 任何東西）。之後每加一個服務的 internal 端點，就幫
+ * 需要呼叫它的 client 多加一組 scope，不用這次就把後台清單裡列的全部 scope 一次註冊完。</p>
  */
 @Component
 public class RegisteredClientSeeder implements ApplicationRunner {
@@ -49,7 +51,8 @@ public class RegisteredClientSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        seedIfAbsent(ADMIN_CLIENT_ID, adminClientSecret, "product.read", "product.write", "search.write");
+        seedIfAbsent(ADMIN_CLIENT_ID, adminClientSecret, "product.read", "product.write", "search.write",
+                "member.read", "account.read", "account.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
     }
 

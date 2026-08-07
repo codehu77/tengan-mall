@@ -18,10 +18,10 @@
         <form class="space-y-5" @submit.prevent="handleLogin">
 
           <!-- 帳號 -->
-          <UFormGroup label="帳號（Email 或手機號碼）" required>
+          <UFormGroup label="帳號" required>
             <UInput
               v-model="loginId"
-              placeholder="請輸入 Email 或手機號碼"
+              placeholder="請輸入使用者名稱"
               icon="i-heroicons-user"
               size="lg"
               :disabled="loading"
@@ -124,16 +124,6 @@
         </div>
       </template>
     </UCard>
-
-    <!-- 測試提示 -->
-    <UAlert
-      class="mt-4"
-      color="blue"
-      variant="soft"
-      icon="i-heroicons-information-circle"
-      title="開發模式"
-      description="目前使用 Mock 資料，任意帳號密碼即可登入。"
-    />
 
   </div>
 </template>

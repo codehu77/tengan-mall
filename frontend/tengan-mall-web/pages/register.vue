@@ -106,12 +106,13 @@
 
     <!-- 測試提示 -->
     <UAlert
+      v-if="smsCode"
       class="mt-4"
       color="blue"
       variant="soft"
       icon="i-heroicons-information-circle"
       title="開發模式"
-      description="驗證碼請輸入 1234（Mock 固定值）。"
+      :description="`目前沒有接真實簡訊廠商，驗證碼直接顯示在這裡：${smsCode}`"
     />
 
   </div>
@@ -127,10 +128,12 @@ const phone = ref('')
 const code = ref('')
 const password = ref('')
 const countdown = ref(0)
-const { register, loading, error } = useAuth()
+const { register, sendSmsCode, smsCode, loading, error } = useAuth()
 
-function handleSendCode() {
-  if (!phone.value) return
+async function handleSendCode() {
+  if (!phone.value || countdown.value > 0) return
+  const ok = await sendSmsCode(phone.value)
+  if (!ok) return
   countdown.value = 60
   const timer = setInterval(() => {
     countdown.value--

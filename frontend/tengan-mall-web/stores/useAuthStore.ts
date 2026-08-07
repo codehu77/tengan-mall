@@ -5,31 +5,35 @@ interface UserInfo {
   username: string
 }
 
-const STORAGE_KEY = 'tengan_auth_user'
-
+/**
+ * 真實身分來源是 HttpOnly cookie（前端 JS 讀不到），這個 store 只是登入狀態的快取——
+ * 不再用 localStorage 存使用者資訊，改成 fetchMe() 打 /api/auth/me 問後端「這顆 cookie 是誰」。
+ */
 export const useAuthStore = defineStore('auth', () => {
-  const stored = import.meta.client ? localStorage.getItem(STORAGE_KEY) : null
-  const initial = stored ? JSON.parse(stored) as UserInfo : null
-
-  const user = ref<UserInfo | null>(initial)
+  const user = ref<UserInfo | null>(null)
 
   const isLoggedIn = computed(() => user.value !== null)
   const username = computed(() => user.value?.username ?? '')
 
-  function setUser(info: UserInfo) {
-    user.value = info
-    if (import.meta.client) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(info))
+  async function fetchMe() {
+    const requestFetch = useRequestFetch()
+    try {
+      const data = await requestFetch<{ accountId: number; username: string; phone: string }>('/bff/auth/me')
+      user.value = { userId: data.accountId, username: data.username }
+    } catch {
+      user.value = null
     }
   }
 
-  function logout() {
+  function setUser(info: UserInfo) {
+    user.value = info
+  }
+
+  async function logout() {
+    await $fetch('/bff/auth/logout', { method: 'POST' }).catch(() => {})
     user.value = null
-    if (import.meta.client) {
-      localStorage.removeItem(STORAGE_KEY)
-    }
     navigateTo('/login')
   }
 
-  return { user, isLoggedIn, username, setUser, logout }
+  return { user, isLoggedIn, username, setUser, fetchMe, logout }
 })

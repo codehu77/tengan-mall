@@ -29,6 +29,7 @@ export default defineNuxtConfig({
   // 環境變數
   runtimeConfig: {
     cookieName: 'mall_token',
+    refreshCookieName: 'mall_refresh_token',
     public: {
       apiBase: 'http://localhost:88',
     },

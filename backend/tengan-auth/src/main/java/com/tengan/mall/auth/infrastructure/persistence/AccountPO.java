@@ -13,6 +13,7 @@ public class AccountPO {
     private Long id;
     private String username;
     private String phone;
+    private String email;
     private String passwordHash;
     private AccountStatus status;
     private LocalDateTime createdAt;
@@ -40,6 +41,14 @@ public class AccountPO {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPasswordHash() {

@@ -1,32 +1,44 @@
-import { MOCK_USER } from '~/mocks/user'
-
 export function useAuth() {
   const authStore = useAuthStore()
   const loading = ref(false)
   const error = ref('')
 
-  async function login(loginId: string, password: string) {
+  /** 展示用：沒有接真實簡訊廠商，發送後直接把驗證碼顯示在畫面上（見 sms_scope_decision）。 */
+  const smsCode = ref('')
+
+  async function login(username: string, password: string) {
     loading.value = true
     error.value = ''
     try {
-      // Mock：模擬 500ms API 延遲，任意帳密都成功
-      // 串接後換成：await $fetch('/api/auth/login', { method: 'POST', body: { loginId, password } })
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      if (!loginId || !password) {
-        throw new Error('請填寫帳號與密碼')
-      }
-
-      authStore.setUser({
-        userId: MOCK_USER.userId,
-        username: loginId,
+      const data = await $fetch<{ accountId: number; username: string }>('/bff/auth/login', {
+        method: 'POST',
+        body: { username, password },
       })
-
+      authStore.setUser({ userId: data.accountId, username: data.username })
       await navigateTo('/')
     } catch (e: any) {
-      error.value = e.message || '登入失敗，請稍後再試'
+      error.value = e.data?.message || e.statusMessage || '登入失敗，請稍後再試'
     } finally {
       loading.value = false
+    }
+  }
+
+  async function sendSmsCode(phone: string) {
+    error.value = ''
+    if (!phone) {
+      error.value = '請先輸入手機號碼'
+      return false
+    }
+    try {
+      const data = await $fetch<{ code: string }>('/bff/auth/sms-send', {
+        method: 'POST',
+        body: { phone },
+      })
+      smsCode.value = data.code
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || '驗證碼發送失敗'
+      return false
     }
   }
 
@@ -34,25 +46,17 @@ export function useAuth() {
     loading.value = true
     error.value = ''
     try {
-      // Mock：模擬 500ms API 延遲
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      if (!username || !phone || !password || !code) {
-        throw new Error('請填寫所有欄位')
-      }
-
-      // 驗證碼固定 1234（Mock）
-      if (code !== '1234') {
-        throw new Error('驗證碼錯誤，請輸入 1234（測試用）')
-      }
-
+      await $fetch('/bff/auth/register', {
+        method: 'POST',
+        body: { username, phone, password, code },
+      })
       await navigateTo('/login')
     } catch (e: any) {
-      error.value = e.message || '註冊失敗，請稍後再試'
+      error.value = e.data?.message || e.statusMessage || '註冊失敗，請稍後再試'
     } finally {
       loading.value = false
     }
   }
 
-  return { login, register, loading, error }
+  return { login, register, sendSmsCode, smsCode, loading, error }
 }
