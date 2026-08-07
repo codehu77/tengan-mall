@@ -10,7 +10,7 @@ export function useAuth() {
     loading.value = true
     error.value = ''
     try {
-      const data = await $fetch<{ accountId: number; username: string }>('/bff/auth/login', {
+      const data = await $fetch<{ accountId: number; username: string }>('/api/auth/login', {
         method: 'POST',
         body: { username, password },
       })
@@ -30,7 +30,7 @@ export function useAuth() {
       return false
     }
     try {
-      const data = await $fetch<{ code: string }>('/bff/auth/sms-send', {
+      const data = await $fetch<{ code: string }>('/api/auth/sms-send', {
         method: 'POST',
         body: { phone },
       })
@@ -46,7 +46,7 @@ export function useAuth() {
     loading.value = true
     error.value = ''
     try {
-      await $fetch('/bff/auth/register', {
+      await $fetch('/api/auth/register', {
         method: 'POST',
         body: { username, phone, password, code },
       })

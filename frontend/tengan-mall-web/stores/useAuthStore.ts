@@ -18,7 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchMe() {
     const requestFetch = useRequestFetch()
     try {
-      const data = await requestFetch<{ accountId: number; username: string; phone: string }>('/bff/auth/me')
+      const data = await requestFetch<{ accountId: number; username: string; phone: string }>('/api/auth/me')
       user.value = { userId: data.accountId, username: data.username }
     } catch {
       user.value = null
@@ -30,7 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
-    await $fetch('/bff/auth/logout', { method: 'POST' }).catch(() => {})
+    await $fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     user.value = null
     navigateTo('/login')
   }
