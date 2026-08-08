@@ -1,5 +1,6 @@
 package com.tengan.mall.product.application.spu;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -12,4 +13,11 @@ import java.util.Optional;
 public interface SkuDetailPort {
 
     Optional<SkuDetailView> findById(Long skuId);
+
+    /**
+     * 給 tengan-cart 這種要一次查多顆 sku 即時價格的情境用，避免逐筆呼叫造成 N+1。跟 findById 一樣
+     * 不套上架過濾——sku 被下架後仍要能查到目前價格/名稱（購物車要顯示，不是直接讓項目消失）；
+     * 已完全刪除的 skuId 會被靜默略過，回傳的清單不保證跟輸入的 ids 等長。
+     */
+    List<SkuDetailView> findByIds(List<Long> skuIds);
 }

@@ -25,28 +25,34 @@ import org.springframework.stereotype.Component;
  * + search.write（觸發 tengan-search 重建索引）+ member.read（呼叫 tengan-member，member 只有
  * 唯讀端點，沒有 write scope）+ account.read/write（呼叫 tengan-auth 自己的 /internal/accounts，
  * 停權會員時同步停用登入帳號、後台列表即時組裝顯示狀態）；tengan-search 只需要 product.read
- * （拉全量匯出資料，不會寫 tengan-product 任何東西）。之後每加一個服務的 internal 端點，就幫
- * 需要呼叫它的 client 多加一組 scope，不用這次就把後台清單裡列的全部 scope 一次註冊完。</p>
+ * （拉全量匯出資料，不會寫 tengan-product 任何東西）；tengan-cart 只需要 product.read
+ * （購物車即時查價，呼叫新增的 /internal/products/skus 批次端點，不寫 tengan-product 任何東西）。
+ * 之後每加一個服務的 internal 端點，就幫需要呼叫它的 client 多加一組 scope，不用這次就把後台清單裡
+ * 列的全部 scope 一次註冊完。</p>
  */
 @Component
 public class RegisteredClientSeeder implements ApplicationRunner {
 
     private static final String ADMIN_CLIENT_ID = "tengan-admin";
     private static final String SEARCH_CLIENT_ID = "tengan-search";
+    private static final String CART_CLIENT_ID = "tengan-cart";
 
     private final RegisteredClientRepository registeredClientRepository;
     private final PasswordEncoder passwordEncoder;
     private final String adminClientSecret;
     private final String searchClientSecret;
+    private final String cartClientSecret;
 
     public RegisteredClientSeeder(RegisteredClientRepository registeredClientRepository,
             PasswordEncoder passwordEncoder,
             @Value("${tengan.oauth2.admin-client-secret:tengan-admin-secret}") String adminClientSecret,
-            @Value("${tengan.oauth2.search-client-secret:tengan-search-secret}") String searchClientSecret) {
+            @Value("${tengan.oauth2.search-client-secret:tengan-search-secret}") String searchClientSecret,
+            @Value("${tengan.oauth2.cart-client-secret:tengan-cart-secret}") String cartClientSecret) {
         this.registeredClientRepository = registeredClientRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminClientSecret = adminClientSecret;
         this.searchClientSecret = searchClientSecret;
+        this.cartClientSecret = cartClientSecret;
     }
 
     @Override
@@ -54,6 +60,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
         seedIfAbsent(ADMIN_CLIENT_ID, adminClientSecret, "product.read", "product.write", "search.write",
                 "member.read", "account.read", "account.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
+        seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
     }
 
     /**

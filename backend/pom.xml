@@ -96,6 +96,7 @@
     <module>tengan-product</module>
     <module>tengan-search</module>
     <module>tengan-member</module>
+    <module>tengan-cart</module>
   </modules>
 
 </project>

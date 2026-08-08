@@ -16,6 +16,10 @@ export function useAuth() {
       })
       authStore.setUser({ userId: data.accountId, username: data.username })
       await useMemberStore().fetchProfile()
+      // 登入成功才有 access token cookie 可用，merge 要在這之後呼叫；訪客購物車併入會員後
+      // 立刻刷新 header 徽章數量，不用等下一次頁面 SSR 重新查
+      const newCartCount = await useCart().mergeCart()
+      useCartStore().setCount(newCartCount)
       await navigateTo('/')
     } catch (e: any) {
       error.value = e.data?.message || e.statusMessage || '登入失敗，請稍後再試'

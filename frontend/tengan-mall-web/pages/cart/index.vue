@@ -28,14 +28,15 @@
             <input
               type="checkbox"
               :checked="item.checked"
-              @change="toggleItem(item.itemId)"
+              @change="toggleItem(item)"
               class="w-4 h-4 accent-red-500 shrink-0"
             />
-            <NuxtLink :to="`/item/${item.skuId}`" class="w-20 h-20 rounded border border-gray-100 overflow-hidden shrink-0">
+            <NuxtLink :to="item.spuId ? `/item/${item.spuId}` : '#'" class="w-20 h-20 rounded border border-gray-100 overflow-hidden shrink-0">
               <img :src="item.image" :alt="item.skuName" class="w-full h-full object-cover" />
             </NuxtLink>
-            <NuxtLink :to="`/item/${item.skuId}`" class="flex-1 text-sm text-gray-700 hover:text-red-500 transition line-clamp-2">
+            <NuxtLink :to="item.spuId ? `/item/${item.spuId}` : '#'" class="flex-1 text-sm text-gray-700 hover:text-red-500 transition line-clamp-2">
               {{ item.skuName }}
+              <span v-if="!item.available" class="text-xs text-gray-400">（已下架）</span>
             </NuxtLink>
             <div class="w-24 text-center text-sm text-gray-700">
               NT$ {{ item.price.toLocaleString() }}
@@ -123,12 +124,11 @@
 </template>
 
 <script setup lang="ts">
-import type { CartItem } from '~/mocks/cart'
+import type { CartItem } from '~/types/cart'
 
-definePageMeta({ middleware: 'auth' })
-
+// 購物車要同時服務會員/訪客，不強制登入才能看（middleware: 'auth' 移除）
 const cartStore = useCartStore()
-const { fetchCartItems, removeFromCart, updateQty, toggleChecked, toggleAllChecked } = useCart()
+const { fetchCartItems, removeFromCart, updateQty, toggleChecked, toggleAllChecked, removeCheckedItems } = useCart()
 
 const items = ref<CartItem[]>(await fetchCartItems())
 
@@ -142,14 +142,14 @@ async function toggleAll() {
   items.value = await fetchCartItems()
 }
 
-async function toggleItem(id: number) {
-  await toggleChecked(id)
+async function toggleItem(item: CartItem) {
+  await toggleChecked(item.itemId, !item.checked)
   items.value = await fetchCartItems()
 }
 
 async function changeQty(id: number, delta: number) {
   const item = items.value.find(i => i.itemId === id)
-  if (!item) return
+  if (!item || item.count + delta < 1) return
   await updateQty(id, item.count + delta)
   items.value = await fetchCartItems()
 }
@@ -161,11 +161,9 @@ async function removeItem(id: number) {
 }
 
 async function removeChecked() {
-  for (const item of items.value.filter(i => i.checked)) {
-    await removeFromCart(item.itemId)
-  }
+  const newCount = await removeCheckedItems()
   items.value = await fetchCartItems()
-  cartStore.setCount(items.value.reduce((sum, i) => sum + i.count, 0))
+  cartStore.setCount(newCount)
 }
 
 function goCheckout() {

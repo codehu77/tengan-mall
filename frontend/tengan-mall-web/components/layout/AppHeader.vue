@@ -58,7 +58,7 @@
                   <NuxtLink
                     v-for="item in miniCartItems"
                     :key="item.itemId"
-                    :to="`/item/${item.skuId}`"
+                    :to="item.spuId ? `/item/${item.spuId}` : '#'"
                     class="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition"
                   >
                     <img :src="item.image" :alt="item.skuName" class="w-14 h-14 rounded border border-gray-100 object-cover shrink-0" />
@@ -118,7 +118,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CartItem } from '~/mocks/cart'
+import type { CartItem } from '~/types/cart'
 
 const keyword = ref('')
 const router = useRouter()

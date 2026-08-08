@@ -5,7 +5,10 @@ import com.tengan.mall.product.application.spu.SkuDetailPort;
 import com.tengan.mall.product.application.spu.SkuDetailView;
 import com.tengan.mall.product.application.spu.SkuImageView;
 import com.tengan.mall.product.application.spu.SkuSaleAttrValueView;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
@@ -45,5 +48,36 @@ public class SkuDetailQueryAdapter implements SkuDetailPort {
 
         return Optional.of(new SkuDetailView(po.getId(), po.getSpuId(), po.getName(), po.getPrice(),
                 po.getMainImage(), po.getSaleCount(), po.getSort(), images, saleAttrValues));
+    }
+
+    @Override
+    public List<SkuDetailView> findByIds(List<Long> skuIds) {
+        if (skuIds.isEmpty()) {
+            return List.of();
+        }
+        List<SkuPO> skuPOs = skuMapper.selectBatchIds(skuIds);
+        if (skuPOs.isEmpty()) {
+            return List.of();
+        }
+        List<Long> foundIds = skuPOs.stream().map(SkuPO::getId).toList();
+
+        Map<Long, List<SkuImageView>> imagesBySkuId = skuImageMapper
+                .selectList(new LambdaQueryWrapper<SkuImagePO>().in(SkuImagePO::getSkuId, foundIds))
+                .stream()
+                .collect(Collectors.groupingBy(SkuImagePO::getSkuId,
+                        Collectors.mapping(i -> new SkuImageView(i.getImageUrl(), i.getSort()), Collectors.toList())));
+        Map<Long, List<SkuSaleAttrValueView>> saleAttrValuesBySkuId = skuSaleAttrValueMapper
+                .selectList(new LambdaQueryWrapper<SkuSaleAttrValuePO>().in(SkuSaleAttrValuePO::getSkuId, foundIds))
+                .stream()
+                .collect(Collectors.groupingBy(SkuSaleAttrValuePO::getSkuId, Collectors.mapping(
+                        v -> new SkuSaleAttrValueView(v.getAttrId(), v.getAttrName(), v.getAttrValue()),
+                        Collectors.toList())));
+
+        return skuPOs.stream()
+                .map(po -> new SkuDetailView(po.getId(), po.getSpuId(), po.getName(), po.getPrice(),
+                        po.getMainImage(), po.getSaleCount(), po.getSort(),
+                        imagesBySkuId.getOrDefault(po.getId(), List.of()),
+                        saleAttrValuesBySkuId.getOrDefault(po.getId(), List.of())))
+                .toList();
     }
 }
