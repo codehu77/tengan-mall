@@ -2,8 +2,8 @@ package com.tengan.mall.member.domain.model;
 
 /**
  * 聚合根：會員收件地址，獨立於 Member 之外（有自己的 CRUD 生命週期，不是 Member 底下的
- * child entity）。地址格式維持單一自由文字欄位（比照 tengan-mall-web 既有 mock 的
- * receiverName/receiverPhone/receiverAddress 形狀），不拆縣市/鄉鎮區結構化欄位。
+ * child entity）。地址拆成 city/district/postalCode/street 四個結構化欄位，配合前台
+ * 城市+區下拉選單的表單設計（2026-08-08 由單一自由文字欄位改版）。
  */
 public class MemberAddress {
 
@@ -11,27 +11,35 @@ public class MemberAddress {
     private final Long memberId;
     private String receiverName;
     private String receiverPhone;
-    private String address;
+    private String city;
+    private String district;
+    private String postalCode;
+    private String street;
     private boolean isDefault;
 
-    private MemberAddress(Long id, Long memberId, String receiverName, String receiverPhone, String address,
-            boolean isDefault) {
+    private MemberAddress(Long id, Long memberId, String receiverName, String receiverPhone, String city,
+            String district, String postalCode, String street, boolean isDefault) {
         this.id = id;
         this.memberId = memberId;
         this.receiverName = receiverName;
         this.receiverPhone = receiverPhone;
-        this.address = address;
+        this.city = city;
+        this.district = district;
+        this.postalCode = postalCode;
+        this.street = street;
         this.isDefault = isDefault;
     }
 
-    public static MemberAddress create(Long memberId, String receiverName, String receiverPhone, String address,
-            boolean isDefault) {
-        return new MemberAddress(null, memberId, receiverName, receiverPhone, address, isDefault);
+    public static MemberAddress create(Long memberId, String receiverName, String receiverPhone, String city,
+            String district, String postalCode, String street, boolean isDefault) {
+        return new MemberAddress(null, memberId, receiverName, receiverPhone, city, district, postalCode, street,
+                isDefault);
     }
 
     public static MemberAddress reconstitute(Long id, Long memberId, String receiverName, String receiverPhone,
-            String address, boolean isDefault) {
-        return new MemberAddress(id, memberId, receiverName, receiverPhone, address, isDefault);
+            String city, String district, String postalCode, String street, boolean isDefault) {
+        return new MemberAddress(id, memberId, receiverName, receiverPhone, city, district, postalCode, street,
+                isDefault);
     }
 
     public void assignId(Long id) {
@@ -41,10 +49,14 @@ public class MemberAddress {
         this.id = id;
     }
 
-    public void update(String receiverName, String receiverPhone, String address) {
+    public void update(String receiverName, String receiverPhone, String city, String district, String postalCode,
+            String street) {
         this.receiverName = receiverName;
         this.receiverPhone = receiverPhone;
-        this.address = address;
+        this.city = city;
+        this.district = district;
+        this.postalCode = postalCode;
+        this.street = street;
     }
 
     public void markAsDefault() {
@@ -75,8 +87,20 @@ public class MemberAddress {
         return receiverPhone;
     }
 
-    public String getAddress() {
-        return address;
+    public String getCity() {
+        return city;
+    }
+
+    public String getDistrict() {
+        return district;
+    }
+
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public String getStreet() {
+        return street;
     }
 
     public boolean isDefault() {

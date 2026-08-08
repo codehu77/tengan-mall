@@ -26,7 +26,8 @@ public class CreateAddressService implements CreateAddressUseCase {
         }
 
         MemberAddress address = MemberAddress.create(command.memberId(), command.receiverName(),
-                command.receiverPhone(), command.address(), shouldBeDefault);
+                command.receiverPhone(), command.city(), command.district(), command.postalCode(),
+                command.street(), shouldBeDefault);
         memberAddressRepository.save(address);
         return new CreateAddressResult(address.getId());
     }

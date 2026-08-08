@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 訂單列表切換狀態頁籤時，內容高度差異很大（全部訂單 vs 只有 1 筆的狀態頁籤），
+   捲軸的出現/消失會讓可視寬度跳動，切頁籤時整個內容區塊看起來會抽動。
+   固定保留捲軸溝槽寬度，讓寬度不再受捲軸有無影響。 */
+html {
+  scrollbar-gutter: stable;
+}

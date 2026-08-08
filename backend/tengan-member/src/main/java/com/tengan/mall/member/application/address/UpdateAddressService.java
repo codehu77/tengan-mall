@@ -20,7 +20,8 @@ public class UpdateAddressService implements UpdateAddressUseCase {
         MemberAddress address = memberAddressRepository.findById(command.addressId())
                 .filter(a -> a.belongsTo(command.memberId()))
                 .orElseThrow(() -> new MemberAddressNotFoundException(command.addressId()));
-        address.update(command.receiverName(), command.receiverPhone(), command.address());
+        address.update(command.receiverName(), command.receiverPhone(), command.city(), command.district(),
+                command.postalCode(), command.street());
         memberAddressRepository.save(address);
     }
 }

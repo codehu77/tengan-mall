@@ -15,6 +15,7 @@ export function useAuth() {
         body: { username, password },
       })
       authStore.setUser({ userId: data.accountId, username: data.username })
+      await useMemberStore().fetchProfile()
       await navigateTo('/')
     } catch (e: any) {
       error.value = e.data?.message || e.statusMessage || '登入失敗，請稍後再試'

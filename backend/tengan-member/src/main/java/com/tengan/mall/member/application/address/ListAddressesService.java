@@ -16,8 +16,8 @@ public class ListAddressesService implements ListAddressesUseCase {
     @Override
     public List<AddressSummary> list(Long memberId) {
         return memberAddressRepository.findByMemberId(memberId).stream()
-                .map(a -> new AddressSummary(a.getId(), a.getReceiverName(), a.getReceiverPhone(), a.getAddress(),
-                        a.isDefault()))
+                .map(a -> new AddressSummary(a.getId(), a.getReceiverName(), a.getReceiverPhone(), a.getCity(),
+                        a.getDistrict(), a.getPostalCode(), a.getStreet(), a.isDefault()))
                 .toList();
     }
 }

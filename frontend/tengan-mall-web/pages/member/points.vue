@@ -1,6 +1,5 @@
 <template>
-  <div class="bg-gray-100 min-h-screen py-6">
-    <div class="max-w-7xl mx-auto px-6 space-y-4">
+  <div class="space-y-4">
 
       <div>
         <h1 class="text-2xl font-semibold text-gray-800">我的點數</h1>
@@ -82,8 +81,6 @@
         @retry="store.loadFaq()"
       />
 
-    </div>
-
     <PointsTransactionDetailDialog
       :open="store.isDetailOpen"
       :transaction="store.selectedTransaction"
@@ -96,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
+definePageMeta({ middleware: 'auth', layout: 'member' })
 
 const store = usePointsStore()
 const isDev = import.meta.dev

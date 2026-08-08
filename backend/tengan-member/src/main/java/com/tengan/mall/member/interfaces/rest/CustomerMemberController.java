@@ -85,7 +85,8 @@ public class CustomerMemberController {
     public ResponseEntity<CreateAddressResponse> createAddress(@AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateAddressRequest request) {
         var result = createAddressUseCase.create(new CreateAddressCommand(memberId(jwt), request.receiverName(),
-                request.receiverPhone(), request.address(), request.isDefault()));
+                request.receiverPhone(), request.city(), request.district(), request.postalCode(), request.street(),
+                request.isDefault()));
         return ResponseEntity.status(HttpStatus.CREATED).body(new CreateAddressResponse(result.id()));
     }
 
@@ -93,7 +94,8 @@ public class CustomerMemberController {
     public void updateAddress(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
             @Valid @RequestBody UpdateAddressRequest request) {
         updateAddressUseCase.update(new UpdateAddressCommand(memberId(jwt), id, request.receiverName(),
-                request.receiverPhone(), request.address()));
+                request.receiverPhone(), request.city(), request.district(), request.postalCode(),
+                request.street()));
     }
 
     @DeleteMapping("/addresses/{id}")
@@ -111,7 +113,7 @@ public class CustomerMemberController {
     }
 
     private AddressResponse toResponse(AddressSummary summary) {
-        return new AddressResponse(summary.id(), summary.receiverName(), summary.receiverPhone(),
-                summary.address(), summary.isDefault());
+        return new AddressResponse(summary.id(), summary.receiverName(), summary.receiverPhone(), summary.city(),
+                summary.district(), summary.postalCode(), summary.street(), summary.isDefault());
     }
 }

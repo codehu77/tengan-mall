@@ -13,7 +13,10 @@ public class MemberAddressPO {
     private Long memberId;
     private String receiverName;
     private String receiverPhone;
-    private String address;
+    private String city;
+    private String district;
+    private String postalCode;
+    private String street;
     private Boolean isDefault;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -50,12 +53,36 @@ public class MemberAddressPO {
         this.receiverPhone = receiverPhone;
     }
 
-    public String getAddress() {
-        return address;
+    public String getCity() {
+        return city;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getDistrict() {
+        return district;
+    }
+
+    public void setDistrict(String district) {
+        this.district = district;
+    }
+
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode;
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public void setStreet(String street) {
+        this.street = street;
     }
 
     public Boolean getIsDefault() {

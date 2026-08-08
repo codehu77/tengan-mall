@@ -70,13 +70,17 @@ public class MemberAddressRepositoryImpl implements MemberAddressRepository {
         po.setMemberId(address.getMemberId());
         po.setReceiverName(address.getReceiverName());
         po.setReceiverPhone(address.getReceiverPhone());
-        po.setAddress(address.getAddress());
+        po.setCity(address.getCity());
+        po.setDistrict(address.getDistrict());
+        po.setPostalCode(address.getPostalCode());
+        po.setStreet(address.getStreet());
         po.setIsDefault(address.isDefault());
         return po;
     }
 
     private MemberAddress toDomain(MemberAddressPO po) {
         return MemberAddress.reconstitute(po.getId(), po.getMemberId(), po.getReceiverName(), po.getReceiverPhone(),
-                po.getAddress(), Boolean.TRUE.equals(po.getIsDefault()));
+                po.getCity(), po.getDistrict(), po.getPostalCode(), po.getStreet(),
+                Boolean.TRUE.equals(po.getIsDefault()));
     }
 }

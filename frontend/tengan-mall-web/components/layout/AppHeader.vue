@@ -22,7 +22,7 @@
       <div class="flex items-center gap-4 shrink-0">
         <!-- 購物車 -->
         <div class="relative" @mouseenter="openMiniCart" @mouseleave="closeMiniCart">
-          <NuxtLink to="/cart" class="relative text-gray-600 hover:text-red-600 block py-2">
+          <NuxtLink to="/cart" class="relative flex items-center h-10 text-gray-600 hover:text-red-600">
             <UIcon name="i-heroicons-shopping-cart" class="w-6 h-6" />
             <span
               v-if="cartCount > 0"
@@ -87,10 +87,20 @@
         <!-- 登入狀態 -->
         <template v-if="authStore.isLoggedIn">
           <UDropdown :items="userMenuItems">
-            <UButton variant="ghost" color="gray">
-              {{ authStore.username }}
-              <UIcon name="i-heroicons-chevron-down" class="w-4 h-4" />
-            </UButton>
+            <button
+              type="button"
+              class="flex items-center h-10 gap-2 px-2 rounded-md text-gray-700 hover:bg-gray-100 transition"
+            >
+              <img
+                v-if="memberStore.profile?.avatarUrl"
+                :src="memberStore.profile.avatarUrl"
+                alt="頭像"
+                class="w-8 h-8 rounded-full object-cover shrink-0"
+              />
+              <UIcon v-else name="i-heroicons-user-circle" class="w-8 h-8 text-gray-400 shrink-0" />
+              <span class="text-base font-medium">{{ displayName }}</span>
+              <UIcon name="i-heroicons-chevron-down" class="w-4 h-4 shrink-0" />
+            </button>
           </UDropdown>
         </template>
         <template v-else>
@@ -113,8 +123,11 @@ import type { CartItem } from '~/mocks/cart'
 const keyword = ref('')
 const router = useRouter()
 const authStore = useAuthStore()
+const memberStore = useMemberStore()
 const cartStore = useCartStore()
 const { fetchMiniCart } = useCart()
+
+const displayName = computed(() => memberStore.profile?.nickname || authStore.username)
 
 const cartCount = computed(() => cartStore.count)
 
@@ -150,6 +163,7 @@ const handleSearch = () => {
 
 const userMenuItems = [
   [
+    { label: '會員中心', icon: 'i-heroicons-user-circle', to: '/member/profile' },
     { label: '我的訂單', icon: 'i-heroicons-clipboard-document-list', to: '/order/list' },
     { label: '我的點數', icon: 'i-heroicons-wallet', to: '/member/points' },
   ],
