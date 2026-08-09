@@ -6,9 +6,13 @@ import LayNavMix from "../lay-sidebar/NavMix.vue";
 import LaySidebarFullScreen from "../lay-sidebar/components/SidebarFullScreen.vue";
 import LaySidebarBreadCrumb from "../lay-sidebar/components/SidebarBreadCrumb.vue";
 import LaySidebarTopCollapse from "../lay-sidebar/components/SidebarTopCollapse.vue";
+import { useRouter } from "vue-router";
 
 import LogoutCircleRLine from "~icons/ri/logout-circle-r-line";
+import UserLine from "~icons/ri/user-line";
 import Setting from "~icons/ri/settings-3-line";
+
+const router = useRouter();
 
 const {
   layout,
@@ -54,6 +58,10 @@ const {
         </span>
         <template #dropdown>
           <el-dropdown-menu class="logout">
+            <el-dropdown-item @click="router.push('/personal')">
+              <IconifyIconOffline :icon="UserLine" style="margin: 5px" />
+              個人中心
+            </el-dropdown-item>
             <el-dropdown-item @click="logout">
               <IconifyIconOffline
                 :icon="LogoutCircleRLine"

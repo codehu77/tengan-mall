@@ -27,6 +27,11 @@ dist/
 npm-debug.log*
 pnpm-debug.log*
 
+# 本機開發時上傳的檔案（頭像等），本機磁碟儲存，不進版控
+# IntelliJ run tengan-admin 的工作目錄實測是 repo 根目錄，所以 app.upload.dir 的相對路徑落在這裡，
+# 不是 backend/tengan-admin/ 底下。
+/data/
+
 # .env 的其他變體（.env 本身已在上面擋掉）
 .env.local
 .env.*.local

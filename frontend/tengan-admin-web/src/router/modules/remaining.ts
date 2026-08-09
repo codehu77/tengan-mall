@@ -44,5 +44,25 @@ export default [
         component: () => import("@/layout/redirect.vue")
       }
     ]
+  },
+  // 個人中心：任何登入的管理員都能進，不掛在 RBAC 選單樹上，所以不出現在側邊欄。
+  {
+    path: "/personal",
+    component: Layout,
+    meta: {
+      title: "個人中心",
+      showLink: false
+    },
+    children: [
+      {
+        path: "/personal",
+        name: "Personal",
+        component: () => import("@/views/personal/index.vue"),
+        meta: {
+          title: "個人中心",
+          showLink: false
+        }
+      }
+    ]
   }
 ] satisfies Array<RouteConfigsTable>;

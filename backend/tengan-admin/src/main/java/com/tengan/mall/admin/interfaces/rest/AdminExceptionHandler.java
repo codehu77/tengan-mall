@@ -3,11 +3,13 @@ package com.tengan.mall.admin.interfaces.rest;
 import com.tengan.mall.admin.domain.exception.AdminAccountDisabledException;
 import com.tengan.mall.admin.domain.exception.DuplicateAdminUsernameException;
 import com.tengan.mall.admin.domain.exception.DuplicateRoleCodeException;
+import com.tengan.mall.admin.domain.exception.FileTooLargeException;
 import com.tengan.mall.admin.domain.exception.InvalidAdminCredentialsException;
 import com.tengan.mall.admin.domain.exception.InvalidAdminRefreshTokenException;
 import com.tengan.mall.admin.domain.exception.InvalidMenuHierarchyException;
 import com.tengan.mall.admin.domain.exception.InvalidMenuRouteException;
 import com.tengan.mall.admin.domain.exception.MenuHasChildrenException;
+import com.tengan.mall.admin.domain.exception.UnsupportedFileTypeException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.http.HttpStatus;
@@ -45,8 +47,9 @@ public class AdminExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
     }
 
-    @ExceptionHandler({InvalidMenuRouteException.class, InvalidMenuHierarchyException.class})
-    public ResponseEntity<Map<String, String>> handleInvalidMenuRoute(RuntimeException e) {
+    @ExceptionHandler({InvalidMenuRouteException.class, InvalidMenuHierarchyException.class,
+            UnsupportedFileTypeException.class, FileTooLargeException.class})
+    public ResponseEntity<Map<String, String>> handleBadRequest(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
     }
 }

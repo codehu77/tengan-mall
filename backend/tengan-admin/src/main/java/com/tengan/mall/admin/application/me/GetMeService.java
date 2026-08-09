@@ -28,6 +28,6 @@ public class GetMeService implements GetMeUseCase {
                 .map(role -> role.getRoleCode().value())
                 .toList();
         return new GetMeResult(adminUser.getId().value(), adminUser.getUsername().value(),
-                adminUser.getRealName(), roleCodes);
+                adminUser.getRealName(), adminUser.getAvatarUrl(), roleCodes);
     }
 }

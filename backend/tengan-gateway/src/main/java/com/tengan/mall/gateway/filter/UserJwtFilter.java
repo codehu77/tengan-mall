@@ -29,6 +29,10 @@ import reactor.core.scheduler.Schedulers;
  *       token 不是 access token JWT），不能套用「強制持有效 access token」的規則，否則會變成
  *       無法自我修復的死結（tengan-auth/tengan-admin 自己的 SecurityConfig 也有對應的放行鏈，
  *       兩邊要一致，不能只修一邊）。</li>
+ *   <li>{@code /api/admin/static/**}：管理員頭像等圖片的靜態資源，也直接放行——瀏覽器
+ *       原生 {@code <img>} 標籤不會帶 Authorization header，這條路徑若強制驗證圖片就顯示不出來。
+ *       只開這一條純讀取的靜態資源路徑，查/改個人資料等 JSON API 不受影響，一樣強制登入
+ *       （tengan-admin 自己的 SecurityConfig 也有對應的放行鏈，兩邊要一致）。</li>
  *   <li>{@code /api/customer/cart/**}：選擇性驗證——驗證成功才轉發 token，
  *       失敗或缺失一律放行但不轉發 Authorization，下游依 header 存不存在判斷會員/訪客</li>
  *   <li>其餘 {@code /api/customer/**}：強制登入，缺失或驗證失敗直接 401，用
@@ -44,6 +48,7 @@ public class UserJwtFilter implements GlobalFilter, Ordered {
     private static final String PUBLIC_PREFIX = "/api/public/";
     private static final String PARTNER_PREFIX = "/api/partner/";
     private static final String ADMIN_PREFIX = "/api/admin/";
+    private static final String ADMIN_STATIC_PREFIX = "/api/admin/static/";
     private static final String CART_SELECTIVE_PREFIX = "/api/customer/cart/";
     private static final String CUSTOMER_REFRESH_PATH = "/api/customer/auth/refresh";
     private static final String ADMIN_LOGIN_PATH = "/api/admin/auth/login";
@@ -63,7 +68,8 @@ public class UserJwtFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
 
         if (path.startsWith(PUBLIC_PREFIX) || path.startsWith(PARTNER_PREFIX) || path.equals(CUSTOMER_REFRESH_PATH)
-                || path.equals(ADMIN_LOGIN_PATH) || path.equals(ADMIN_REFRESH_PATH)) {
+                || path.equals(ADMIN_LOGIN_PATH) || path.equals(ADMIN_REFRESH_PATH)
+                || path.startsWith(ADMIN_STATIC_PREFIX)) {
             return chain.filter(exchange);
         }
 

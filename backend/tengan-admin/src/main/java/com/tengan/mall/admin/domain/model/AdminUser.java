@@ -15,26 +15,28 @@ public class AdminUser {
     private final AdminUsername username;
     private String passwordHash;
     private String realName;
+    private String avatarUrl;
     private AdminUserStatus status;
     private final Set<RoleId> roleIds;
 
     private AdminUser(AdminUserId id, AdminUsername username, String passwordHash, String realName,
-            AdminUserStatus status, Set<RoleId> roleIds) {
+            String avatarUrl, AdminUserStatus status, Set<RoleId> roleIds) {
         this.id = id;
         this.username = username;
         this.passwordHash = passwordHash;
         this.realName = realName;
+        this.avatarUrl = avatarUrl;
         this.status = status;
         this.roleIds = new HashSet<>(roleIds);
     }
 
     public static AdminUser create(AdminUsername username, String passwordHash, String realName) {
-        return new AdminUser(null, username, passwordHash, realName, AdminUserStatus.ACTIVE, Set.of());
+        return new AdminUser(null, username, passwordHash, realName, null, AdminUserStatus.ACTIVE, Set.of());
     }
 
     public static AdminUser reconstitute(AdminUserId id, AdminUsername username, String passwordHash,
-            String realName, AdminUserStatus status, Set<RoleId> roleIds) {
-        return new AdminUser(id, username, passwordHash, realName, status, roleIds);
+            String realName, String avatarUrl, AdminUserStatus status, Set<RoleId> roleIds) {
+        return new AdminUser(id, username, passwordHash, realName, avatarUrl, status, roleIds);
     }
 
     public void assignId(AdminUserId id) {
@@ -58,6 +60,16 @@ public class AdminUser {
         this.roleIds.addAll(newRoleIds);
     }
 
+    /** 管理員自己編輯個人資訊：改名字、換頭像。 */
+    public void updateProfile(String realName, String avatarUrl) {
+        this.realName = realName;
+        this.avatarUrl = avatarUrl;
+    }
+
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
+
     public boolean isActive() {
         return status == AdminUserStatus.ACTIVE;
     }
@@ -76,6 +88,10 @@ public class AdminUser {
 
     public String getRealName() {
         return realName;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
     }
 
     public AdminUserStatus getStatus() {

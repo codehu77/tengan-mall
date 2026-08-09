@@ -82,6 +82,7 @@ public class AdminUserRepositoryImpl implements AdminUserRepository {
         po.setUsername(adminUser.getUsername().value());
         po.setPasswordHash(adminUser.getPasswordHash());
         po.setRealName(adminUser.getRealName());
+        po.setAvatarUrl(adminUser.getAvatarUrl());
         po.setStatus(adminUser.getStatus());
         return po;
     }
@@ -91,6 +92,6 @@ public class AdminUserRepositoryImpl implements AdminUserRepository {
                 Wrappers.<UserRolePO>lambdaQuery().eq(UserRolePO::getAdminUserId, po.getId()));
         Set<RoleId> roleIds = links.stream().map(link -> new RoleId(link.getRoleId())).collect(Collectors.toSet());
         return AdminUser.reconstitute(new AdminUserId(po.getId()), new AdminUsername(po.getUsername()),
-                po.getPasswordHash(), po.getRealName(), po.getStatus(), roleIds);
+                po.getPasswordHash(), po.getRealName(), po.getAvatarUrl(), po.getStatus(), roleIds);
     }
 }

@@ -28,9 +28,36 @@ export type RefreshTokenResult = {
   refreshToken: string;
 };
 
+/** 對齊 tengan-admin 的 MeResponse。 */
+export type MeResult = {
+  adminId: number;
+  username: string;
+  realName: string;
+  avatarUrl: string;
+  roleCodes: Array<string>;
+};
+
 /** 登入 */
 export const getLogin = (data?: object) => {
   return http.request<UserResult>("post", "/api/admin/auth/login", { data });
+};
+
+/** 查詢目前登入管理員的個人資料 */
+export const getMyProfile = () => {
+  return http.request<MeResult>("get", "/api/admin/auth/me");
+};
+
+/** 更新目前登入管理員的個人資料（真實姓名、頭像） */
+export const updateMyProfile = (data: { realName: string; avatarUrl: string }) => {
+  return http.request<void>("put", "/api/admin/auth/me", { data });
+};
+
+/** 修改目前登入管理員的密碼 */
+export const changeMyPassword = (data: {
+  oldPassword: string;
+  newPassword: string;
+}) => {
+  return http.request<void>("put", "/api/admin/auth/me/password", { data });
 };
 
 /** 重新整理`token` */

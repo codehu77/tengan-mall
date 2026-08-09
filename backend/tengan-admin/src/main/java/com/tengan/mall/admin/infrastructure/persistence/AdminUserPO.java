@@ -14,6 +14,7 @@ public class AdminUserPO {
     private String username;
     private String passwordHash;
     private String realName;
+    private String avatarUrl;
     private AdminUserStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -48,6 +49,14 @@ public class AdminUserPO {
 
     public void setRealName(String realName) {
         this.realName = realName;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public AdminUserStatus getStatus() {
