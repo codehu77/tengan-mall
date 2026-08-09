@@ -10,6 +10,7 @@ import {
   updateMenu,
   deleteMenu
 } from "@/api/menu";
+import { initRouter } from "@/router/utils";
 import menuForm from "./form.vue";
 
 defineOptions({
@@ -30,6 +31,16 @@ async function onSearch() {
   const { items } = await getMenuList();
   dataList.value = items;
   loading.value = false;
+}
+
+/**
+ * Sidebar 用的 usePermissionStoreHook().wholeMenus 只在登入後第一次進頁時抓取一次
+ * （router/index.ts 只在 wholeMenus 為空時才重跑 initRouter()），選單管理頁改完
+ * sortOrder 後如果不主動重跑 initRouter()，Sidebar 會停在登入當下的舊順序，
+ * 要整頁重整或重新登入才會同步。
+ */
+function refreshSidebar() {
+  initRouter();
 }
 
 const formRef = ref();
@@ -100,6 +111,7 @@ function openMenuDialog(
             });
             done();
             onSearch();
+            refreshSidebar();
           })
           .catch(() => closeLoading());
       });
@@ -115,6 +127,7 @@ function onDelete(row: MenuTreeItem) {
       .then(() => {
         message("刪除成功", { type: "success" });
         onSearch();
+        refreshSidebar();
       })
       .catch((error: any) => {
         message(error?.response?.data?.message ?? "刪除失敗，底下可能還有子節點", {
@@ -151,6 +164,11 @@ function allowDrop(draggingNode: DragNode, dropNode: DragNode, type: string) {
  * 已經失效（讀出來是空陣列），送出去的 Promise.all([]) 會直接秒過、完全沒打到後端，
  * 畫面卻照樣顯示「更新成功」。dropNode 沒有被 remove，它的 .parent 才是拖放後真正的
  * 那個父節點，讀出來的 childNodes 才是新順序。
+ *
+ * sortOrder 從 1 開始寫（不是 0）：pure-admin 的 ascending()/handRank()（router/utils.ts）
+ * 把「頂層節點 rank === 0」當成「沒設定 rank」的訊號、只保留給首頁節點，非首頁的頂層目錄一旦
+ * sortOrder 被拖成 0，就會被前端框架悄悄用陣列位置重新編號，導致 Sidebar 順序跟選單管理頁對不起來
+ * （曾經真的把系統管理拖到第一個、sortOrder=0，Sidebar 因此掉到最後面）。
  */
 async function onNodeDrop(draggingNode: DragNode, dropNode: DragNode) {
   const siblings: MenuTreeItem[] = (dropNode.parent?.childNodes ?? []).map(
@@ -166,12 +184,13 @@ async function onNodeDrop(draggingNode: DragNode, dropNode: DragNode) {
           routeName: item.routeName,
           icon: item.icon,
           permissionCode: item.permissionCode,
-          sortOrder: index
+          sortOrder: index + 1
         })
       )
     );
     message("排序已更新", { type: "success" });
     onSearch();
+    refreshSidebar();
   } catch {
     message("排序更新失敗", { type: "error" });
     onSearch();
