@@ -1,0 +1,7 @@
+package com.tengan.mall.admin.interfaces.rest.dto;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
+public record CreateStockRequest(@NotNull Long skuId, @NotNull Long wareId, @Min(0) int initialStock) {
+}

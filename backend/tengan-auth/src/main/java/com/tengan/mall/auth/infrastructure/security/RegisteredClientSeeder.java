@@ -27,6 +27,8 @@ import org.springframework.stereotype.Component;
  * 停權會員時同步停用登入帳號、後台列表即時組裝顯示狀態）；tengan-search 只需要 product.read
  * （拉全量匯出資料，不會寫 tengan-product 任何東西）；tengan-cart 只需要 product.read
  * （購物車即時查價，呼叫新增的 /internal/products/skus 批次端點，不寫 tengan-product 任何東西）。
+ * tengan-admin 這次（Phase 5）多了 inventory.read/write（呼叫 tengan-inventory 的庫存/倉庫/工作單
+ * 管理端點）+ coupon.read/write（呼叫 tengan-coupon 的模板 CRUD/核發端點）。
  * 之後每加一個服務的 internal 端點，就幫需要呼叫它的 client 多加一組 scope，不用這次就把後台清單裡
  * 列的全部 scope 一次註冊完。</p>
  */
@@ -58,7 +60,8 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         seedIfAbsent(ADMIN_CLIENT_ID, adminClientSecret, "product.read", "product.write", "search.write",
-                "member.read", "account.read", "account.write");
+                "member.read", "account.read", "account.write", "inventory.read", "inventory.write", "coupon.read",
+                "coupon.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
         seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
     }

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
+import { h, ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
 import { message } from "@/utils/message";
+import { addDialog } from "@/components/ReDialog";
 import { PureTableBar } from "@/components/RePureTableBar";
 import type { TableColumns } from "@pureadmin/table";
 import { type CategoryTreeItem, getCategoryTree } from "@/api/productCategory";
@@ -15,6 +16,8 @@ import {
   deleteSpu,
   duplicateSpu
 } from "@/api/productSpu";
+import spuStockDialog from "./stockDialog.vue";
+import spuViewDialog from "./viewDialog.vue";
 
 defineOptions({
   name: "ProductSpu"
@@ -83,13 +86,14 @@ const searchForm = reactive<{
 });
 
 const columns: TableColumns[] = [
+  { label: "SPU ID", prop: "id", width: 90 },
   { label: "主圖", prop: "mainImage", width: 90, slot: "mainImage" },
   { label: "名稱", prop: "name", minWidth: 180 },
   { label: "分類", prop: "categoryId", minWidth: 140, slot: "category" },
   { label: "品牌", prop: "brandId", minWidth: 120, slot: "brand" },
   { label: "SKU數量", prop: "skuCount", width: 100 },
   { label: "狀態", prop: "status", width: 100, slot: "status" },
-  { label: "操作", fixed: "right", width: 280, slot: "operation" }
+  { label: "操作", fixed: "right", width: 400, slot: "operation" }
 ];
 
 async function loadFilters() {
@@ -141,6 +145,33 @@ function onCreate() {
 
 function onEdit(row: SpuSummaryItem) {
   router.push(`/products/spu/edit/${row.id}`);
+}
+
+function onView(row: SpuSummaryItem) {
+  addDialog({
+    title: `瀏覽 - ${row.name}`,
+    width: "60%",
+    draggable: true,
+    closeOnClickModal: false,
+    hideFooter: true,
+    contentRenderer: () =>
+      h(spuViewDialog, {
+        spuId: row.id,
+        categoryName: categoryNameMap.value.get(row.categoryId) ?? "—",
+        brandName: brandNameMap.value.get(row.brandId) ?? "—"
+      })
+  });
+}
+
+function onManageStock(row: SpuSummaryItem) {
+  addDialog({
+    title: `庫存管理 - ${row.name}`,
+    width: "44%",
+    draggable: true,
+    closeOnClickModal: false,
+    hideFooter: true,
+    contentRenderer: () => h(spuStockDialog, { spuId: row.id })
+  });
 }
 
 function onPublish(row: SpuSummaryItem) {
@@ -311,7 +342,11 @@ onMounted(async () => {
             </el-tag>
           </template>
           <template #operation="{ row }">
+            <el-button link type="primary" @click="onView(row)">瀏覽</el-button>
             <el-button link type="primary" @click="onEdit(row)">編輯</el-button>
+            <el-button link type="primary" @click="onManageStock(row)">
+              庫存
+            </el-button>
             <el-button link type="info" @click="onDuplicate(row)">
               複製
             </el-button>
