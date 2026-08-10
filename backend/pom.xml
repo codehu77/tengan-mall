@@ -99,6 +99,7 @@
     <module>tengan-cart</module>
     <module>tengan-inventory</module>
     <module>tengan-coupon</module>
+    <module>tengan-order</module>
   </modules>
 
 </project>

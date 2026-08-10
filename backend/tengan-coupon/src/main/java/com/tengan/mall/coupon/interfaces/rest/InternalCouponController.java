@@ -13,14 +13,18 @@ import com.tengan.mall.coupon.application.template.DelistTemplateUseCase;
 import com.tengan.mall.coupon.application.template.ListTemplatesUseCase;
 import com.tengan.mall.coupon.application.template.UpdateTemplateCommand;
 import com.tengan.mall.coupon.application.template.UpdateTemplateUseCase;
+import com.tengan.mall.coupon.application.membercoupon.ValidateCouponCommand;
+import com.tengan.mall.coupon.application.membercoupon.ValidateCouponUseCase;
 import com.tengan.mall.coupon.interfaces.rest.dto.CreateTemplateRequest;
 import com.tengan.mall.coupon.interfaces.rest.dto.CreateTemplateResponse;
 import com.tengan.mall.coupon.interfaces.rest.dto.GrantCouponsRequest;
 import com.tengan.mall.coupon.interfaces.rest.dto.GrantCouponsResponse;
+import com.tengan.mall.coupon.interfaces.rest.dto.InternalValidateCouponRequest;
 import com.tengan.mall.coupon.interfaces.rest.dto.ListTemplatesResponse;
 import com.tengan.mall.coupon.interfaces.rest.dto.OrderSnRequest;
 import com.tengan.mall.coupon.interfaces.rest.dto.TemplateResponse;
 import com.tengan.mall.coupon.interfaces.rest.dto.UpdateTemplateRequest;
+import com.tengan.mall.coupon.interfaces.rest.dto.ValidateCouponResponse;
 import com.tengan.mall.jwt.IdentityAssertionVerifier;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -48,12 +52,14 @@ public class InternalCouponController {
     private final UpdateTemplateUseCase updateTemplateUseCase;
     private final DelistTemplateUseCase delistTemplateUseCase;
     private final GrantCouponsUseCase grantCouponsUseCase;
+    private final ValidateCouponUseCase validateCouponUseCase;
     private final IdentityAssertionVerifier adminIdentityAssertionVerifier;
 
     public InternalCouponController(ConsumeCouponUseCase consumeCouponUseCase,
             RevertCouponUseCase revertCouponUseCase, ListTemplatesUseCase listTemplatesUseCase,
             CreateTemplateUseCase createTemplateUseCase, UpdateTemplateUseCase updateTemplateUseCase,
             DelistTemplateUseCase delistTemplateUseCase, GrantCouponsUseCase grantCouponsUseCase,
+            ValidateCouponUseCase validateCouponUseCase,
             @Qualifier("adminIdentityAssertionVerifier") IdentityAssertionVerifier adminIdentityAssertionVerifier) {
         this.consumeCouponUseCase = consumeCouponUseCase;
         this.revertCouponUseCase = revertCouponUseCase;
@@ -62,6 +68,7 @@ public class InternalCouponController {
         this.updateTemplateUseCase = updateTemplateUseCase;
         this.delistTemplateUseCase = delistTemplateUseCase;
         this.grantCouponsUseCase = grantCouponsUseCase;
+        this.validateCouponUseCase = validateCouponUseCase;
         this.adminIdentityAssertionVerifier = adminIdentityAssertionVerifier;
     }
 
@@ -77,6 +84,18 @@ public class InternalCouponController {
     public ResponseEntity<Void> revert(@PathVariable Long id, @Valid @RequestBody OrderSnRequest request) {
         revertCouponUseCase.revert(new RevertCouponCommand(id, request.orderSn()));
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 給 tengan-order 下單時重新核算折扣用，直接複用 CustomerCouponController 也在呼叫的
+     * ValidateCouponUseCase（本身就不含 HTTP/JWT 解析邏輯），userId 改由呼叫端明確帶入 body。
+     */
+    @PostMapping("/validate")
+    @PreAuthorize("hasAuthority('SCOPE_coupon.read')")
+    public ValidateCouponResponse validate(@Valid @RequestBody InternalValidateCouponRequest request) {
+        var result = validateCouponUseCase
+                .validate(new ValidateCouponCommand(request.userId(), request.couponId(), request.amount()));
+        return new ValidateCouponResponse(result.valid(), result.discountAmount());
     }
 
     @GetMapping("/templates")

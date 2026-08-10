@@ -28,7 +28,11 @@ import org.springframework.stereotype.Component;
  * （拉全量匯出資料，不會寫 tengan-product 任何東西）；tengan-cart 只需要 product.read
  * （購物車即時查價，呼叫新增的 /internal/products/skus 批次端點，不寫 tengan-product 任何東西）。
  * tengan-admin 這次（Phase 5）多了 inventory.read/write（呼叫 tengan-inventory 的庫存/倉庫/工作單
- * 管理端點）+ coupon.read/write（呼叫 tengan-coupon 的模板 CRUD/核發端點）。
+ * 管理端點）+ coupon.read/write（呼叫 tengan-coupon 的模板 CRUD/核發端點）。Phase 6 再多了
+ * order.read/write（呼叫 tengan-order 的訂單管理端點）；同時新增 tengan-order 這個 client 本身
+ * ——下單編排需要呼叫 cart（讀取已勾選項目+清空）/product（即時查價）/inventory（鎖庫存）/
+ * coupon（驗證+核銷+回滾）四個服務，scope 只給實際會用到的（cart.read/write、product.read、
+ * inventory.write、coupon.read/write，沒有 inventory.read/coupon.write 用不到的 write/read 組合）。
  * 之後每加一個服務的 internal 端點，就幫需要呼叫它的 client 多加一組 scope，不用這次就把後台清單裡
  * 列的全部 scope 一次註冊完。</p>
  */
@@ -38,32 +42,38 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private static final String ADMIN_CLIENT_ID = "tengan-admin";
     private static final String SEARCH_CLIENT_ID = "tengan-search";
     private static final String CART_CLIENT_ID = "tengan-cart";
+    private static final String ORDER_CLIENT_ID = "tengan-order";
 
     private final RegisteredClientRepository registeredClientRepository;
     private final PasswordEncoder passwordEncoder;
     private final String adminClientSecret;
     private final String searchClientSecret;
     private final String cartClientSecret;
+    private final String orderClientSecret;
 
     public RegisteredClientSeeder(RegisteredClientRepository registeredClientRepository,
             PasswordEncoder passwordEncoder,
             @Value("${tengan.oauth2.admin-client-secret:tengan-admin-secret}") String adminClientSecret,
             @Value("${tengan.oauth2.search-client-secret:tengan-search-secret}") String searchClientSecret,
-            @Value("${tengan.oauth2.cart-client-secret:tengan-cart-secret}") String cartClientSecret) {
+            @Value("${tengan.oauth2.cart-client-secret:tengan-cart-secret}") String cartClientSecret,
+            @Value("${tengan.oauth2.order-client-secret:tengan-order-secret}") String orderClientSecret) {
         this.registeredClientRepository = registeredClientRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminClientSecret = adminClientSecret;
         this.searchClientSecret = searchClientSecret;
         this.cartClientSecret = cartClientSecret;
+        this.orderClientSecret = orderClientSecret;
     }
 
     @Override
     public void run(ApplicationArguments args) {
         seedIfAbsent(ADMIN_CLIENT_ID, adminClientSecret, "product.read", "product.write", "search.write",
                 "member.read", "account.read", "account.write", "inventory.read", "inventory.write", "coupon.read",
-                "coupon.write");
+                "coupon.write", "order.read", "order.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
         seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
+        seedIfAbsent(ORDER_CLIENT_ID, orderClientSecret, "cart.read", "cart.write", "product.read",
+                "inventory.write", "coupon.read", "coupon.write");
     }
 
     /**
