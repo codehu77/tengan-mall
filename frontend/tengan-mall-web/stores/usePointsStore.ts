@@ -7,9 +7,11 @@ import type {
   PointBatch,
   PointFaqItem,
   PointTransaction,
-  PointTransactionFilterType,
+  PointTransactionTypeFilter,
+  PointTransactionStatusFilter,
   PointDateRangeFilter,
   TransactionQuery,
+  TransactionCountItem,
 } from '~/types/points'
 
 const DEFAULT_PAGE_SIZE = 8
@@ -43,6 +45,7 @@ export const usePointsStore = defineStore('points', () => {
   const transactionsError = ref<string | null>(null)
 
   const filter = reactive<TransactionQuery>({
+    status: 'ALL',
     type: 'ALL',
     dateRange: 'ALL',
     keyword: '',
@@ -51,6 +54,9 @@ export const usePointsStore = defineStore('points', () => {
   })
 
   const totalPages = computed(() => Math.max(1, Math.ceil(transactionsTotal.value / filter.pageSize)))
+
+  // 分類 tabs 顯示筆數用——非核心內容，載入失敗就悄悄不顯示徽章，不冒出額外的錯誤畫面
+  const transactionCounts = ref<TransactionCountItem[]>([])
 
   // 交易詳情 Dialog
   const isDetailOpen = ref(false)
@@ -123,9 +129,21 @@ export const usePointsStore = defineStore('points', () => {
     }
   }
 
-  function setFilterType(type: PointTransactionFilterType) {
-    if (filter.type === type) return
+  async function loadTransactionCounts() {
+    try {
+      transactionCounts.value = await pointsService.fetchTransactionCounts()
+    } catch {
+      // 靜默失敗——分類筆數只是輔助資訊，不影響交易明細本身能不能看
+    }
+  }
+
+  // 消費者視角的分類（全部/待入帳/已生效/已使用/已過期/人工調整/已撤銷），每個分類背後對應固定的
+  // type+status 組合（見 TransactionFilterBar.vue 的 categoryTabs）——只有「獲得」真的有等待/生效
+  // 兩階段需要拆開看，其餘類型都是一次性事件，不需要讓使用者面對兩個正交的篩選維度。
+  function setFilterCategory(type: PointTransactionTypeFilter, status: PointTransactionStatusFilter) {
+    if (filter.type === type && filter.status === status) return
     filter.type = type
+    filter.status = status
     filter.page = 1
     loadTransactions()
   }
@@ -181,6 +199,7 @@ export const usePointsStore = defineStore('points', () => {
     loadExpiring()
     loadFaq()
     loadTransactions()
+    loadTransactionCounts()
   }
 
   return {
@@ -203,6 +222,7 @@ export const usePointsStore = defineStore('points', () => {
     transactionsError,
     filter,
     totalPages,
+    transactionCounts,
     isDetailOpen,
     selectedTransaction,
     selectedTransactionId,
@@ -213,7 +233,8 @@ export const usePointsStore = defineStore('points', () => {
     loadExpiring,
     loadFaq,
     loadTransactions,
-    setFilterType,
+    loadTransactionCounts,
+    setFilterCategory,
     setDateRange,
     setKeyword,
     setPage,

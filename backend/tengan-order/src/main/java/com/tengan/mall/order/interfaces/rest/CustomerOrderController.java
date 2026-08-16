@@ -74,7 +74,7 @@ public class CustomerOrderController {
                 request.receiverInfo().district(), request.receiverInfo().postalCode(),
                 request.receiverInfo().street());
         var result = createOrderUseCase.create(new CreateOrderCommand(memberId(jwt), request.orderToken(),
-                receiverInfo, request.paymentMethod(), request.couponId(), request.remark()));
+                receiverInfo, request.paymentMethod(), request.couponId(), request.pointsUsed(), request.remark()));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new CreateOrderResponse(result.orderSn(), result.payAmount()));
     }
@@ -99,8 +99,8 @@ public class CustomerOrderController {
                 .toList();
         return new OrderDetailResponse(d.id(), d.orderSn(), d.memberId(), d.status(), d.cancelReason(),
                 d.totalAmount(), d.discountAmount(), d.payAmount(), d.paymentMethod(), d.couponId(),
-                d.receiverName(), d.receiverPhone(), d.city(), d.district(), d.postalCode(), d.street(), d.remark(),
-                d.receiptTime(), d.createdAt(), items);
+                d.pointsUsed(), d.pointsDiscountAmount(), d.receiverName(), d.receiverPhone(), d.city(),
+                d.district(), d.postalCode(), d.street(), d.remark(), d.receiptTime(), d.createdAt(), items);
     }
 
     @PutMapping("/{orderSn}/cancel")

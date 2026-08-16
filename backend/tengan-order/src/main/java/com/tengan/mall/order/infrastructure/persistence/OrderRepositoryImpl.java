@@ -39,9 +39,9 @@ public class OrderRepositoryImpl implements OrderRepository {
                 .toList();
         return Optional.of(Order.reconstitute(po.getId(), po.getOrderSn(), po.getMemberId(), po.getStatus(),
                 po.getCancelReason(), po.getTotalAmount(), po.getDiscountAmount(), po.getPayAmount(),
-                po.getPaymentMethod(), po.getCouponId(), po.getReceiverName(), po.getReceiverPhone(), po.getCity(),
-                po.getDistrict(), po.getPostalCode(), po.getStreet(), po.getRemark(), toInstant(po.getReceiptTime()),
-                toInstant(po.getCreatedAt()), items));
+                po.getPaymentMethod(), po.getCouponId(), po.getPointsUsed(), po.getPointsDiscountAmount(),
+                po.getReceiverName(), po.getReceiverPhone(), po.getCity(), po.getDistrict(), po.getPostalCode(),
+                po.getStreet(), po.getRemark(), toInstant(po.getReceiptTime()), toInstant(po.getCreatedAt()), items));
     }
 
     @Override
@@ -56,6 +56,8 @@ public class OrderRepositoryImpl implements OrderRepository {
         po.setPayAmount(order.getPayAmount());
         po.setPaymentMethod(order.getPaymentMethod());
         po.setCouponId(order.getCouponId());
+        po.setPointsUsed(order.getPointsUsed());
+        po.setPointsDiscountAmount(order.getPointsDiscountAmount());
         po.setReceiverName(order.getReceiverName());
         po.setReceiverPhone(order.getReceiverPhone());
         po.setCity(order.getCity());
@@ -99,6 +101,11 @@ public class OrderRepositoryImpl implements OrderRepository {
     @Override
     public boolean markCompleted(String orderSn) {
         return orderMapper.markCompleted(orderSn) > 0;
+    }
+
+    @Override
+    public boolean markPointsCredited(String orderSn) {
+        return orderMapper.markPointsCredited(orderSn) > 0;
     }
 
     private Instant toInstant(LocalDateTime dateTime) {

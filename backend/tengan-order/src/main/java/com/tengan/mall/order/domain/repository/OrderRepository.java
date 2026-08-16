@@ -21,4 +21,7 @@ public interface OrderRepository {
 
     /** 條件式 UPDATE status=COMPLETED WHERE order_sn=? AND status=SHIPPED（確認收貨）。 */
     boolean markCompleted(String orderSn);
+
+    /** 條件式 UPDATE points_credited=true WHERE order_sn=? AND points_credited=false（Phase 8 排程用）。 */
+    boolean markPointsCredited(String orderSn);
 }

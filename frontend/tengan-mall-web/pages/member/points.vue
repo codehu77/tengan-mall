@@ -54,7 +54,8 @@
 
         <PointsTransactionFilterBar
           :model-value="store.filter"
-          @update:type="store.setFilterType"
+          :counts="store.transactionCounts"
+          @update:category="store.setFilterCategory($event.type, $event.status)"
           @update:date-range="store.setDateRange"
           @update:keyword="store.setKeyword"
         />

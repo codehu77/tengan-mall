@@ -121,6 +121,11 @@
                 <span class="font-semibold text-red-500">- NT$ {{ order.discountAmount.toLocaleString() }}</span>
               </div>
 
+              <div v-if="order.pointsDiscountAmount > 0" class="flex justify-between items-center text-base text-gray-700">
+                <span>點數折抵（{{ order.pointsUsed }} 點）</span>
+                <span class="font-semibold text-red-500">- NT$ {{ order.pointsDiscountAmount.toLocaleString() }}</span>
+              </div>
+
             </div>
 
             <div class="border-t border-gray-200 mt-4 pt-4 flex justify-between items-center">

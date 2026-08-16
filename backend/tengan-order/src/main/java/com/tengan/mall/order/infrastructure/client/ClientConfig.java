@@ -66,4 +66,9 @@ public class ClientConfig {
     public RestClient couponRestClient(@Value("${tengan.coupon.base-url}") String baseUrl) {
         return buildRestClient(baseUrl);
     }
+
+    @Bean
+    public RestClient walletRestClient(@Value("${tengan.wallet.base-url}") String baseUrl) {
+        return buildRestClient(baseUrl);
+    }
 }

@@ -22,6 +22,9 @@ public class OrderPO {
     private BigDecimal payAmount;
     private String paymentMethod;
     private Long couponId;
+    private Integer pointsUsed;
+    private BigDecimal pointsDiscountAmount;
+    private Boolean pointsCredited;
     private String receiverName;
     private String receiverPhone;
     private String city;
@@ -111,6 +114,30 @@ public class OrderPO {
 
     public void setCouponId(Long couponId) {
         this.couponId = couponId;
+    }
+
+    public Integer getPointsUsed() {
+        return pointsUsed;
+    }
+
+    public void setPointsUsed(Integer pointsUsed) {
+        this.pointsUsed = pointsUsed;
+    }
+
+    public BigDecimal getPointsDiscountAmount() {
+        return pointsDiscountAmount;
+    }
+
+    public void setPointsDiscountAmount(BigDecimal pointsDiscountAmount) {
+        this.pointsDiscountAmount = pointsDiscountAmount;
+    }
+
+    public Boolean getPointsCredited() {
+        return pointsCredited;
+    }
+
+    public void setPointsCredited(Boolean pointsCredited) {
+        this.pointsCredited = pointsCredited;
     }
 
     public String getReceiverName() {

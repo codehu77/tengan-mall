@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { TIER_LABEL } from '~/mocks/points'
+import { TIER_LABEL } from '~/types/points'
 import type { TierInfo } from '~/types/points'
 
 defineProps<{

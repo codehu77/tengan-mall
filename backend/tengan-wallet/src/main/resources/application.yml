@@ -1,0 +1,33 @@
+server:
+  port: 9110
+
+spring:
+  application:
+    name: tengan-mall-wallet
+  datasource:
+    url: jdbc:mysql://localhost:3306/tengan_mall_wallet?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Taipei
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:tengan123}
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_ADMIN_USERNAME:nacos}
+        password: ${NACOS_ADMIN_PASSWORD:tengan123}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_ADMIN_USERNAME:nacos}
+        password: ${NACOS_ADMIN_PASSWORD:tengan123}
+        file-extension: yaml
+  config:
+    import: optional:nacos:${spring.application.name}.yaml
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

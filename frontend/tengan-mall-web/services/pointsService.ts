@@ -1,12 +1,3 @@
-import {
-  getPointSummary,
-  getTierInfo,
-  getTierBenefits,
-  getExpiringBatches,
-  getFaqList,
-  queryTransactions,
-  getTransactionDetail,
-} from '~/mocks/points'
 import type {
   PointAccountSummary,
   TierInfo,
@@ -16,6 +7,7 @@ import type {
   PointTransaction,
   TransactionQuery,
   TransactionQueryResult,
+  TransactionCountItem,
 } from '~/types/points'
 
 export interface ServiceOptions {
@@ -23,44 +15,57 @@ export interface ServiceOptions {
   simulateError?: boolean
 }
 
-// Mock 階段：內部直接讀 mocks/points.ts 的靜態資料並模擬網路延遲。
-// 之後串接 Spring Boot（gulimall-member）時，只需把每個函式內部改成
-// useFetch/$fetch 呼叫對應的 /api/member/points/** 端點，回傳型別維持不變，
-// 呼叫端（stores/usePointsStore.ts）完全不用修改。
-function delayOrThrow<T>(factory: () => T, opts?: ServiceOptions, ms = 400): Promise<T> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (opts?.simulateError) {
-        reject(new Error('伺服器發生錯誤，請稍後再試'))
-        return
-      }
-      resolve(factory())
-    }, ms)
-  })
-}
-
+// 比照 useOrder.ts/useCart.ts：一律用 useRequestFetch()，SSR 頁面才能正確帶上瀏覽器原本的
+// Authorization cookie。isCurrent/highlight 是後端 /api/public/wallet/points/tier/benefits
+// （公開端點，不帶會員身份）不會回傳的欄位，這裡結合 /api/wallet/tier 的結果自己標記。
 export const pointsService = {
-  fetchSummary(opts?: ServiceOptions): Promise<PointAccountSummary> {
-    return delayOrThrow(() => getPointSummary(), opts)
+  async fetchSummary(opts?: ServiceOptions): Promise<PointAccountSummary> {
+    if (opts?.simulateError) throw new Error('伺服器發生錯誤，請稍後再試')
+    return useRequestFetch()('/api/wallet/summary')
   },
 
-  fetchTierInfo(opts?: ServiceOptions): Promise<{ current: TierInfo; benefits: TierBenefit[] }> {
-    return delayOrThrow(() => ({ current: getTierInfo(), benefits: getTierBenefits() }), opts)
+  async fetchTierInfo(opts?: ServiceOptions): Promise<{ current: TierInfo; benefits: TierBenefit[] }> {
+    if (opts?.simulateError) throw new Error('伺服器發生錯誤，請稍後再試')
+    const fetch = useRequestFetch()
+    const [current, rawBenefits] = await Promise.all([
+      fetch<TierInfo>('/api/wallet/tier'),
+      fetch<Omit<TierBenefit, 'isCurrent' | 'highlight'>[]>('/api/wallet/tier-benefits'),
+    ])
+    const benefits: TierBenefit[] = rawBenefits.map(b => ({
+      ...b,
+      isCurrent: b.tier === current.tier,
+      highlight: b.tier === 'PRO',
+    }))
+    return { current, benefits }
   },
 
-  fetchExpiringBatches(opts?: ServiceOptions): Promise<PointBatch[]> {
-    return delayOrThrow(() => getExpiringBatches(), opts)
+  async fetchExpiringBatches(opts?: ServiceOptions): Promise<PointBatch[]> {
+    if (opts?.simulateError) throw new Error('伺服器發生錯誤，請稍後再試')
+    return useRequestFetch()('/api/wallet/expiring')
   },
 
-  fetchFaq(opts?: ServiceOptions): Promise<PointFaqItem[]> {
-    return delayOrThrow(() => getFaqList(), opts, 300)
+  async fetchFaq(opts?: ServiceOptions): Promise<PointFaqItem[]> {
+    if (opts?.simulateError) throw new Error('伺服器發生錯誤，請稍後再試')
+    return useRequestFetch()('/api/wallet/faq')
   },
 
-  fetchTransactions(query: TransactionQuery, opts?: ServiceOptions): Promise<TransactionQueryResult> {
-    return delayOrThrow(() => queryTransactions(query), opts, 500)
+  async fetchTransactions(query: TransactionQuery, opts?: ServiceOptions): Promise<TransactionQueryResult> {
+    if (opts?.simulateError) throw new Error('伺服器發生錯誤，請稍後再試')
+    return useRequestFetch()('/api/wallet/transactions', { query })
   },
 
-  fetchTransactionDetail(id: string, opts?: ServiceOptions): Promise<PointTransaction | null> {
-    return delayOrThrow(() => getTransactionDetail(id), opts, 250)
+  async fetchTransactionDetail(id: string, opts?: ServiceOptions): Promise<PointTransaction | null> {
+    if (opts?.simulateError) throw new Error('伺服器發生錯誤，請稍後再試')
+    try {
+      return await useRequestFetch()(`/api/wallet/transactions/${id}`)
+    } catch (e: any) {
+      if (e?.statusCode === 404 || e?.response?.status === 404) return null
+      throw e
+    }
+  },
+
+  async fetchTransactionCounts(opts?: ServiceOptions): Promise<TransactionCountItem[]> {
+    if (opts?.simulateError) throw new Error('伺服器發生錯誤，請稍後再試')
+    return useRequestFetch()('/api/wallet/transactions/counts')
   },
 }

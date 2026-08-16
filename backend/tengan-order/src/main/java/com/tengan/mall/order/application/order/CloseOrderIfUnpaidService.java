@@ -2,6 +2,7 @@ package com.tengan.mall.order.application.order;
 
 import com.tengan.mall.order.application.port.CouponPort;
 import com.tengan.mall.order.application.port.InventoryPort;
+import com.tengan.mall.order.application.port.WalletPort;
 import com.tengan.mall.order.domain.model.OrderStatus;
 import com.tengan.mall.order.domain.repository.OrderRepository;
 import org.springframework.stereotype.Service;
@@ -17,12 +18,14 @@ public class CloseOrderIfUnpaidService implements CloseOrderIfUnpaidUseCase {
     private final OrderRepository orderRepository;
     private final InventoryPort inventoryPort;
     private final CouponPort couponPort;
+    private final WalletPort walletPort;
 
     public CloseOrderIfUnpaidService(OrderRepository orderRepository, InventoryPort inventoryPort,
-            CouponPort couponPort) {
+            CouponPort couponPort, WalletPort walletPort) {
         this.orderRepository = orderRepository;
         this.inventoryPort = inventoryPort;
         this.couponPort = couponPort;
+        this.walletPort = walletPort;
     }
 
     @Override
@@ -37,6 +40,9 @@ public class CloseOrderIfUnpaidService implements CloseOrderIfUnpaidUseCase {
             inventoryPort.release(orderSn);
             if (order.getCouponId() != null) {
                 couponPort.revert(order.getCouponId(), orderSn);
+            }
+            if (order.getPointsUsed() != null && order.getPointsUsed() > 0) {
+                walletPort.revert(order.getMemberId(), orderSn);
             }
         });
     }

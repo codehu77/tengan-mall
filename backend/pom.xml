@@ -101,6 +101,7 @@
     <module>tengan-coupon</module>
     <module>tengan-order</module>
     <module>tengan-payment</module>
+    <module>tengan-wallet</module>
   </modules>
 
 </project>

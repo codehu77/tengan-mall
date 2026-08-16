@@ -1,5 +1,6 @@
 package com.tengan.mall.order.application.order;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,4 +17,7 @@ public interface OrderQueryPort {
     Optional<OrderDetailView> findDetailByOrderSn(String orderSn);
 
     long countCreatedToday();
+
+    /** status=COMPLETED AND points_credited=false AND receipt_time<=cutoff，供 PointsGrantScheduler 掃描。 */
+    List<PointsGrantCandidate> findPendingPointsCredit(Instant cutoff, int limit);
 }

@@ -6,6 +6,7 @@ import com.tengan.mall.order.application.order.OrderDetailView;
 import com.tengan.mall.order.application.order.OrderItemView;
 import com.tengan.mall.order.application.order.OrderQueryPort;
 import com.tengan.mall.order.application.order.OrderSummary;
+import com.tengan.mall.order.application.order.PointsGrantCandidate;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -52,15 +53,24 @@ public class OrderQueryAdapter implements OrderQueryPort {
                 .toList();
         return Optional.of(new OrderDetailView(po.getId(), po.getOrderSn(), po.getMemberId(),
                 po.getStatus().getValue(), po.getCancelReason(), po.getTotalAmount(), po.getDiscountAmount(),
-                po.getPayAmount(), po.getPaymentMethod(), po.getCouponId(), po.getReceiverName(),
-                po.getReceiverPhone(), po.getCity(), po.getDistrict(), po.getPostalCode(), po.getStreet(),
-                po.getRemark(), toInstant(po.getReceiptTime()), toInstant(po.getCreatedAt()), items));
+                po.getPayAmount(), po.getPaymentMethod(), po.getCouponId(), po.getPointsUsed(),
+                po.getPointsDiscountAmount(), po.getReceiverName(), po.getReceiverPhone(), po.getCity(),
+                po.getDistrict(), po.getPostalCode(), po.getStreet(), po.getRemark(),
+                toInstant(po.getReceiptTime()), toInstant(po.getCreatedAt()), items));
     }
 
     @Override
     public long countCreatedToday() {
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
         return orderMapper.selectCount(new LambdaQueryWrapper<OrderPO>().ge(OrderPO::getCreatedAt, startOfToday));
+    }
+
+    @Override
+    public List<PointsGrantCandidate> findPendingPointsCredit(Instant cutoff, int limit) {
+        LocalDateTime cutoffDateTime = cutoff.atZone(ZoneId.systemDefault()).toLocalDateTime();
+        return orderMapper.findPendingPointsCredit(cutoffDateTime, limit).stream()
+                .map(po -> new PointsGrantCandidate(po.getOrderSn(), po.getMemberId(), po.getPayAmount()))
+                .toList();
     }
 
     private LambdaQueryWrapper<OrderPO> buildWrapper(Long memberId, Integer status) {

@@ -1,17 +1,25 @@
 <template>
   <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-    <!-- 類型 Tabs -->
+    <!-- 消費者視角的分類 Tabs：每個分類背後對應固定的 type+status 組合，不再讓使用者面對兩個正交的
+         篩選維度（只有「獲得」真的有待入帳/已生效兩階段，其餘類型都是一次性事件）。 -->
     <div class="flex border-b border-gray-100 overflow-x-auto">
       <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        class="px-4 py-3 text-base font-medium transition border-b-2 -mb-px whitespace-nowrap"
-        :class="modelValue.type === tab.value
+        v-for="tab in categoryTabs"
+        :key="tab.label"
+        class="px-4 py-3 text-base font-medium transition border-b-2 -mb-px whitespace-nowrap flex items-center gap-1.5"
+        :class="isActive(tab)
           ? 'border-red-500 text-red-600'
           : 'border-transparent text-gray-500 hover:text-gray-700'"
-        @click="$emit('update:type', tab.value)"
+        @click="$emit('update:category', { type: tab.type, status: tab.status })"
       >
         {{ tab.label }}
+        <span
+          v-if="countLabel(tab)"
+          class="text-xs font-semibold rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center"
+          :class="isActive(tab) ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'"
+        >
+          {{ countLabel(tab) }}
+        </span>
       </button>
     </div>
 
@@ -21,7 +29,7 @@
         <select
           :value="modelValue.dateRange"
           class="text-base border border-gray-200 rounded-lg pl-3 pr-8 py-2 outline-none focus:border-red-300 text-gray-700 bg-white appearance-none"
-          @change="$emit('update:dateRange', ($event.target as HTMLSelectElement).value)"
+          @change="$emit('update:dateRange', ($event.target as HTMLSelectElement).value as any)"
         >
           <option v-for="r in dateRangeOptions" :key="r.value" :value="r.value">{{ r.label }}</option>
         </select>
@@ -43,26 +51,62 @@
 </template>
 
 <script setup lang="ts">
-import type { PointDateRangeFilter, PointTransactionFilterType, TransactionQuery } from '~/types/points'
+import type {
+  PointDateRangeFilter,
+  PointTransactionTypeFilter,
+  PointTransactionStatusFilter,
+  TransactionQuery,
+  TransactionCountItem,
+} from '~/types/points'
 
-defineProps<{
+const props = defineProps<{
   modelValue: TransactionQuery
+  counts?: TransactionCountItem[]
 }>()
 
 const emit = defineEmits<{
-  'update:type': [PointTransactionFilterType]
+  'update:category': [{ type: PointTransactionTypeFilter; status: PointTransactionStatusFilter }]
   'update:dateRange': [PointDateRangeFilter]
   'update:keyword': [string]
 }>()
 
-const tabs: { label: string; value: PointTransactionFilterType }[] = [
-  { label: '全部', value: 'ALL' },
-  { label: '獲得', value: 'EARN' },
-  { label: '使用', value: 'REDEEM' },
-  { label: '過期', value: 'EXPIRE' },
-  { label: '人工調整', value: 'ADJUST' },
-  { label: '待入帳', value: 'PENDING' },
+interface CategoryTab {
+  label: string
+  type: PointTransactionTypeFilter
+  status: PointTransactionStatusFilter
+}
+
+const categoryTabs: CategoryTab[] = [
+  { label: '全部', type: 'ALL', status: 'ALL' },
+  { label: '待入帳', type: 'EARN', status: 'PENDING' },
+  { label: '已生效', type: 'EARN', status: 'CONFIRMED' },
+  { label: '已使用', type: 'REDEEM', status: 'CONFIRMED' },
+  { label: '已過期', type: 'EXPIRE', status: 'ALL' },
+  { label: '人工調整', type: 'ADJUST', status: 'ALL' },
+  { label: '已撤銷', type: 'REDEEM', status: 'REVERSED' },
 ]
+
+function isActive(tab: CategoryTab) {
+  return props.modelValue.type === tab.type && props.modelValue.status === tab.status
+}
+
+// 分類 tabs 顯示筆數：後端只回傳原始 (type, status) 分組數字，分類定義（例如「已過期」對應
+// type=EXPIRE 不分狀態）只活在這個檔案，跟真正拿去篩選列表用的 type/status 是同一份定義。
+function countFor(tab: CategoryTab): number {
+  if (!props.counts) return 0
+  if (tab.type === 'ALL') {
+    return props.counts.reduce((sum, c) => sum + c.count, 0)
+  }
+  return props.counts
+    .filter(c => c.type === tab.type && (tab.status === 'ALL' || c.status === tab.status))
+    .reduce((sum, c) => sum + c.count, 0)
+}
+
+function countLabel(tab: CategoryTab): string | null {
+  const n = countFor(tab)
+  if (n <= 0) return null
+  return n > 99 ? '99+' : String(n)
+}
 
 const dateRangeOptions: { label: string; value: PointDateRangeFilter }[] = [
   { label: '全部時間', value: 'ALL' },

@@ -2,6 +2,7 @@ package com.tengan.mall.order.application.order;
 
 import com.tengan.mall.order.application.port.CouponPort;
 import com.tengan.mall.order.application.port.InventoryPort;
+import com.tengan.mall.order.application.port.WalletPort;
 import com.tengan.mall.order.domain.exception.OrderAccessDeniedException;
 import com.tengan.mall.order.domain.exception.OrderCancellationNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderNotFoundException;
@@ -15,11 +16,14 @@ public class CancelOrderService implements CancelOrderUseCase {
     private final OrderRepository orderRepository;
     private final InventoryPort inventoryPort;
     private final CouponPort couponPort;
+    private final WalletPort walletPort;
 
-    public CancelOrderService(OrderRepository orderRepository, InventoryPort inventoryPort, CouponPort couponPort) {
+    public CancelOrderService(OrderRepository orderRepository, InventoryPort inventoryPort, CouponPort couponPort,
+            WalletPort walletPort) {
         this.orderRepository = orderRepository;
         this.inventoryPort = inventoryPort;
         this.couponPort = couponPort;
+        this.walletPort = walletPort;
     }
 
     @Override
@@ -35,6 +39,9 @@ public class CancelOrderService implements CancelOrderUseCase {
         inventoryPort.release(command.orderSn());
         if (order.getCouponId() != null) {
             couponPort.revert(order.getCouponId(), command.orderSn());
+        }
+        if (order.getPointsUsed() != null && order.getPointsUsed() > 0) {
+            walletPort.revert(order.getMemberId(), command.orderSn());
         }
     }
 }

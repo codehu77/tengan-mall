@@ -1,8 +1,11 @@
 package com.tengan.mall.order.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.time.LocalDateTime;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 /**
@@ -23,4 +26,11 @@ public interface OrderMapper extends BaseMapper<OrderPO> {
 
     @Update("UPDATE `order` SET status = 4, receipt_time = NOW() WHERE order_sn = #{orderSn} AND status = 3")
     int markCompleted(@Param("orderSn") String orderSn);
+
+    @Update("UPDATE `order` SET points_credited = TRUE WHERE order_sn = #{orderSn} AND points_credited = FALSE")
+    int markPointsCredited(@Param("orderSn") String orderSn);
+
+    @Select("SELECT * FROM `order` WHERE status = 4 AND points_credited = FALSE AND receipt_time <= #{cutoff} "
+            + "ORDER BY receipt_time ASC LIMIT #{limit}")
+    List<OrderPO> findPendingPointsCredit(@Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
 }

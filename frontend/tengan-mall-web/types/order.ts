@@ -34,6 +34,7 @@ export interface CreateOrderPayload {
   receiverInfo: ReceiverInfoPayload
   paymentMethod: PaymentMethod
   couponId?: number | null
+  pointsUsed?: number | null
   remark?: string
 }
 
@@ -73,6 +74,8 @@ export interface OrderDetail {
   payAmount: number
   paymentMethod: PaymentMethod
   couponId: number | null
+  pointsUsed: number | null
+  pointsDiscountAmount: number
   receiverName: string
   receiverPhone: string
   city: string

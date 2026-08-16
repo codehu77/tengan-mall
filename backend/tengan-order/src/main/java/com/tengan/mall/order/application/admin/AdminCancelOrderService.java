@@ -3,6 +3,7 @@ package com.tengan.mall.order.application.admin;
 import com.tengan.mall.order.application.order.OrderQueryPort;
 import com.tengan.mall.order.application.port.CouponPort;
 import com.tengan.mall.order.application.port.InventoryPort;
+import com.tengan.mall.order.application.port.WalletPort;
 import com.tengan.mall.order.domain.exception.OrderCancellationNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderNotFoundException;
 import com.tengan.mall.order.domain.model.OrderOperLog;
@@ -22,14 +23,17 @@ public class AdminCancelOrderService implements AdminCancelOrderUseCase {
     private final OrderQueryPort orderQueryPort;
     private final InventoryPort inventoryPort;
     private final CouponPort couponPort;
+    private final WalletPort walletPort;
     private final OrderOperLogRepository orderOperLogRepository;
 
     public AdminCancelOrderService(OrderRepository orderRepository, OrderQueryPort orderQueryPort,
-            InventoryPort inventoryPort, CouponPort couponPort, OrderOperLogRepository orderOperLogRepository) {
+            InventoryPort inventoryPort, CouponPort couponPort, WalletPort walletPort,
+            OrderOperLogRepository orderOperLogRepository) {
         this.orderRepository = orderRepository;
         this.orderQueryPort = orderQueryPort;
         this.inventoryPort = inventoryPort;
         this.couponPort = couponPort;
+        this.walletPort = walletPort;
         this.orderOperLogRepository = orderOperLogRepository;
     }
 
@@ -43,6 +47,9 @@ public class AdminCancelOrderService implements AdminCancelOrderUseCase {
         inventoryPort.release(command.orderSn());
         if (detail.couponId() != null) {
             couponPort.revert(detail.couponId(), command.orderSn());
+        }
+        if (detail.pointsUsed() != null && detail.pointsUsed() > 0) {
+            walletPort.revert(detail.memberId(), command.orderSn());
         }
         orderOperLogRepository.save(OrderOperLog.create(command.operator(), "cancel",
                 "客服代為取消 orderSn=" + command.orderSn() + " reason=" + command.reason()));

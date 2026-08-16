@@ -128,6 +128,37 @@
                 </div>
               </div>
 
+              <!-- 點數折抵 -->
+              <div v-if="availablePoints > 0">
+                <div class="flex items-center justify-between">
+                  <span class="text-base text-gray-700">點數折抵（可用 {{ availablePoints }} 點）</span>
+                  <span v-if="appliedPoints > 0" class="text-base font-semibold text-red-500">- NT$ {{ pointsDiscountAmount }}</span>
+                </div>
+                <div class="mt-2 flex items-center gap-2">
+                  <input
+                    v-model.number="pointsInput"
+                    type="number"
+                    min="0"
+                    :max="availablePoints"
+                    class="w-28 text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-red-300"
+                  />
+                  <button
+                    class="text-sm text-red-500 border border-red-300 rounded-lg px-2.5 py-1 hover:bg-red-50 transition"
+                    :disabled="applyingPoints"
+                    @click="applyPoints"
+                  >
+                    套用
+                  </button>
+                  <button
+                    v-if="appliedPoints > 0"
+                    class="text-sm text-gray-400 hover:text-gray-600 transition"
+                    @click="clearPoints"
+                  >
+                    清除
+                  </button>
+                </div>
+              </div>
+
             </div>
 
             <div class="border-t border-gray-200 mt-4 pt-4 flex justify-between items-center">
@@ -215,6 +246,7 @@ definePageMeta({ middleware: 'auth' })
 const { confirmOrder, createOrder, fetchAvailableCoupons } = useOrder()
 const { fetchPaymentMethods } = usePayment()
 const { fetchCartCount } = useCart()
+const { fetchPointsSummary, previewRedeemPoints } = useWallet()
 const addressStore = useAddressStore()
 const cartStore = useCartStore()
 const toast = useToast()
@@ -235,6 +267,12 @@ const showCouponModal = ref(false)
 const selectedCoupon = ref<MyCoupon | null>(null)
 const pendingCouponId = ref<number | null>(null)
 
+const availablePoints = ref(0)
+const pointsInput = ref(0)
+const appliedPoints = ref(0)
+const pointsDiscountAmount = ref(0)
+const applyingPoints = ref(false)
+
 function openCouponModal() {
   pendingCouponId.value = selectedCoupon.value?.id ?? null
   showCouponModal.value = true
@@ -243,11 +281,43 @@ function openCouponModal() {
 function confirmCoupon() {
   selectedCoupon.value = availableCoupons.value.find(c => c.id === pendingCouponId.value) ?? null
   showCouponModal.value = false
+  // 折抵基準（訂單金額-優惠券折扣）變了，先前套用的點數折抵金額可能不再正確，請使用者重新套用。
+  clearPoints()
+}
+
+function clearPoints() {
+  appliedPoints.value = 0
+  pointsDiscountAmount.value = 0
+  pointsInput.value = 0
+}
+
+async function applyPoints() {
+  if (!confirmResult.value) return
+  const points = Math.floor(pointsInput.value)
+  if (points <= 0 || points > availablePoints.value) {
+    toast.add({ title: '請輸入有效的點數數量', color: 'orange', timeout: 3000 })
+    return
+  }
+  const orderAmountAfterCoupon = confirmResult.value.totalAmount - (selectedCoupon.value?.discountAmount ?? 0)
+  applyingPoints.value = true
+  try {
+    const result = await previewRedeemPoints(orderAmountAfterCoupon, points)
+    if (!result.valid) {
+      toast.add({ title: '點數折抵失敗', description: '點數餘額不足或訂單金額不符', color: 'red', timeout: 3000 })
+      return
+    }
+    appliedPoints.value = points
+    pointsDiscountAmount.value = result.discountAmount
+  } catch (e: any) {
+    toast.add({ title: '點數折抵試算失敗', description: e.data?.data?.message ?? e.message, color: 'red', timeout: 3000 })
+  } finally {
+    applyingPoints.value = false
+  }
 }
 
 const payableAmount = computed(() => {
   const total = confirmResult.value?.totalAmount ?? 0
-  return total - (selectedCoupon.value?.discountAmount ?? 0)
+  return total - (selectedCoupon.value?.discountAmount ?? 0) - pointsDiscountAmount.value
 })
 
 const canSubmit = computed(() =>
@@ -289,6 +359,9 @@ onMounted(async () => {
       toast.add({ title: '購物車沒有已勾選的商品', color: 'orange', timeout: 3000 })
       return navigateTo('/cart')
     }
+
+    const pointsSummary = await fetchPointsSummary()
+    availablePoints.value = pointsSummary.availablePoints
   } catch (e: any) {
     toast.add({ title: '載入結帳資訊失敗', description: e.data?.data?.message ?? e.message, color: 'red', timeout: 3000 })
   } finally {
@@ -315,6 +388,7 @@ async function submitOrder() {
       },
       paymentMethod: paymentMethod.value,
       couponId: selectedCoupon.value?.id ?? null,
+      pointsUsed: appliedPoints.value > 0 ? appliedPoints.value : null,
       remark: remark.value || undefined,
     })
     // 下單成功後 tengan-order 已經呼叫 tengan-cart 把已下單項目移除，Header 的購物車徽章數量
@@ -351,6 +425,8 @@ async function submitOrder() {
     // 這次嘗試已經失敗，orderToken 已被消費掉且不會恢復——重新拿一顆新的,讓使用者不用手動整頁重新整理
     try {
       await refreshConfirm()
+      clearPoints()
+      availablePoints.value = (await fetchPointsSummary()).availablePoints
     } catch {
       // 重新整理本身失敗就不疊加第二個錯誤 toast 了，維持原本的下單失敗訊息就好
     }

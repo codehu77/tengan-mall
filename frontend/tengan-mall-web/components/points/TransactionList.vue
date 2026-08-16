@@ -42,6 +42,9 @@
               <UBadge :color="(TRANSACTION_TYPE_META[tx.type].color as any)" variant="subtle" size="sm">
                 {{ TRANSACTION_TYPE_META[tx.type].label }}
               </UBadge>
+              <UBadge v-if="tx.status !== 'CONFIRMED'" :color="(TRANSACTION_STATUS_META[tx.status].color as any)" variant="soft" size="sm">
+                {{ TRANSACTION_STATUS_META[tx.status].label }}
+              </UBadge>
             </div>
             <p class="text-sm text-gray-400 mt-1 truncate">{{ formatDate(tx.createdAt, true) }}</p>
           </div>
@@ -50,8 +53,9 @@
             <p class="text-lg font-semibold" :class="tx.points >= 0 ? 'text-green-600' : 'text-gray-700'">
               {{ tx.points >= 0 ? '+' : '' }}{{ tx.points.toLocaleString() }}
             </p>
-            <p v-if="tx.balanceAfter !== null" class="text-sm text-gray-400 mt-0.5">餘額 {{ tx.balanceAfter.toLocaleString() }}</p>
-            <p v-else class="text-sm text-yellow-500 mt-0.5">未入帳</p>
+            <p v-if="tx.status === 'CONFIRMED' && tx.balanceAfter !== null" class="text-sm text-gray-400 mt-0.5">
+              餘額 {{ tx.balanceAfter.toLocaleString() }}
+            </p>
           </div>
 
           <UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-gray-300 shrink-0" />
@@ -72,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { TRANSACTION_TYPE_META } from '~/mocks/points'
+import { TRANSACTION_TYPE_META, TRANSACTION_STATUS_META } from '~/types/points'
 import type { PointTransaction } from '~/types/points'
 
 defineProps<{
@@ -97,7 +101,6 @@ function iconBgClass(type: PointTransaction['type']) {
     REDEEM: 'bg-red-50',
     EXPIRE: 'bg-gray-100',
     ADJUST: 'bg-orange-50',
-    PENDING: 'bg-yellow-50',
   }
   return map[type]
 }
@@ -108,7 +111,6 @@ function iconColorClass(type: PointTransaction['type']) {
     REDEEM: 'text-red-500',
     EXPIRE: 'text-gray-400',
     ADJUST: 'text-orange-500',
-    PENDING: 'text-yellow-500',
   }
   return map[type]
 }

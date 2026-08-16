@@ -8,6 +8,7 @@ import com.tengan.mall.order.application.port.OrderEventPort;
 import com.tengan.mall.order.application.port.OrderTokenPort;
 import com.tengan.mall.order.application.port.PricedSkuInfo;
 import com.tengan.mall.order.application.port.ProductPort;
+import com.tengan.mall.order.application.port.WalletPort;
 import com.tengan.mall.order.domain.exception.CouponNotApplicableException;
 import com.tengan.mall.order.domain.exception.EmptyCartException;
 import com.tengan.mall.order.domain.exception.InventoryShortageException;
@@ -50,17 +51,19 @@ public class CreateOrderService implements CreateOrderUseCase {
     private final CartPort cartPort;
     private final ProductPort productPort;
     private final CouponPort couponPort;
+    private final WalletPort walletPort;
     private final InventoryPort inventoryPort;
     private final OrderRepository orderRepository;
     private final OrderEventPort orderEventPort;
 
     public CreateOrderService(OrderTokenPort orderTokenPort, CartPort cartPort, ProductPort productPort,
-            CouponPort couponPort, InventoryPort inventoryPort, OrderRepository orderRepository,
+            CouponPort couponPort, WalletPort walletPort, InventoryPort inventoryPort, OrderRepository orderRepository,
             OrderEventPort orderEventPort) {
         this.orderTokenPort = orderTokenPort;
         this.cartPort = cartPort;
         this.productPort = productPort;
         this.couponPort = couponPort;
+        this.walletPort = walletPort;
         this.inventoryPort = inventoryPort;
         this.orderRepository = orderRepository;
         this.orderEventPort = orderEventPort;
@@ -100,11 +103,12 @@ public class CreateOrderService implements CreateOrderUseCase {
             }
             discountAmount = validation.discountAmount();
         }
-        BigDecimal payAmount = totalAmount.subtract(discountAmount);
         String orderSn = generateOrderSn();
 
         // 4. 補償堆疊：由外而內記錄「已成功、失敗時需要反做」的動作
         Deque<Runnable> compensations = new ArrayDeque<>();
+        BigDecimal pointsDiscountAmount = BigDecimal.ZERO;
+        BigDecimal payAmount;
         try {
             var lockItems = orderItems.stream().map(i -> new LockItem(i.skuId(), i.count())).toList();
             var lockResult = inventoryPort.lock(orderSn, lockItems);
@@ -119,11 +123,21 @@ public class CreateOrderService implements CreateOrderUseCase {
                 compensations.push(() -> couponPort.revert(couponId, orderSn));
             }
 
+            // 5. 若使用點數折抵，向 tengan-wallet 核銷（失敗機率比核銷優惠券更低——餘額不足才會失敗，
+            // 放在庫存/優惠券之後、寫入本地 order 之前，沿用「先做便宜可逆、後做昂貴不可逆」排序原則）
+            if (command.pointsUsed() != null && command.pointsUsed() > 0) {
+                var walletResult = walletPort.consume(command.memberId(), command.pointsUsed(), orderSn);
+                pointsDiscountAmount = walletResult.discountAmount();
+                Long memberId = command.memberId();
+                compensations.push(() -> walletPort.revert(memberId, orderSn));
+            }
+
+            payAmount = totalAmount.subtract(discountAmount).subtract(pointsDiscountAmount);
             ReceiverInfo receiver = command.receiverInfo();
             Order order = Order.create(orderSn, command.memberId(), command.paymentMethod(), command.couponId(),
-                    receiver.receiverName(), receiver.receiverPhone(), receiver.city(), receiver.district(),
-                    receiver.postalCode(), receiver.street(), command.remark(), totalAmount, discountAmount,
-                    payAmount, orderItems);
+                    command.pointsUsed(), pointsDiscountAmount, receiver.receiverName(), receiver.receiverPhone(),
+                    receiver.city(), receiver.district(), receiver.postalCode(), receiver.street(), command.remark(),
+                    totalAmount, discountAmount, payAmount, orderItems);
             // 只有這裡碰資料庫，且只有這裡（OrderRepositoryImpl.save）標 @Transactional
             orderRepository.save(order);
 
@@ -138,7 +152,7 @@ public class CreateOrderService implements CreateOrderUseCase {
             throw e;
         }
 
-        // 5. 非關鍵路徑：訂單已經成立，這兩步失敗不該讓下單請求失敗（已知限制，見規劃文件五、）
+        // 6. 非關鍵路徑：訂單已經成立，這兩步失敗不該讓下單請求失敗（已知限制，見規劃文件五、）
         safely(() -> orderEventPort.publishOrderCreatedAndScheduleTimeout(orderSn));
         safely(() -> cartPort.removeItemsAfterOrder(command.memberId(), skuIds));
 

@@ -20,7 +20,7 @@
               <UBadge :color="(TRANSACTION_TYPE_META[transaction.type].color as any)" variant="subtle">
                 {{ TRANSACTION_TYPE_META[transaction.type].label }}
               </UBadge>
-              <span class="text-base text-gray-400">{{ statusLabel(transaction.status) }}</span>
+              <span class="text-base text-gray-400">{{ TRANSACTION_STATUS_META[transaction.status].label }}</span>
             </div>
             <p class="text-3xl font-bold" :class="transaction.points >= 0 ? 'text-green-600' : 'text-gray-700'">
               {{ transaction.points >= 0 ? '+' : '' }}{{ transaction.points.toLocaleString() }} 點
@@ -76,8 +76,8 @@
 </template>
 
 <script setup lang="ts">
-import { TRANSACTION_TYPE_META } from '~/mocks/points'
-import type { PointTransaction, PointTransactionStatus } from '~/types/points'
+import { TRANSACTION_TYPE_META, TRANSACTION_STATUS_META } from '~/types/points'
+import type { PointTransaction } from '~/types/points'
 
 defineProps<{
   open: boolean
@@ -87,14 +87,4 @@ defineProps<{
 }>()
 
 defineEmits<{ close: []; retry: [] }>()
-
-function statusLabel(status: PointTransactionStatus) {
-  const map: Record<PointTransactionStatus, string> = {
-    CONFIRMED: '已確認',
-    PENDING: '待入帳',
-    EXPIRED: '已失效',
-    REVERSED: '已沖銷',
-  }
-  return map[status]
-}
 </script>
