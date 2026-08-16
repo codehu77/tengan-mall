@@ -37,6 +37,8 @@ public class RabbitConfig {
     public static final String ROUTING_KEY_CREATED = "order.created";
     public static final String ROUTING_KEY_DELAY = "order.delay";
     public static final String ROUTING_KEY_CLOSE = "order.close";
+    /** tengan-order 自己不消費這個 routing key，只是生產者——tengan-inventory 訂閱它觸發扣庫存（見 Phase 7 規劃）。 */
+    public static final String ROUTING_KEY_PAID = "order.paid";
 
     public static final String DELAY_QUEUE = "order.delay.queue";
     public static final String CLOSE_QUEUE = "order.close.queue";

@@ -5,6 +5,7 @@ import com.tengan.mall.order.domain.exception.EmptyCartException;
 import com.tengan.mall.order.domain.exception.InventoryShortageException;
 import com.tengan.mall.order.domain.exception.OrderAccessDeniedException;
 import com.tengan.mall.order.domain.exception.OrderCancellationNotAllowedException;
+import com.tengan.mall.order.domain.exception.OrderMarkPaidNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderNotFoundException;
 import com.tengan.mall.order.domain.exception.OrderReceiptNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderShipmentNotAllowedException;
@@ -40,7 +41,8 @@ public class OrderExceptionHandler {
 
     @ExceptionHandler({OrderTokenInvalidException.class, EmptyCartException.class,
             CouponNotApplicableException.class, OrderCancellationNotAllowedException.class,
-            OrderShipmentNotAllowedException.class, OrderReceiptNotAllowedException.class})
+            OrderShipmentNotAllowedException.class, OrderReceiptNotAllowedException.class,
+            OrderMarkPaidNotAllowedException.class})
     public ResponseEntity<Map<String, String>> handleConflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }

@@ -19,4 +19,10 @@ public class OrderEventPublisher implements OrderEventPort {
         rabbitTemplate.convertAndSend(RabbitConfig.ORDER_EVENT_EXCHANGE, RabbitConfig.ROUTING_KEY_CREATED, event);
         rabbitTemplate.convertAndSend(RabbitConfig.ORDER_EVENT_EXCHANGE, RabbitConfig.ROUTING_KEY_DELAY, event);
     }
+
+    @Override
+    public void publishOrderPaid(String orderSn) {
+        rabbitTemplate.convertAndSend(RabbitConfig.ORDER_EVENT_EXCHANGE, RabbitConfig.ROUTING_KEY_PAID,
+                new OrderSnEvent(orderSn));
+    }
 }

@@ -100,6 +100,7 @@
     <module>tengan-inventory</module>
     <module>tengan-coupon</module>
     <module>tengan-order</module>
+    <module>tengan-payment</module>
   </modules>
 
 </project>

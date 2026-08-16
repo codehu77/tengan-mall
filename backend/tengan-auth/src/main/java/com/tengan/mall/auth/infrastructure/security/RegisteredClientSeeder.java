@@ -43,6 +43,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private static final String SEARCH_CLIENT_ID = "tengan-search";
     private static final String CART_CLIENT_ID = "tengan-cart";
     private static final String ORDER_CLIENT_ID = "tengan-order";
+    private static final String PAYMENT_CLIENT_ID = "tengan-payment";
 
     private final RegisteredClientRepository registeredClientRepository;
     private final PasswordEncoder passwordEncoder;
@@ -50,30 +51,34 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private final String searchClientSecret;
     private final String cartClientSecret;
     private final String orderClientSecret;
+    private final String paymentClientSecret;
 
     public RegisteredClientSeeder(RegisteredClientRepository registeredClientRepository,
             PasswordEncoder passwordEncoder,
             @Value("${tengan.oauth2.admin-client-secret:tengan-admin-secret}") String adminClientSecret,
             @Value("${tengan.oauth2.search-client-secret:tengan-search-secret}") String searchClientSecret,
             @Value("${tengan.oauth2.cart-client-secret:tengan-cart-secret}") String cartClientSecret,
-            @Value("${tengan.oauth2.order-client-secret:tengan-order-secret}") String orderClientSecret) {
+            @Value("${tengan.oauth2.order-client-secret:tengan-order-secret}") String orderClientSecret,
+            @Value("${tengan.oauth2.payment-client-secret:tengan-payment-secret}") String paymentClientSecret) {
         this.registeredClientRepository = registeredClientRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminClientSecret = adminClientSecret;
         this.searchClientSecret = searchClientSecret;
         this.cartClientSecret = cartClientSecret;
         this.orderClientSecret = orderClientSecret;
+        this.paymentClientSecret = paymentClientSecret;
     }
 
     @Override
     public void run(ApplicationArguments args) {
         seedIfAbsent(ADMIN_CLIENT_ID, adminClientSecret, "product.read", "product.write", "search.write",
                 "member.read", "account.read", "account.write", "inventory.read", "inventory.write", "coupon.read",
-                "coupon.write", "order.read", "order.write");
+                "coupon.write", "order.read", "order.write", "payment.read", "payment.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
         seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
         seedIfAbsent(ORDER_CLIENT_ID, orderClientSecret, "cart.read", "cart.write", "product.read",
                 "inventory.write", "coupon.read", "coupon.write");
+        seedIfAbsent(PAYMENT_CLIENT_ID, paymentClientSecret, "order.read", "order.write");
     }
 
     /**

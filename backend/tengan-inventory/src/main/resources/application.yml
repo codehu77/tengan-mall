@@ -8,6 +8,11 @@ spring:
     url: jdbc:mysql://localhost:3306/tengan_mall_inventory?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Taipei
     username: root
     password: ${MYSQL_ROOT_PASSWORD:tengan123}
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: ${RABBITMQ_USER:tengan}
+    password: ${RABBITMQ_PASSWORD:tengan123}
   cloud:
     nacos:
       discovery:

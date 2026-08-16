@@ -9,6 +9,7 @@ import com.tengan.mall.order.application.admin.GetOrderStatsTodayUseCase;
 import com.tengan.mall.order.application.admin.ShipOrderCommand;
 import com.tengan.mall.order.application.admin.ShipOrderUseCase;
 import com.tengan.mall.order.application.order.CloseOrderIfUnpaidUseCase;
+import com.tengan.mall.order.application.order.MarkOrderPaidUseCase;
 import com.tengan.mall.order.interfaces.rest.dto.AdminCancelOrderRequest;
 import com.tengan.mall.order.interfaces.rest.dto.OrderDetailResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderItemResponse;
@@ -40,12 +41,13 @@ public class InternalOrderController {
     private final ShipOrderUseCase shipOrderUseCase;
     private final AdminCancelOrderUseCase adminCancelOrderUseCase;
     private final CloseOrderIfUnpaidUseCase closeOrderIfUnpaidUseCase;
+    private final MarkOrderPaidUseCase markOrderPaidUseCase;
     private final IdentityAssertionVerifier adminIdentityAssertionVerifier;
 
     public InternalOrderController(AdminListOrdersUseCase adminListOrdersUseCase,
             AdminGetOrderDetailUseCase adminGetOrderDetailUseCase, GetOrderStatsTodayUseCase getOrderStatsTodayUseCase,
             ShipOrderUseCase shipOrderUseCase, AdminCancelOrderUseCase adminCancelOrderUseCase,
-            CloseOrderIfUnpaidUseCase closeOrderIfUnpaidUseCase,
+            CloseOrderIfUnpaidUseCase closeOrderIfUnpaidUseCase, MarkOrderPaidUseCase markOrderPaidUseCase,
             @Qualifier("adminIdentityAssertionVerifier") IdentityAssertionVerifier adminIdentityAssertionVerifier) {
         this.adminListOrdersUseCase = adminListOrdersUseCase;
         this.adminGetOrderDetailUseCase = adminGetOrderDetailUseCase;
@@ -53,6 +55,7 @@ public class InternalOrderController {
         this.shipOrderUseCase = shipOrderUseCase;
         this.adminCancelOrderUseCase = adminCancelOrderUseCase;
         this.closeOrderIfUnpaidUseCase = closeOrderIfUnpaidUseCase;
+        this.markOrderPaidUseCase = markOrderPaidUseCase;
         this.adminIdentityAssertionVerifier = adminIdentityAssertionVerifier;
     }
 
@@ -111,6 +114,14 @@ public class InternalOrderController {
     @PreAuthorize("hasAuthority('SCOPE_order.write')")
     public ResponseEntity<Void> closeIfUnpaid(@PathVariable String orderSn) {
         closeOrderIfUnpaidUseCase.close(orderSn);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 供 tengan-payment 驗完 ECPay callback／LINE Pay confirm 或 COD 同步完成後呼叫；系統觸發，不是管理員動作，不用 X-Identity-Assertion。 */
+    @PutMapping("/{orderSn}/paid")
+    @PreAuthorize("hasAuthority('SCOPE_order.write')")
+    public ResponseEntity<Void> markPaid(@PathVariable String orderSn) {
+        markOrderPaidUseCase.markPaid(orderSn);
         return ResponseEntity.noContent().build();
     }
 

@@ -77,6 +77,9 @@
           <div class="bg-white rounded-lg p-6">
             <h2 class="text-xl font-bold text-gray-800 mb-4">付款方式</h2>
             <div class="border-t border-gray-100 pt-4 space-y-3">
+              <div v-if="paymentMethods.length === 0" class="text-sm text-gray-400 text-center py-4">
+                目前沒有可用的付款方式，請聯繫客服
+              </div>
               <label
                 v-for="method in paymentMethods"
                 :key="method.value"
@@ -205,10 +208,12 @@
 <script setup lang="ts">
 import type { MyCoupon } from '~/types/coupon'
 import type { PaymentMethod } from '~/types/order'
+import { PAYMENT_METHOD_META } from '~/types/order'
 
 definePageMeta({ middleware: 'auth' })
 
 const { confirmOrder, createOrder, fetchAvailableCoupons } = useOrder()
+const { fetchPaymentMethods } = usePayment()
 const { fetchCartCount } = useCart()
 const addressStore = useAddressStore()
 const cartStore = useCartStore()
@@ -221,11 +226,8 @@ const confirmResult = ref<Awaited<ReturnType<typeof confirmOrder>> | null>(null)
 const selectedAddressId = ref<number | null>(null)
 const remark = ref('')
 
-const paymentMethods: Array<{ value: PaymentMethod; label: string; icon: string }> = [
-  { value: 'linepay', label: 'LINE Pay', icon: 'i-heroicons-device-phone-mobile' },
-  { value: 'credit_card', label: '信用卡付款', icon: 'i-heroicons-credit-card' },
-  { value: 'cod', label: '貨到付款', icon: 'i-heroicons-banknotes' },
-]
+// 後台「支付管理」的啟用/停用開關要真的有效果，付款方式選項不再寫死——見 GET /api/customer/payments/methods。
+const paymentMethods = ref<Array<{ value: PaymentMethod; label: string; icon: string }>>([])
 const paymentMethod = ref<PaymentMethod>('linepay')
 
 const availableCoupons = ref<MyCoupon[]>([])
@@ -250,6 +252,7 @@ const payableAmount = computed(() => {
 
 const canSubmit = computed(() =>
   !!confirmResult.value && confirmResult.value.items.length > 0 && !!selectedAddressId.value
+  && paymentMethods.value.length > 0
 )
 
 /**
@@ -274,6 +277,12 @@ onMounted(async () => {
     selectedAddressId.value = addressStore.addresses.find(a => a.isDefault)?.id
       ?? addressStore.addresses[0]?.id
       ?? null
+
+    const { methods } = await fetchPaymentMethods()
+    paymentMethods.value = methods.map(m => ({ value: m, ...PAYMENT_METHOD_META[m] }))
+    if (paymentMethods.value.length > 0 && !methods.includes(paymentMethod.value)) {
+      paymentMethod.value = paymentMethods.value[0].value
+    }
 
     await refreshConfirm()
     if (confirmResult.value?.items.length === 0) {
