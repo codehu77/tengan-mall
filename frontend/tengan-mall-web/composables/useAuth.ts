@@ -16,6 +16,7 @@ export function useAuth() {
       })
       authStore.setUser({ userId: data.accountId, username: data.username })
       await useMemberStore().fetchProfile()
+      await usePointsStore().loadCurrentTier()
       // 登入成功才有 access token cookie 可用，merge 要在這之後呼叫；訪客購物車併入會員後
       // 立刻刷新 header 徽章數量，不用等下一次頁面 SSR 重新查
       const newCartCount = await useCart().mergeCart()

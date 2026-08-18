@@ -60,6 +60,15 @@
         <UIcon name="i-heroicons-wallet" class="w-5 h-5" />
         我的點數
       </NuxtLink>
+
+      <NuxtLink
+        to="/member/subscription"
+        class="flex items-center gap-2 py-1 text-base transition"
+        :class="isActive('/member/subscription') ? 'text-red-500 font-medium' : 'text-gray-500 hover:text-red-500'"
+      >
+        <UIcon name="i-heroicons-star" class="w-5 h-5" />
+        訂閱會員
+      </NuxtLink>
     </nav>
   </aside>
 </template>

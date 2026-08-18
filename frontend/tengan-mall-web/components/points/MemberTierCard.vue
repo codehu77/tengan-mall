@@ -25,16 +25,17 @@
           <span>本月已回饋</span>
           <span>
             {{ tier.monthlyEarnedPoints.toLocaleString() }} 點
-            <span class="text-gray-400">/ {{ tier.monthlyCap ? `${tier.monthlyCap.toLocaleString()} 點` : '無上限' }}</span>
+            <span v-if="tier.cashbackRate > 0" class="text-gray-400">/ {{ tier.monthlyCap ? `${tier.monthlyCap.toLocaleString()} 點` : '無上限' }}</span>
           </span>
         </div>
-        <div v-if="tier.monthlyCap" class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div v-if="tier.cashbackRate > 0 && tier.monthlyCap" class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
             class="h-full bg-red-500 rounded-full transition-all"
             :style="{ width: `${Math.min(100, (tier.monthlyEarnedPoints / tier.monthlyCap) * 100)}%` }"
           />
         </div>
-        <p v-else class="text-sm text-red-500 mt-1">PRO+ 會員單月回饋無上限</p>
+        <p v-else-if="tier.cashbackRate > 0" class="text-sm text-red-500 mt-1">PRO+ 會員單月回饋無上限</p>
+        <p v-else class="text-sm text-gray-400 mt-1">目前為一般會員，暫無回饋資格</p>
       </div>
     </div>
   </PointsStateView>

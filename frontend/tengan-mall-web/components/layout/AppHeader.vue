@@ -86,22 +86,36 @@
 
         <!-- 登入狀態 -->
         <template v-if="authStore.isLoggedIn">
-          <UDropdown :items="userMenuItems">
-            <button
-              type="button"
-              class="flex items-center h-10 gap-2 px-2 rounded-md text-gray-700 hover:bg-gray-100 transition"
+          <div class="relative">
+            <UDropdown :items="userMenuItems">
+              <button
+                type="button"
+                class="flex items-center h-10 gap-2 px-2 rounded-md text-gray-700 hover:bg-gray-100 transition"
+              >
+                <img
+                  v-if="memberStore.profile?.avatarUrl"
+                  :src="memberStore.profile.avatarUrl"
+                  alt="頭像"
+                  class="w-8 h-8 rounded-full object-cover shrink-0"
+                />
+                <UIcon v-else name="i-heroicons-user-circle" class="w-8 h-8 text-gray-400 shrink-0" />
+                <span class="text-base font-medium">{{ displayName }}</span>
+                <UIcon name="i-heroicons-chevron-down" class="w-4 h-4 shrink-0" />
+              </button>
+            </UDropdown>
+            <span
+              v-if="memberTier && memberTier !== 'FREE'"
+              class="absolute -top-1.5 -right-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full cursor-pointer transition"
+              :class="
+                memberTier === 'PRO_PLUS'
+                  ? 'bg-red-500 text-white hover:bg-red-600'
+                  : 'bg-orange-500 text-white hover:bg-orange-600'
+              "
+              @click.stop="router.push('/member/subscription')"
             >
-              <img
-                v-if="memberStore.profile?.avatarUrl"
-                :src="memberStore.profile.avatarUrl"
-                alt="頭像"
-                class="w-8 h-8 rounded-full object-cover shrink-0"
-              />
-              <UIcon v-else name="i-heroicons-user-circle" class="w-8 h-8 text-gray-400 shrink-0" />
-              <span class="text-base font-medium">{{ displayName }}</span>
-              <UIcon name="i-heroicons-chevron-down" class="w-4 h-4 shrink-0" />
-            </button>
-          </UDropdown>
+              {{ TIER_LABEL[memberTier] }}
+            </span>
+          </div>
         </template>
         <template v-else>
           <NuxtLink to="/login">
@@ -119,15 +133,18 @@
 
 <script setup lang="ts">
 import type { CartItem } from '~/types/cart'
+import { TIER_LABEL } from '~/types/points'
 
 const keyword = ref('')
 const router = useRouter()
 const authStore = useAuthStore()
 const memberStore = useMemberStore()
 const cartStore = useCartStore()
+const pointsStore = usePointsStore()
 const { fetchMiniCart } = useCart()
 
 const displayName = computed(() => memberStore.profile?.nickname || authStore.username)
+const memberTier = computed(() => pointsStore.tierCurrent?.tier)
 
 const cartCount = computed(() => cartStore.count)
 

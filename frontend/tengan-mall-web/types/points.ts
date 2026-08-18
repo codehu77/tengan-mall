@@ -1,4 +1,4 @@
-// 會員等級（僅 3 級：一般會員 / PRO / PRO+，不含訂閱付款流程）
+// 會員等級（僅 3 級：一般會員 / PRO / PRO+；訂閱付款流程見 types/subscription.ts）
 export type MemberTier = 'FREE' | 'PRO' | 'PRO_PLUS'
 
 // 點數交易「為什麼變動」，不可變起因，跟下面的 status（現在算不算數）是兩個獨立維度
@@ -31,7 +31,6 @@ export interface TierBenefit {
   monthlyCapLabel: string
   perks: string[]
   isCurrent: boolean
-  highlight: boolean
 }
 
 // 點數錢包摘要：可用 / 待入帳 / 即將到期

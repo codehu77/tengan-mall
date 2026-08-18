@@ -10,9 +10,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ECPay 的 ReturnURL 收到付款結果通知——這是「訂單已付款」這個事實的其中一個觸發點（另一個是
+ * ECPay 一般訂單的 ReturnURL 通知——這是「訂單已付款」這個事實的其中一個觸發點（另一個是
  * LINE Pay confirm、還有 COD 同步）。驗簽 → 條件式 UPDATE 搶操作權 → 呼叫 tengan-order。搶不到操作權
  * 代表是重複通知（ECPay 官方會重試），直接視為成功、不重複呼叫 tengan-order（冪等）。
+ *
+ * <p>訂閱單走的是完全獨立的 {@code ecpay-subscription-return-url}（見
+ * {@link HandleSubscriptionReturnCallbackService}），不共用這支——兩者是不同的 use case，訂閱單本來
+ * 就不會有 payment_record，硬塞進同一支只會讓「查不到訂單」這個分支背負兩種不同語意。</p>
  */
 @Service
 public class HandleEcpayCallbackService implements HandleEcpayCallbackUseCase {

@@ -11,16 +11,24 @@
           v-for="benefit in benefits"
           :key="benefit.tier"
           class="rounded-lg border p-4 relative h-full"
-          :class="benefit.highlight ? 'border-red-300 bg-red-50/50' : 'border-gray-100'"
+          :class="
+            benefit.tier === 'PRO'
+              ? 'border-red-300 bg-red-50/50'
+              : benefit.isCurrent
+                ? 'border-gray-800'
+                : 'border-gray-100'
+          "
         >
-          <span
-            v-if="benefit.isCurrent"
-            class="absolute -top-2.5 left-4 text-sm bg-gray-800 text-white px-2 py-0.5 rounded-full"
-          >
-            目前方案
-          </span>
+          <div class="absolute -top-2.5 left-4 flex items-center gap-1.5">
+            <span v-if="benefit.isCurrent" class="text-sm bg-gray-800 text-white px-2 py-0.5 rounded-full">
+              目前方案
+            </span>
+            <span v-if="benefit.tier === 'PRO'" class="text-sm bg-red-500 text-white px-2 py-0.5 rounded-full">
+              推薦方案
+            </span>
+          </div>
           <p class="font-semibold text-gray-800 mt-1 text-lg">{{ benefit.label }}</p>
-          <p class="text-3xl font-bold mt-1" :class="benefit.highlight ? 'text-red-500' : 'text-gray-700'">
+          <p class="text-3xl font-bold mt-1" :class="benefit.tier === 'PRO' ? 'text-red-500' : 'text-gray-700'">
             {{ benefit.cashbackRateLabel }}
           </p>
           <p class="text-sm text-gray-400 mb-3">{{ benefit.monthlyCapLabel }}</p>

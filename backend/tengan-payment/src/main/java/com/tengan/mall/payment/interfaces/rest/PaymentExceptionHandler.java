@@ -1,11 +1,13 @@
 package com.tengan.mall.payment.interfaces.rest;
 
+import com.tengan.mall.payment.domain.exception.AlreadySubscribedException;
 import com.tengan.mall.payment.domain.exception.InvalidCheckMacValueException;
 import com.tengan.mall.payment.domain.exception.OrderNotPayableException;
 import com.tengan.mall.payment.domain.exception.PaymentAlreadyPaidException;
 import com.tengan.mall.payment.domain.exception.PaymentGatewayException;
 import com.tengan.mall.payment.domain.exception.PaymentRecordNotFoundException;
 import com.tengan.mall.payment.domain.exception.PaymentTransactionMismatchException;
+import com.tengan.mall.payment.domain.exception.SubscriptionNotFoundException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,13 +24,13 @@ public class PaymentExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
     }
 
-    @ExceptionHandler(PaymentRecordNotFoundException.class)
+    @ExceptionHandler({PaymentRecordNotFoundException.class, SubscriptionNotFoundException.class})
     public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
     }
 
     @ExceptionHandler({PaymentAlreadyPaidException.class, OrderNotPayableException.class,
-            PaymentTransactionMismatchException.class})
+            PaymentTransactionMismatchException.class, AlreadySubscribedException.class})
     public ResponseEntity<Map<String, String>> handleConflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }

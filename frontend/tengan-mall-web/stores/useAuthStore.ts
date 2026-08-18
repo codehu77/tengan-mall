@@ -32,12 +32,14 @@ export const useAuthStore = defineStore('auth', () => {
   /** access token 過期等情境下，後端已經不認這個身分了，只清本地快取，不再打一次 /api/auth/logout。 */
   function clearSession() {
     user.value = null
+    usePointsStore().clearCurrentTier()
   }
 
   async function logout() {
     await $fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     user.value = null
     useMemberStore().clear()
+    usePointsStore().clearCurrentTier()
     navigateTo('/login')
   }
 

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="h-full">
     <div v-if="loading">
       <slot name="loading">
         <div class="space-y-3">
@@ -24,7 +24,7 @@
       </slot>
     </div>
 
-    <div v-else>
+    <div v-else class="h-full">
       <slot />
     </div>
   </div>

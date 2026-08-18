@@ -39,4 +39,9 @@ public class ClientConfig {
                         converters -> converters.add(0, new MappingJackson2HttpMessageConverter(objectMapper)))
                 .build();
     }
+
+    @Bean
+    public RestClient walletRestClient(@Value("${tengan.wallet.base-url}") String baseUrl) {
+        return RestClient.builder().baseUrl(baseUrl).build();
+    }
 }

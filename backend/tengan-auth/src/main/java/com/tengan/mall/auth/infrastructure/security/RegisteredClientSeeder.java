@@ -81,7 +81,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
         seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
         seedIfAbsent(ORDER_CLIENT_ID, orderClientSecret, "cart.read", "cart.write", "product.read",
                 "inventory.write", "coupon.read", "coupon.write", "wallet.read", "wallet.write");
-        seedIfAbsent(PAYMENT_CLIENT_ID, paymentClientSecret, "order.read", "order.write");
+        seedIfAbsent(PAYMENT_CLIENT_ID, paymentClientSecret, "order.read", "order.write", "wallet.write");
     }
 
     /**

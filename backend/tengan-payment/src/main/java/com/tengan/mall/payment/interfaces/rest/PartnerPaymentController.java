@@ -2,6 +2,10 @@ package com.tengan.mall.payment.interfaces.rest;
 
 import com.tengan.mall.payment.application.webhook.HandleEcpayCallbackCommand;
 import com.tengan.mall.payment.application.webhook.HandleEcpayCallbackUseCase;
+import com.tengan.mall.payment.application.webhook.HandlePeriodCallbackCommand;
+import com.tengan.mall.payment.application.webhook.HandlePeriodCallbackUseCase;
+import com.tengan.mall.payment.application.webhook.HandleSubscriptionReturnCallbackCommand;
+import com.tengan.mall.payment.application.webhook.HandleSubscriptionReturnCallbackUseCase;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +28,15 @@ public class PartnerPaymentController {
     private static final Logger log = LoggerFactory.getLogger(PartnerPaymentController.class);
 
     private final HandleEcpayCallbackUseCase handleEcpayCallbackUseCase;
+    private final HandlePeriodCallbackUseCase handlePeriodCallbackUseCase;
+    private final HandleSubscriptionReturnCallbackUseCase handleSubscriptionReturnCallbackUseCase;
 
-    public PartnerPaymentController(HandleEcpayCallbackUseCase handleEcpayCallbackUseCase) {
+    public PartnerPaymentController(HandleEcpayCallbackUseCase handleEcpayCallbackUseCase,
+            HandlePeriodCallbackUseCase handlePeriodCallbackUseCase,
+            HandleSubscriptionReturnCallbackUseCase handleSubscriptionReturnCallbackUseCase) {
         this.handleEcpayCallbackUseCase = handleEcpayCallbackUseCase;
+        this.handlePeriodCallbackUseCase = handlePeriodCallbackUseCase;
+        this.handleSubscriptionReturnCallbackUseCase = handleSubscriptionReturnCallbackUseCase;
     }
 
     // 刻意不用 produces 屬性：那會讓 Spring 在進 controller 前用請求的 Accept header 做內容協商，
@@ -38,6 +48,31 @@ public class PartnerPaymentController {
             handleEcpayCallbackUseCase.handle(new HandleEcpayCallbackCommand(params));
         } catch (RuntimeException e) {
             log.error("處理 ECPay callback 失敗: {}", params.get("MerchantTradeNo"), e);
+        }
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body("1|OK");
+    }
+
+    /** Phase 8.5：訂閱每一期（含第一期）的定期定額扣款通知，可能延遲到隔天才送達。 */
+    @PostMapping("/callback/ecpay-period")
+    public ResponseEntity<String> ecpayPeriodCallback(@RequestParam Map<String, String> params) {
+        try {
+            handlePeriodCallbackUseCase.handle(new HandlePeriodCallbackCommand(params));
+        } catch (RuntimeException e) {
+            log.error("處理 ECPay 定期定額 callback 失敗: {}", params.get("MerchantTradeNo"), e);
+        }
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body("1|OK");
+    }
+
+    /**
+     * Phase 8.5 補強：訂閱第一期的授權結果，AioCheckOut 當下同步送回，跟一般訂單的 ReturnURL
+     * 是不同的 use case，故意分開一支端點，不共用 {@code /callback/ecpay}。
+     */
+    @PostMapping("/callback/ecpay-subscription")
+    public ResponseEntity<String> ecpaySubscriptionReturnCallback(@RequestParam Map<String, String> params) {
+        try {
+            handleSubscriptionReturnCallbackUseCase.handle(new HandleSubscriptionReturnCallbackCommand(params));
+        } catch (RuntimeException e) {
+            log.error("處理 ECPay 訂閱首刷 callback 失敗: {}", params.get("MerchantTradeNo"), e);
         }
         return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN).body("1|OK");
     }

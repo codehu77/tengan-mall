@@ -7,5 +7,6 @@ export default defineNuxtPlugin(async () => {
   await authStore.fetchMe()
   if (authStore.isLoggedIn) {
     await useMemberStore().fetchProfile()
+    await usePointsStore().loadCurrentTier()
   }
 })

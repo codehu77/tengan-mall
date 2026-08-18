@@ -77,6 +77,15 @@ export const usePointsStore = defineStore('points', () => {
     }
   }
 
+  // 給 Header 用：只拿目前會員資格，不連比較表一起打
+  async function loadCurrentTier(opts?: ServiceOptions) {
+    try {
+      tierCurrent.value = await pointsService.fetchCurrentTier(opts)
+    } catch {
+      // 靜默失敗——Header 徽章非核心內容，失敗就不顯示，不冒出額外的錯誤畫面
+    }
+  }
+
   async function loadTier(opts?: ServiceOptions) {
     tierLoading.value = true
     tierError.value = null
@@ -193,6 +202,10 @@ export const usePointsStore = defineStore('points', () => {
     detailError.value = null
   }
 
+  function clearCurrentTier() {
+    tierCurrent.value = null
+  }
+
   function initAll() {
     loadSummary()
     loadTier()
@@ -229,6 +242,7 @@ export const usePointsStore = defineStore('points', () => {
     detailLoading,
     detailError,
     loadSummary,
+    loadCurrentTier,
     loadTier,
     loadExpiring,
     loadFaq,
@@ -241,6 +255,7 @@ export const usePointsStore = defineStore('points', () => {
     openTransactionDetail,
     retryDetail,
     closeDetail,
+    clearCurrentTier,
     initAll,
   }
 })

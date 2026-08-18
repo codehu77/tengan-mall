@@ -124,6 +124,22 @@ public class InternalWalletController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Phase 8.5 新增：tengan-payment 訂閱扣款成功/到期時的系統觸發呼叫，沒有人類操作者，
+     * 不要求 X-Identity-Assertion——比照 tengan-order 的 {@code /internal/orders/{orderSn}/paid}
+     * 系統觸發不用 X-Identity-Assertion 的既有模式，operator 記固定字串。跟上面那支
+     * {@code /members/{memberId}/tier}（客服人工調整，要求 X-Identity-Assertion）刻意分開，
+     * 不放寬既有端點的安全語意。
+     */
+    @PostMapping("/members/{memberId}/tier/subscription")
+    @PreAuthorize("hasAuthority('SCOPE_wallet.write')")
+    public ResponseEntity<Void> updateTierFromSubscription(@PathVariable Long memberId,
+            @Valid @RequestBody UpdateTierRequest request) {
+        updateMemberTierUseCase.update(new UpdateMemberTierCommand(memberId,
+                MemberTierLevel.valueOf(request.tier().toUpperCase()), request.reason(), "system:tengan-payment"));
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/rules")
     @PreAuthorize("hasAuthority('SCOPE_wallet.read')")
     public WalletRuleResponse getRules() {
