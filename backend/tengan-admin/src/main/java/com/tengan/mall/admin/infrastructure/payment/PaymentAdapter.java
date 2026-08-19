@@ -3,6 +3,7 @@ package com.tengan.mall.admin.infrastructure.payment;
 import com.tengan.mall.admin.application.port.PaymentMethodConfigItem;
 import com.tengan.mall.admin.application.port.PaymentPort;
 import com.tengan.mall.admin.application.port.PaymentRecordPageResult;
+import com.tengan.mall.admin.application.port.ReconcileNowResult;
 import com.tengan.mall.admin.infrastructure.payment.dto.PaymentRecordListEnvelope;
 import com.tengan.mall.admin.infrastructure.payment.dto.UpdatePaymentMethodStatusPayload;
 import java.util.List;
@@ -52,5 +53,13 @@ public class PaymentAdapter implements PaymentPort {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
                 .header("X-Identity-Assertion", "Bearer " + operatorToken)
                 .body(new UpdatePaymentMethodStatusPayload(enabled)).retrieve().toBodilessEntity();
+    }
+
+    @Override
+    public ReconcileNowResult triggerReconcileNow() {
+        ReconcileNowResult result = paymentRestClient.post().uri("/internal/reconcile/run")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken()).retrieve()
+                .body(ReconcileNowResult.class);
+        return result == null ? new ReconcileNowResult(0, 0, 0, 0, 0, 0, 0, 0) : result;
     }
 }

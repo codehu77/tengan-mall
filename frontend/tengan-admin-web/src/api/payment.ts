@@ -43,3 +43,21 @@ export const updatePaymentMethodStatus = (method: string, enabled: boolean) => {
     data: { enabled }
   });
 };
+
+/** 對齊 tengan-admin ReconcileNowResponse——converged+failed 可能小於 checked（單筆查 ECPay 失敗時）。 */
+export type ReconcileNowResult = {
+  paymentChecked: number;
+  paymentConverged: number;
+  paymentFailed: number;
+  subscriptionChecked: number;
+  subscriptionConverged: number;
+  subscriptionFailed: number;
+  /** 情境 B：ACTIVE 訂閱續期查帳（paidUntil 已過期但通知遲遲沒進來的候選數）。 */
+  renewalChecked: number;
+  /** 這次查帳後 paidUntil 真的往後延長成功的筆數。 */
+  renewalRecovered: number;
+};
+
+export const triggerReconcileNow = () => {
+  return http.request<ReconcileNowResult>("post", "/api/admin/payments/reconcile-now");
+};

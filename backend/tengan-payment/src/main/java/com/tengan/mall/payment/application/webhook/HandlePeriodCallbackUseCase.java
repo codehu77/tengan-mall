@@ -26,4 +26,14 @@ public interface HandlePeriodCallbackUseCase {
      */
     void confirmFromPeriodQuery(String merchantTradeNo, String gwsr, BigDecimal amount, int totalSuccessTimes,
             Instant processDate);
+
+    /**
+     * 情境 B（ACTIVE 訂閱續期查帳）用：把 ExecLog 裡的一筆執行紀錄（可能成功可能失敗）餵回既有的
+     * 收斂邏輯，跟 PeriodReturnURL 通知走同一套處理——成功才延長 paidUntil/升級，失敗只累計連續失敗
+     * 次數（累計到 6 次一樣會自動轉 CANCELLED，跟 webhook 路徑共用同一段判斷，不重寫）。gwsr 直接沿用
+     * ECPay 回傳值，既有的 existsByGwsr 冪等檢查會自然擋掉已經處理過的紀錄（不管是先前 webhook 補上
+     * 還是查帳查過），可以對整份 ExecLog 每筆都無腦重播一次，不用自己先判斷哪些是新的。
+     */
+    void replayPeriodResult(String merchantTradeNo, String gwsr, boolean success, BigDecimal amount,
+            int totalSuccessTimes, Instant processDate);
 }

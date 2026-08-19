@@ -49,4 +49,14 @@ public interface SubscriptionMapper extends BaseMapper<SubscriptionPO> {
     @Select("SELECT * FROM subscription WHERE member_id = #{memberId} AND benefit_expired_at IS NULL "
             + "ORDER BY created_at DESC LIMIT 1")
     SubscriptionPO findCurrentByMemberId(@Param("memberId") Long memberId);
+
+    // status=0(PENDING)：首刷通知還沒收到、卡住的訂閱，供排程式查帳/手動立即查帳掃描候選。
+    @Select("SELECT * FROM subscription WHERE status = 0 AND created_at <= #{cutoff} "
+            + "ORDER BY created_at ASC LIMIT #{limit}")
+    List<SubscriptionPO> findStuckPending(@Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
+
+    // status=1(ACTIVE)：已經生效但續期通知遲遲沒進來、paid_until 過期的訂閱，情境 B 用。
+    @Select("SELECT * FROM subscription WHERE status = 1 AND paid_until <= #{cutoff} "
+            + "ORDER BY paid_until ASC LIMIT #{limit}")
+    List<SubscriptionPO> findStuckActive(@Param("cutoff") LocalDateTime cutoff, @Param("limit") int limit);
 }

@@ -1,6 +1,7 @@
 package com.tengan.mall.payment.domain.repository;
 
 import com.tengan.mall.payment.domain.model.PaymentRecord;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +23,13 @@ public interface PaymentRecordRepository {
 
     /** 供事後偵測「同一張訂單是否有多筆 PAID」用（見 Phase 8.6 擴充的殘餘風險偵測）。 */
     List<PaymentRecord> findAllPaidByOrderSn(String orderSn);
+
+    /**
+     * 找出建立時間早於等於 cutoff、還卡在 PENDING 的 credit_card 記錄，供排程式查帳/手動立即查帳
+     * 掃描候選（Phase 8.6 原本設計的情境 A）。排程呼叫時 cutoff 傳「現在-40分鐘」（ECPay 官方建議門檻），
+     * 手動立即查帳呼叫時 cutoff 傳「現在」（不限制卡住多久，全部一次查）。
+     */
+    List<PaymentRecord> findStuckPending(Instant cutoff, int limit);
 
     /** 條件式 UPDATE status=PAID, gateway_trade_no=?, paid_at=NOW() WHERE id=? AND status=PENDING，回傳是否真的搶到操作權。 */
     boolean markPaid(Long id, String gatewayTradeNo);

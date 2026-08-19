@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tengan.mall.payment.application.payment.EcpayFormData;
 import com.tengan.mall.payment.application.payment.EcpayTradeQueryResult;
+import com.tengan.mall.payment.application.subscription.EcpayPeriodExecLogEntry;
+import com.tengan.mall.payment.application.subscription.EcpayPeriodExecLogQueryResult;
 import com.tengan.mall.payment.application.subscription.EcpayPeriodQueryResult;
 import com.tengan.mall.payment.domain.exception.PaymentGatewayException;
 import java.math.BigDecimal;
@@ -16,7 +18,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
@@ -139,6 +143,41 @@ public class EcpayPaymentGatewayClient {
         BigDecimal amount = parseAmountOrZero(stringOrNull(json.get("amount")));
         Instant processDate = parseProcessDate(stringOrNull(json.get("process_date")));
         return new EcpayPeriodQueryResult(succeeded, gwsr, tradeNo, amount, totalSuccessTimes, processDate);
+    }
+
+    /**
+     * 情境 B（ACTIVE 訂閱續期查帳）用：跟 {@link #queryPeriod} 打同一支 API，但這次解析
+     * {@code ExecLog[]} 逐期明細，而不是只看頂層欄位——官方文件明講頂層 process_date/gwsr/amount
+     * 是「首次授權」專屬資料，第二期以後的結果只會出現在 ExecLog 陣列裡（已用官方文件核對過欄位
+     * 語意，不是憑猜測）。
+     */
+    public EcpayPeriodExecLogQueryResult queryPeriodExecLog(String merchantTradeNo) {
+        Map<String, String> params = buildQueryParams(merchantTradeNo);
+        String responseBody = postForm(queryPeriodUrl, params);
+        Map<String, Object> json = parseJson(responseBody);
+        if (!json.containsKey("RtnCode")) {
+            throw new PaymentGatewayException("ECPay 訂閱查詢回應格式異常: " + responseBody);
+        }
+        String execStatus = stringOrNull(json.get("ExecStatus"));
+        int totalSuccessTimes = parseIntOrZero(json.get("TotalSuccessTimes"));
+        List<EcpayPeriodExecLogEntry> entries = new ArrayList<>();
+        if (json.get("ExecLog") instanceof List<?> rawList) {
+            for (Object item : rawList) {
+                if (item instanceof Map<?, ?> rawEntry) {
+                    entries.add(toExecLogEntry(rawEntry));
+                }
+            }
+        }
+        return new EcpayPeriodExecLogQueryResult(execStatus, totalSuccessTimes, entries);
+    }
+
+    private EcpayPeriodExecLogEntry toExecLogEntry(Map<?, ?> raw) {
+        boolean success = parseIntOrZero(raw.get("RtnCode")) == 1;
+        BigDecimal amount = parseAmountOrZero(stringOrNull(raw.get("amount")));
+        String gwsr = stringOrNull(raw.get("gwsr"));
+        Instant processDate = parseProcessDate(stringOrNull(raw.get("process_date")));
+        String tradeNo = stringOrNull(raw.get("TradeNo"));
+        return new EcpayPeriodExecLogEntry(success, amount, gwsr, processDate, tradeNo);
     }
 
     private Map<String, String> buildQueryParams(String merchantTradeNo) {

@@ -91,6 +91,16 @@ public class SubscriptionRepositoryImpl implements SubscriptionRepository {
         return mapper.markBenefitExpired(id) > 0;
     }
 
+    @Override
+    public List<Subscription> findStuckPending(Instant cutoff, int limit) {
+        return mapper.findStuckPending(toLocalDateTime(cutoff), limit).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Subscription> findStuckActive(Instant cutoff, int limit) {
+        return mapper.findStuckActive(toLocalDateTime(cutoff), limit).stream().map(this::toDomain).toList();
+    }
+
     private Subscription toDomain(SubscriptionPO po) {
         return Subscription.reconstitute(po.getId(), po.getMemberId(), po.getTargetTier(), po.getStatus(),
                 po.getEcpayMerchantTradeNo(), po.getPeriodAmount(), po.getConsecutiveFailures(),

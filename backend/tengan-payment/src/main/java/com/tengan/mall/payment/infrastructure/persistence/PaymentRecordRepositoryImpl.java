@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tengan.mall.payment.domain.model.PaymentRecord;
 import com.tengan.mall.payment.domain.model.PaymentStatus;
 import com.tengan.mall.payment.domain.repository.PaymentRecordRepository;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -72,6 +73,16 @@ public class PaymentRecordRepositoryImpl implements PaymentRecordRepository {
         return paymentRecordMapper
                 .selectList(new LambdaQueryWrapper<PaymentRecordPO>().eq(PaymentRecordPO::getOrderSn, orderSn)
                         .eq(PaymentRecordPO::getStatus, PaymentStatus.PAID))
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<PaymentRecord> findStuckPending(Instant cutoff, int limit) {
+        return paymentRecordMapper
+                .selectList(new LambdaQueryWrapper<PaymentRecordPO>().eq(PaymentRecordPO::getMethod, "credit_card")
+                        .eq(PaymentRecordPO::getStatus, PaymentStatus.PENDING)
+                        .le(PaymentRecordPO::getCreatedAt, toLocalDateTime(cutoff))
+                        .orderByAsc(PaymentRecordPO::getCreatedAt).last("LIMIT " + limit))
                 .stream().map(this::toDomain).toList();
     }
 

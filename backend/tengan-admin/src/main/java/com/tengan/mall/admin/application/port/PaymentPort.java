@@ -10,4 +10,7 @@ public interface PaymentPort {
     List<PaymentMethodConfigItem> listPaymentMethods();
 
     void updatePaymentMethodStatus(String method, boolean enabled, String operatorToken);
+
+    /** 立即查帳（跳過排程的 40 分鐘門檻，全部目前卡在 PENDING 的記錄都查一次），供 demo 用手動按鈕。 */
+    ReconcileNowResult triggerReconcileNow();
 }

@@ -46,4 +46,17 @@ public interface SubscriptionRepository {
 
     /** 條件式 UPDATE benefit_expired_at=NOW() WHERE id=? AND benefit_expired_at IS NULL，冪等防重複降級。 */
     boolean markBenefitExpired(Long id);
+
+    /**
+     * status=PENDING(0) 且 created_at<=cutoff，供排程式查帳/手動立即查帳掃描候選（Phase 8.6 原本設計的
+     * 情境 A，訂閱版本）。排程呼叫時 cutoff 傳「現在-40分鐘」，手動立即查帳呼叫時 cutoff 傳「現在」。
+     */
+    List<Subscription> findStuckPending(Instant cutoff, int limit);
+
+    /**
+     * status=ACTIVE(1) 且 paid_until<=cutoff，供排程式查帳/手動立即查帳掃描候選（情境 B：續期通知
+     * 完全沒來）。排程呼叫時 cutoff 傳「現在-寬限緩衝」（避免誤判 PeriodReturnURL 正常延遲送達的情況），
+     * 手動立即查帳呼叫時 cutoff 傳「現在」。
+     */
+    List<Subscription> findStuckActive(Instant cutoff, int limit);
 }

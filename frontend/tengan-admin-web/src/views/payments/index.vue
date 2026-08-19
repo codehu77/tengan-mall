@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
 import { message } from "@/utils/message";
+import { ElMessageBox } from "element-plus";
 import { PureTableBar } from "@/components/RePureTableBar";
 import type { TableColumns } from "@pureadmin/table";
 import {
@@ -8,7 +9,8 @@ import {
   type PaymentMethodConfig,
   getPaymentRecordList,
   getPaymentMethods,
-  updatePaymentMethodStatus
+  updatePaymentMethodStatus,
+  triggerReconcileNow
 } from "@/api/payment";
 
 defineOptions({
@@ -128,6 +130,29 @@ function onToggleMethod(config: PaymentMethodConfig) {
     .catch(error => showError(error, "更新付款方式狀態失敗"));
 }
 
+// Phase 8.6 排程式查帳收尾：手動立即查帳（不限卡多久，一次查完目前所有 PENDING），demo 用，
+// 不用等排程的 40 分鐘門檻或下一輪掃描週期。
+const reconcileLoading = ref(false);
+
+async function onReconcileNow() {
+  reconcileLoading.value = true;
+  try {
+    const result = await triggerReconcileNow();
+    await ElMessageBox.alert(
+      `一般訂單：查了 ${result.paymentChecked} 筆，${result.paymentConverged} 筆確認已付款、${result.paymentFailed} 筆確認未付款<br/>` +
+        `訂閱首期：查了 ${result.subscriptionChecked} 筆，${result.subscriptionConverged} 筆確認成功、${result.subscriptionFailed} 筆確認失敗<br/>` +
+        `訂閱續期：查了 ${result.renewalChecked} 筆，${result.renewalRecovered} 筆確認續訂成功`,
+      "立即查帳結果",
+      { confirmButtonText: "確定", dangerouslyUseHTMLString: true }
+    );
+    onSearch();
+  } catch (error) {
+    showError(error, "立即查帳失敗");
+  } finally {
+    reconcileLoading.value = false;
+  }
+}
+
 onMounted(() => {
   onSearch();
   loadMethodConfigs();
@@ -160,6 +185,7 @@ onMounted(() => {
       <el-form-item>
         <el-button type="primary" @click="onSearch">查詢</el-button>
         <el-button @click="onReset">重置</el-button>
+        <el-button type="warning" :loading="reconcileLoading" @click="onReconcileNow">立即查帳</el-button>
       </el-form-item>
     </el-form>
 

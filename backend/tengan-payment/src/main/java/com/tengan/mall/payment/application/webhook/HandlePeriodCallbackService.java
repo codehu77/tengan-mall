@@ -87,10 +87,17 @@ public class HandlePeriodCallbackService implements HandlePeriodCallbackUseCase 
     @Transactional
     public void confirmFromPeriodQuery(String merchantTradeNo, String gwsr, BigDecimal amount,
             int totalSuccessTimes, Instant processDate) {
+        replayPeriodResult(merchantTradeNo, gwsr, true, amount, totalSuccessTimes, processDate);
+    }
+
+    @Override
+    @Transactional
+    public void replayPeriodResult(String merchantTradeNo, String gwsr, boolean success, BigDecimal amount,
+            int totalSuccessTimes, Instant processDate) {
         subscriptionRepository.findByMerchantTradeNo(merchantTradeNo).ifPresent(subscription -> {
             String idempotencyKey = (gwsr != null && !gwsr.isBlank()) ? gwsr
-                    : merchantTradeNo + ":" + totalSuccessTimes + ":true";
-            applyResult(subscription, idempotencyKey, true, amount, totalSuccessTimes, processDate);
+                    : merchantTradeNo + ":" + totalSuccessTimes + ":" + success;
+            applyResult(subscription, idempotencyKey, success, amount, totalSuccessTimes, processDate);
         });
     }
 

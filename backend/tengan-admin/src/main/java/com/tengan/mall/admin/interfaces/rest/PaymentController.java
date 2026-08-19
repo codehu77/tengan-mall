@@ -4,6 +4,7 @@ import com.tengan.mall.admin.application.port.PaymentPort;
 import com.tengan.mall.admin.interfaces.rest.dto.PaymentMethodConfigResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.PaymentRecordListResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.PaymentRecordResponse;
+import com.tengan.mall.admin.interfaces.rest.dto.ReconcileNowResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.UpdatePaymentMethodStatusRequest;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,5 +57,14 @@ public class PaymentController {
             @PathVariable String method, @RequestBody UpdatePaymentMethodStatusRequest request) {
         paymentPort.updatePaymentMethodStatus(method, request.enabled(), operatorJwt.getTokenValue());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reconcile-now")
+    @PreAuthorize("hasAuthority('payment:reconcile:write')")
+    public ReconcileNowResponse reconcileNow() {
+        var result = paymentPort.triggerReconcileNow();
+        return new ReconcileNowResponse(result.paymentChecked(), result.paymentConverged(), result.paymentFailed(),
+                result.subscriptionChecked(), result.subscriptionConverged(), result.subscriptionFailed(),
+                result.renewalChecked(), result.renewalRecovered());
     }
 }
