@@ -3,6 +3,7 @@ package com.tengan.mall.payment.application.subscription;
 import com.tengan.mall.payment.application.payment.EcpayFormData;
 import com.tengan.mall.payment.domain.exception.AlreadySubscribedException;
 import com.tengan.mall.payment.domain.model.Subscription;
+import com.tengan.mall.payment.domain.model.SubscriptionStatus;
 import com.tengan.mall.payment.domain.repository.SubscriptionRepository;
 import com.tengan.mall.payment.infrastructure.ecpay.EcpayPaymentGatewayClient;
 import java.math.BigDecimal;
@@ -29,18 +30,35 @@ public class SubscribeService implements SubscribeUseCase {
 
     private final SubscriptionRepository subscriptionRepository;
     private final EcpayPaymentGatewayClient ecpayPaymentGatewayClient;
+    private final ReconcileSubscriptionUseCase reconcileSubscriptionUseCase;
 
     public SubscribeService(SubscriptionRepository subscriptionRepository,
-            EcpayPaymentGatewayClient ecpayPaymentGatewayClient) {
+            EcpayPaymentGatewayClient ecpayPaymentGatewayClient,
+            ReconcileSubscriptionUseCase reconcileSubscriptionUseCase) {
         this.subscriptionRepository = subscriptionRepository;
         this.ecpayPaymentGatewayClient = ecpayPaymentGatewayClient;
+        this.reconcileSubscriptionUseCase = reconcileSubscriptionUseCase;
     }
 
     @Override
     @Transactional
     public SubscribeResult subscribe(SubscribeCommand command) {
         subscriptionRepository.findCurrentByMemberId(command.memberId()).ifPresent(existing -> {
-            throw new AlreadySubscribedException(command.memberId());
+            if (existing.getStatus() == SubscriptionStatus.PENDING) {
+                // PENDING 是前次嘗試殘留（可能只是使用者放棄結帳，也可能是真的卡住），先同步查 ECPay
+                // 真實狀態再決定：查到首期其實成功了就擋（AlreadySubscribedException）；查到未成功
+                // reconcile 內部已經 abandonPending 釋放 active_slot，往下可以正常建立新訂閱。
+                if (reconcileSubscriptionUseCase.reconcile(existing)) {
+                    throw new AlreadySubscribedException(command.memberId());
+                }
+                return;
+            }
+            if (existing.getStatus() == SubscriptionStatus.ACTIVE) {
+                throw new AlreadySubscribedException(command.memberId());
+            }
+            // CANCELLED 但還在鑑賞期（benefitExpiredAt 還是 NULL）：這裡不特別擋，active_slot 還沒被
+            // markBenefitExpired 清空，下面 INSERT 會撞 uk_active_slot，一樣轉成 AlreadySubscribedException
+            // （見下方 catch DuplicateKeyException）。
         });
 
         String targetTier = command.targetTier().toUpperCase();

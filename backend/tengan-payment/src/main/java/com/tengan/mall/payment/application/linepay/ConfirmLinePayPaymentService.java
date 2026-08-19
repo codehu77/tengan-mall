@@ -1,6 +1,6 @@
 package com.tengan.mall.payment.application.linepay;
 
-import com.tengan.mall.payment.application.port.OrderPort;
+import com.tengan.mall.payment.application.payment.PaymentConvergenceService;
 import com.tengan.mall.payment.domain.exception.PaymentGatewayException;
 import com.tengan.mall.payment.domain.exception.PaymentRecordNotFoundException;
 import com.tengan.mall.payment.domain.exception.PaymentTransactionMismatchException;
@@ -25,19 +25,20 @@ public class ConfirmLinePayPaymentService implements ConfirmLinePayPaymentUseCas
 
     private final PaymentRecordRepository paymentRecordRepository;
     private final LinePayPaymentGatewayClient linePayPaymentGatewayClient;
-    private final OrderPort orderPort;
+    private final PaymentConvergenceService paymentConvergenceService;
 
     public ConfirmLinePayPaymentService(PaymentRecordRepository paymentRecordRepository,
-            LinePayPaymentGatewayClient linePayPaymentGatewayClient, OrderPort orderPort) {
+            LinePayPaymentGatewayClient linePayPaymentGatewayClient,
+            PaymentConvergenceService paymentConvergenceService) {
         this.paymentRecordRepository = paymentRecordRepository;
         this.linePayPaymentGatewayClient = linePayPaymentGatewayClient;
-        this.orderPort = orderPort;
+        this.paymentConvergenceService = paymentConvergenceService;
     }
 
     @Override
     @Transactional
     public void confirm(ConfirmLinePayPaymentCommand command) {
-        PaymentRecord record = paymentRecordRepository.findByOrderSn(command.orderSn())
+        PaymentRecord record = paymentRecordRepository.findLatestByOrderSn(command.orderSn())
                 .orElseThrow(() -> new PaymentRecordNotFoundException(command.orderSn()));
 
         if (!record.getMemberId().equals(command.memberId())) {
@@ -55,14 +56,8 @@ public class ConfirmLinePayPaymentService implements ConfirmLinePayPaymentUseCas
             throw new PaymentGatewayException("LINE Pay 付款確認失敗: orderSn=" + command.orderSn());
         }
 
-        if (!paymentRecordRepository.markPaid(command.orderSn(), command.transactionId())) {
+        if (!paymentConvergenceService.convergeToPaid(record, command.transactionId())) {
             log.info("LINE Pay confirm 重複呼叫，冪等略過: orderSn={}", command.orderSn());
-            return;
-        }
-        try {
-            orderPort.markPaid(command.orderSn());
-        } catch (RuntimeException e) {
-            log.warn("tengan-order markPaid 失敗（可能與逾時取消競速）: orderSn={}", command.orderSn(), e);
         }
     }
 }

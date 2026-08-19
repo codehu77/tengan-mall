@@ -15,7 +15,7 @@ public class GetPaymentStatusService implements GetPaymentStatusUseCase {
 
     @Override
     public PaymentStatusView getStatus(String orderSn) {
-        var record = paymentRecordRepository.findByOrderSn(orderSn)
+        var record = paymentRecordRepository.findLatestByOrderSn(orderSn)
                 .orElseThrow(() -> new PaymentRecordNotFoundException(orderSn));
         return new PaymentStatusView(record.getOrderSn(), record.getMethod(), record.getStatus().getValue(),
                 record.getAmount());

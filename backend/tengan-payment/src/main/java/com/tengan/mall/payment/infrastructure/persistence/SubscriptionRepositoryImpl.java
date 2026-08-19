@@ -70,6 +70,11 @@ public class SubscriptionRepositoryImpl implements SubscriptionRepository {
     }
 
     @Override
+    public boolean abandonPending(Long id) {
+        return mapper.abandonPending(id) > 0;
+    }
+
+    @Override
     public int incrementConsecutiveFailures(Long id) {
         mapper.incrementConsecutiveFailures(id);
         SubscriptionPO po = mapper.selectById(id);

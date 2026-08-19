@@ -10,16 +10,11 @@
     </div>
 
     <template v-else>
-      <!-- 付款確認中：ECPay 首刷授權結果還沒回來，不能當成已訂閱成功 -->
-      <div
-        v-if="subscription?.status === 'PENDING'"
-        class="bg-blue-50 border border-blue-200 rounded-lg px-5 py-3 flex items-center gap-3"
-      >
-        <UIcon name="i-heroicons-clock" class="w-5 h-5 text-blue-400 shrink-0" />
-        <p class="text-sm text-blue-600">付款確認中，請稍候片刻後重新整理頁面查看結果</p>
-      </div>
-
-      <template v-else-if="subscription?.subscribed">
+      <!-- PENDING（ECPay 首刷授權結果還沒回來，例如剛剛按上一頁離開付款頁）直接落回下面的方案選擇
+           畫面，不特別攔住——使用者可能本來就想改選別的方案，重新點下面任一顆按鈕都會先讓後端同步
+           查一次 ECPay 真實狀態：查到舊嘗試其實沒成功就作廢重來，查到其實成功了就收斂成 ACTIVE
+           （見 handleSubscribe 的 catch 分支）。 -->
+      <template v-if="subscription?.subscribed && subscription.status !== 'PENDING'">
         <!-- 已取消但權益尚未到期：明確標示不會立刻失去 PRO -->
         <div
           v-if="!subscription.autoRenew"
@@ -169,12 +164,20 @@ async function handleSubscribe(tier: SubscriptionTargetTier) {
     const result = await subscribe(tier)
     submitEcpayForm(result.ecpayForm)
   } catch (e: any) {
-    toast.add({
-      title: '訂閱失敗',
-      description: e.data?.data?.message ?? e.message,
-      color: 'red',
-      timeout: 4000,
-    })
+    // 從 PENDING 按「重新查詢付款結果」時，後端會先同步查 ECPay 真實狀態——如果查到其實已經授權
+    // 成功，會直接收斂成 ACTIVE 再丟「已經有一份進行中的訂閱」擋重複，這裡重抓一次狀態，讓畫面從
+    // 「付款確認中」正確跳到「訂閱中」，不要停在過期的 PENDING 畫面又疊一個看起來像失敗的紅色提示。
+    subscription.value = await fetchMySubscription()
+    if (subscription.value.status === 'ACTIVE') {
+      toast.add({ title: '訂閱成功', description: '剛剛的付款其實已經授權成功', color: 'green', timeout: 3000 })
+    } else {
+      toast.add({
+        title: '訂閱失敗',
+        description: e.data?.data?.message ?? e.message,
+        color: 'red',
+        timeout: 4000,
+      })
+    }
     subscribing.value = false
   }
 }

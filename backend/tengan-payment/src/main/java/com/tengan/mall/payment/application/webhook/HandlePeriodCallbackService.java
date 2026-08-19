@@ -83,6 +83,17 @@ public class HandlePeriodCallbackService implements HandlePeriodCallbackUseCase 
         });
     }
 
+    @Override
+    @Transactional
+    public void confirmFromPeriodQuery(String merchantTradeNo, String gwsr, BigDecimal amount,
+            int totalSuccessTimes, Instant processDate) {
+        subscriptionRepository.findByMerchantTradeNo(merchantTradeNo).ifPresent(subscription -> {
+            String idempotencyKey = (gwsr != null && !gwsr.isBlank()) ? gwsr
+                    : merchantTradeNo + ":" + totalSuccessTimes + ":true";
+            applyResult(subscription, idempotencyKey, true, amount, totalSuccessTimes, processDate);
+        });
+    }
+
     /** PeriodReturnURL 的每期通知、跟 ReturnURL 對第一期的即時確認，最終都走同一套入帳邏輯。 */
     private void applyResult(Subscription subscription, String idempotencyKey, boolean success, BigDecimal amount,
             int totalSuccessTimes, Instant processDate) {

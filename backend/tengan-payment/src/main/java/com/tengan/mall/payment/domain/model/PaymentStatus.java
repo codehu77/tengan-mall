@@ -7,7 +7,9 @@ import com.baomidou.mybatisplus.annotation.IEnum;
 public enum PaymentStatus implements IEnum<Integer> {
 
     PENDING(1),
-    PAID(2);
+    PAID(2),
+    /** 同步查帳（使用者重試觸發/排程掃描）確認這筆嘗試沒有真的付款成功，結案存查。 */
+    FAILED(3);
 
     @EnumValue
     private final int code;

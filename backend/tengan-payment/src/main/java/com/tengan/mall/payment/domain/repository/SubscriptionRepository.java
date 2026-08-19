@@ -27,6 +27,14 @@ public interface SubscriptionRepository {
     /** 條件式 UPDATE status=CANCELLED WHERE id=? AND status=ACTIVE，不動 paidUntil，回傳是否真的搶到操作權。 */
     boolean markCancelled(Long id);
 
+    /**
+     * PENDING 且從未成功過的訂閱判定作廢：立即轉 CANCELLED + 清空 active_slot + 設 benefitExpiredAt=NOW()
+     * （沒有真的授予過權益，不需要真的呼叫 wallet 降級），讓會員能立刻重新訂閱，不用等
+     * SubscriptionExpiryScheduler 下一輪（最長 1 小時）才處理。條件式 UPDATE WHERE status=PENDING，
+     * 回傳是否真的搶到操作權。
+     */
+    boolean abandonPending(Long id);
+
     /** 遞增連續失敗次數，回傳遞增後的次數。 */
     int incrementConsecutiveFailures(Long id);
 

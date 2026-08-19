@@ -46,12 +46,11 @@ public class HandleSubscriptionReturnCallbackService implements HandleSubscripti
         String rtnCode = params.get("RtnCode");
         if (!"1".equals(rtnCode)) {
             log.warn("ECPay 訂閱首刷授權未成功: merchantTradeNo={} rtnCode={}", merchantTradeNo, rtnCode);
-            // 首刷沒過，這份訂閱從沒真的生效過（還停在 PENDING），直接轉 CANCELLED，而不是放著卡住——
-            // SubscriptionExpiryScheduler 只處理 CANCELLED，放著不管的話 findCurrentByMemberId 會一直
-            // 查到這筆從沒成功過的訂閱，導致這個會員永遠無法重新訂閱。
-
+            // 首刷沒過，這份訂閱從沒真的生效過（還停在 PENDING），直接作廢（abandonPending：轉 CANCELLED
+            // + 立即清空 active_slot），而不是放著卡住——這個會員才能立刻重新訂閱，不用等
+            // SubscriptionExpiryScheduler 下一輪（最長 1 小時）才把 active_slot 釋放出來。
             subscriptionRepository.findByMerchantTradeNo(merchantTradeNo)
-                    .ifPresent(subscription -> subscriptionRepository.markCancelled(subscription.getId()));
+                    .ifPresent(subscription -> subscriptionRepository.abandonPending(subscription.getId()));
             return;
         }
 

@@ -23,6 +23,13 @@ public interface SubscriptionMapper extends BaseMapper<SubscriptionPO> {
     @Update("UPDATE subscription SET status = 2, cancelled_at = NOW() WHERE id = #{id} AND status <> 2")
     int markCancelled(@Param("id") Long id);
 
+    // PENDING 專用的立即作廢：跟 markBenefitExpired 一樣清 active_slot，但不等排程、當場就讓
+    // uk_active_slot 空出來——PENDING 從沒真的生效過，沒有 wallet 權益需要降級，跟 markBenefitExpired
+    // 的差別只在這裡不呼叫 wallet。
+    @Update("UPDATE subscription SET status = 2, cancelled_at = NOW(), benefit_expired_at = NOW(), active_slot = NULL "
+            + "WHERE id = #{id} AND status = 0")
+    int abandonPending(@Param("id") Long id);
+
     @Update("UPDATE subscription SET consecutive_failures = consecutive_failures + 1 WHERE id = #{id}")
     int incrementConsecutiveFailures(@Param("id") Long id);
 

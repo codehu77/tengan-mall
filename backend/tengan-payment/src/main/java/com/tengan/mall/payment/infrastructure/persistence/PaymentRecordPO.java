@@ -13,6 +13,7 @@ public class PaymentRecordPO {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String orderSn;
+    private String ecpayMerchantTradeNo;
     private Long memberId;
     private String method;
     private BigDecimal amount;
@@ -36,6 +37,14 @@ public class PaymentRecordPO {
 
     public void setOrderSn(String orderSn) {
         this.orderSn = orderSn;
+    }
+
+    public String getEcpayMerchantTradeNo() {
+        return ecpayMerchantTradeNo;
+    }
+
+    public void setEcpayMerchantTradeNo(String ecpayMerchantTradeNo) {
+        this.ecpayMerchantTradeNo = ecpayMerchantTradeNo;
     }
 
     public Long getMemberId() {

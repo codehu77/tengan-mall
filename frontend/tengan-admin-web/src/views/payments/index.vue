@@ -36,15 +36,18 @@ const methodOptions = [
   { label: "貨到付款", value: "cod" }
 ];
 
-/** 1=PENDING 2=PAID（跟 tengan-payment PaymentStatus 對齊）。 */
+/** 1=PENDING 2=PAID 3=FAILED（跟 tengan-payment PaymentStatus 對齊）。FAILED 是同步查帳確認未付款
+ * 的舊嘗試，credit_card 重試會保留這筆存查，不會被刪除。 */
 const statusOptions = [
   { label: "待付款", value: 1 },
-  { label: "已付款", value: 2 }
+  { label: "已付款", value: 2 },
+  { label: "查無付款(已作廢)", value: 3 }
 ];
 
-const statusTagType: Record<number, "warning" | "success"> = {
+const statusTagType: Record<number, "warning" | "success" | "info"> = {
   1: "warning",
-  2: "success"
+  2: "success",
+  3: "info"
 };
 
 const columns: TableColumns[] = [
