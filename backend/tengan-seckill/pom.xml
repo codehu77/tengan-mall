@@ -10,13 +10,14 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>tengan-order</artifactId>
+  <artifactId>tengan-seckill</artifactId>
   <packaging>jar</packaging>
 
   <!--
-    訂單網域（開發順序與清單.md Phase 6）：跨服務編排核心，同步呼叫 cart/product/inventory/coupon
-    的 internal 端點，用手動編排 + 補償取代分散式交易（見規劃文件）。orderToken 防重複用 Redis
-    Lua script；逾時取消用 RabbitMQ TTL+DLX 延遲佇列（同一服務身兼生產者+消費者）。
+    秒殺網域（開發順序與清單.md Phase 9，2026-08-21 重新規劃）：限時搶購跟首發合併成同一套機制，
+    用 activity_type 參數化配額是否真的稀缺。核心是「保留配額」這個 internal 端點供 tengan-order
+    的訂單建立 Saga 呼叫（比照 inventory lock/release 的既有模式），三道防線本體（限購計數 INCRBY +
+    RSemaphore.tryAcquire）用 Redisson 實作，是整個專案第一次引入這個依賴。
   -->
 
   <dependencies>
@@ -41,12 +42,15 @@
       <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-amqp</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.retry</groupId>
-      <artifactId>spring-retry</artifactId>
+      <groupId>org.redisson</groupId>
+      <artifactId>redisson-spring-boot-starter</artifactId>
+      <exclusions>
+        <!-- 這個 starter 預設帶自己的 spring-data-redis 版本，改吃 Spring Boot BOM 管的那份，避免版本衝突。 -->
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-data-redis</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -85,6 +89,12 @@
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-mysql</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

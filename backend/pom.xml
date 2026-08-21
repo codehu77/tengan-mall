@@ -27,6 +27,8 @@
 
     <!-- 不在 Spring Boot/Cloud BOM 管理範圍內，各服務共用同一版本，統一寫在這裡 -->
     <mybatis-plus.version>3.5.7</mybatis-plus.version>
+    <!-- tengan-seckill 第一次引入，RSemaphore 分散式信號量用來做搶購限流/扣配額 -->
+    <redisson.version>3.37.0</redisson.version>
   </properties>
 
   <dependencyManagement>
@@ -59,11 +61,21 @@
         <artifactId>tengan-jwt-verification-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.tengan.mall</groupId>
+        <artifactId>tengan-snowflake-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <dependency>
         <groupId>com.baomidou</groupId>
         <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         <version>${mybatis-plus.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.redisson</groupId>
+        <artifactId>redisson-spring-boot-starter</artifactId>
+        <version>${redisson.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -90,6 +102,7 @@
 
   <modules>
     <module>tengan-jwt-verification-starter</module>
+    <module>tengan-snowflake-starter</module>
     <module>tengan-gateway</module>
     <module>tengan-auth</module>
     <module>tengan-admin</module>
@@ -102,6 +115,7 @@
     <module>tengan-order</module>
     <module>tengan-payment</module>
     <module>tengan-wallet</module>
+    <module>tengan-seckill</module>
   </modules>
 
 </project>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.tengan.mall</groupId>
+    <artifactId>tengan-mall-backend</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>tengan-snowflake-starter</artifactId>
+  <packaging>jar</packaging>
+
+  <!--
+    第二個允許的共用模組（cross-cutting 技術碼：分散式 ID 產生，見 docs/ddd-standards.md 第九節
+    例外條款，跟 tengan-jwt-verification-starter 屬於同一類）。orderSn 唯一性要求在秒殺場景下
+    不能再用機率性防碰撞（tengan-order 原本的 timestamp+random），需要真正保證唯一的演算法，
+    但這是純技術問題，跟任何一個 bounded context 的業務語意無關，不算「跨 context 共用業務型別」。
+  -->
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
+
+</project>

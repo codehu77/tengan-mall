@@ -1,0 +1,51 @@
+server:
+  port: 9120
+
+spring:
+  application:
+    name: tengan-mall-seckill
+  datasource:
+    url: jdbc:mysql://localhost:3306/tengan_mall_seckill?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Taipei
+    username: root
+    password: ${MYSQL_ROOT_PASSWORD:tengan123}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD:tengan123}
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_ADMIN_USERNAME:nacos}
+        password: ${NACOS_ADMIN_PASSWORD:tengan123}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        username: ${NACOS_ADMIN_USERNAME:nacos}
+        password: ${NACOS_ADMIN_PASSWORD:tengan123}
+        file-extension: yaml
+  config:
+    import: optional:nacos:${spring.application.name}.yaml
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+tengan:
+  snowflake:
+    # 秒殺訂單保留成功後產生 orderSn 用的 worker-id，跟 tengan-order（worker-id=1）不重複。
+    worker-id: 2
+  seckill:
+    # 結算/回滾用的 RSemaphore key TTL 要比活動 end_time 多留一段緩衝，讓 SettlementScheduler
+    # 來得及在 key 過期前讀到最後的 availablePermits()；購物車/下單判斷模式的 seckill:sku:{skuId}
+    # key 沒有這個緩衝，精確設在 end_time（見 SeckillCacheAdapter 說明）。
+    settlement-grace-minutes: 60
+    # 預熱排程往未來看多久（小時）——每日固定四個時間點觸發，抓 6 小時剛好銜接下一次排程，
+    # 不會漏掉「這次還沒開始、下次排程前就會開始」的活動。
+    warmup-horizon-hours: 6

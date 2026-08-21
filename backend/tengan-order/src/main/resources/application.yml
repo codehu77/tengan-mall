@@ -47,3 +47,6 @@ tengan:
     # 待付款訂單多久沒付款自動取消（毫秒）；正式環境建議 30 分鐘，這裡預設值方便本機直接啟動就能跑，
     # 展示/測試時建議在 Nacos tengan-mall-order.yaml 覆蓋成更短的值（例如 60000）。
     unpaid-timeout-ms: 900000
+  snowflake:
+    # orderSn 產生器的 worker-id，tengan-seckill 給 2，兩邊不重複避免同毫秒生出相同 ID。
+    worker-id: 1

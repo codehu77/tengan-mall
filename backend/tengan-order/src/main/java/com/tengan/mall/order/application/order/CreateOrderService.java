@@ -16,14 +16,12 @@ import com.tengan.mall.order.domain.exception.OrderTokenInvalidException;
 import com.tengan.mall.order.domain.model.Order;
 import com.tengan.mall.order.domain.model.OrderItem;
 import com.tengan.mall.order.domain.repository.OrderRepository;
+import com.tengan.mall.snowflake.SnowflakeIdGenerator;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -45,7 +43,6 @@ import org.springframework.stereotype.Service;
 public class CreateOrderService implements CreateOrderUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(CreateOrderService.class);
-    private static final DateTimeFormatter ORDER_SN_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final OrderTokenPort orderTokenPort;
     private final CartPort cartPort;
@@ -55,10 +52,11 @@ public class CreateOrderService implements CreateOrderUseCase {
     private final InventoryPort inventoryPort;
     private final OrderRepository orderRepository;
     private final OrderEventPort orderEventPort;
+    private final SnowflakeIdGenerator snowflakeIdGenerator;
 
     public CreateOrderService(OrderTokenPort orderTokenPort, CartPort cartPort, ProductPort productPort,
             CouponPort couponPort, WalletPort walletPort, InventoryPort inventoryPort, OrderRepository orderRepository,
-            OrderEventPort orderEventPort) {
+            OrderEventPort orderEventPort, SnowflakeIdGenerator snowflakeIdGenerator) {
         this.orderTokenPort = orderTokenPort;
         this.cartPort = cartPort;
         this.productPort = productPort;
@@ -67,6 +65,7 @@ public class CreateOrderService implements CreateOrderUseCase {
         this.inventoryPort = inventoryPort;
         this.orderRepository = orderRepository;
         this.orderEventPort = orderEventPort;
+        this.snowflakeIdGenerator = snowflakeIdGenerator;
     }
 
     @Override
@@ -167,10 +166,11 @@ public class CreateOrderService implements CreateOrderUseCase {
         }
     }
 
-    /** 服務層產生，不用 DB 序列（比照 PurchaseOrder.poNumber 生成方式）。 */
+    /**
+     * 用 Snowflake 產生，保證唯一（不用 DB 序列）。原本是 timestamp+random 的機率性防碰撞，
+     * 秒殺場景下同一秒可能有上百筆訂單同時產生，碰撞機率不可忽略，改用 tengan-snowflake-starter。
+     */
     private String generateOrderSn() {
-        String timestamp = ORDER_SN_TIMESTAMP.format(LocalDateTime.now());
-        int random = ThreadLocalRandom.current().nextInt(10000);
-        return timestamp + String.format("%04d", random);
+        return Long.toString(snowflakeIdGenerator.nextId());
     }
 }
