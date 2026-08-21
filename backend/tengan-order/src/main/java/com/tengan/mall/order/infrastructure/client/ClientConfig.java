@@ -15,10 +15,11 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.web.client.RestClient;
 
 /**
- * tengan-order 呼叫 cart/product/inventory/coupon 四個服務的 /internal/** 端點都要帶 Service JWT
- * ——比照 tengan-admin/tengan-cart 呼叫其他服務的既有模式（AuthorizedClientServiceOAuth2AuthorizedClientManager，
- * client_credentials 是服務對服務授權，不綁定任何使用者請求）。四個 client 共用同一顆
- * authorizedClientManager，各自的 client 註冊資訊在 Nacos tengan-mall-order.yaml。
+ * tengan-order 呼叫 cart/product/inventory/coupon/wallet/seckill 這幾個服務的 /internal/** 端點
+ * 都要帶 Service JWT——比照 tengan-admin/tengan-cart 呼叫其他服務的既有模式
+ * （AuthorizedClientServiceOAuth2AuthorizedClientManager，client_credentials 是服務對服務授權，
+ * 不綁定任何使用者請求）。所有 client 共用同一顆 authorizedClientManager，各自的 client 註冊資訊
+ * 在 Nacos tengan-mall-order.yaml。
  */
 @Configuration
 public class ClientConfig {
@@ -69,6 +70,11 @@ public class ClientConfig {
 
     @Bean
     public RestClient walletRestClient(@Value("${tengan.wallet.base-url}") String baseUrl) {
+        return buildRestClient(baseUrl);
+    }
+
+    @Bean
+    public RestClient seckillRestClient(@Value("${tengan.seckill.base-url}") String baseUrl) {
         return buildRestClient(baseUrl);
     }
 }

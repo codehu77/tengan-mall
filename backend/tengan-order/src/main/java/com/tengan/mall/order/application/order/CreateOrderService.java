@@ -1,6 +1,8 @@
 package com.tengan.mall.order.application.order;
 
+import com.tengan.mall.order.application.port.ActiveSeckillSku;
 import com.tengan.mall.order.application.port.CartPort;
+import com.tengan.mall.order.application.port.CheckedCartItem;
 import com.tengan.mall.order.application.port.CouponPort;
 import com.tengan.mall.order.application.port.InventoryPort;
 import com.tengan.mall.order.application.port.LockItem;
@@ -8,6 +10,7 @@ import com.tengan.mall.order.application.port.OrderEventPort;
 import com.tengan.mall.order.application.port.OrderTokenPort;
 import com.tengan.mall.order.application.port.PricedSkuInfo;
 import com.tengan.mall.order.application.port.ProductPort;
+import com.tengan.mall.order.application.port.SeckillPort;
 import com.tengan.mall.order.application.port.WalletPort;
 import com.tengan.mall.order.domain.exception.CouponNotApplicableException;
 import com.tengan.mall.order.domain.exception.EmptyCartException;
@@ -34,10 +37,12 @@ import org.springframework.stereotype.Service;
  * orderRepository.save() 那一段本地多表寫入才需要交易保護，已經在 OrderRepositoryImpl.save() 上標好
  * （見規劃文件三、）。
  *
- * <p>步驟排序刻意「先做便宜可逆的、後做昂貴不可逆的」：鎖庫存（失敗機率相對高，失敗時什麼都還沒發生）
- * → 核銷優惠券（失敗機率較低，一旦成功就有副作用）→ 本地寫入 order/order_item（機率最低，一旦要處理
- * 失敗要補償前面兩者）。補償堆疊（compensations）記錄「已成功、失敗時需要反做」的動作，由外而內
- * 反序執行——這是手動實作的 Saga 補償鏈，取代分散式交易（見規劃文件一、1~4、7）。</p>
+ * <p>步驟排序刻意「先做便宜可逆的、後做昂貴不可逆的」：秒殺配額保留（Phase 9 新增，購物車裡若有
+ * 秒殺項目，這是最稀缺、競爭最激烈的資源，優先嘗試盡早失敗）→ 鎖一般庫存（失敗機率相對高，失敗時
+ * 什麼都還沒發生）→ 核銷優惠券（失敗機率較低，一旦成功就有副作用）→ 本地寫入 order/order_item
+ * （機率最低，一旦要處理失敗要補償前面各項）。補償堆疊（compensations）記錄「已成功、失敗時需要
+ * 反做」的動作，由外而內反序執行——這是手動實作的 Saga 補償鏈，取代分散式交易（見規劃文件一、1~4、7；
+ * 秒殺配額保留見 Phase 9 規劃第 4.2 節）。</p>
  */
 @Service
 public class CreateOrderService implements CreateOrderUseCase {
@@ -50,19 +55,21 @@ public class CreateOrderService implements CreateOrderUseCase {
     private final CouponPort couponPort;
     private final WalletPort walletPort;
     private final InventoryPort inventoryPort;
+    private final SeckillPort seckillPort;
     private final OrderRepository orderRepository;
     private final OrderEventPort orderEventPort;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
 
     public CreateOrderService(OrderTokenPort orderTokenPort, CartPort cartPort, ProductPort productPort,
-            CouponPort couponPort, WalletPort walletPort, InventoryPort inventoryPort, OrderRepository orderRepository,
-            OrderEventPort orderEventPort, SnowflakeIdGenerator snowflakeIdGenerator) {
+            CouponPort couponPort, WalletPort walletPort, InventoryPort inventoryPort, SeckillPort seckillPort,
+            OrderRepository orderRepository, OrderEventPort orderEventPort, SnowflakeIdGenerator snowflakeIdGenerator) {
         this.orderTokenPort = orderTokenPort;
         this.cartPort = cartPort;
         this.productPort = productPort;
         this.couponPort = couponPort;
         this.walletPort = walletPort;
         this.inventoryPort = inventoryPort;
+        this.seckillPort = seckillPort;
         this.orderRepository = orderRepository;
         this.orderEventPort = orderEventPort;
         this.snowflakeIdGenerator = snowflakeIdGenerator;
@@ -83,11 +90,16 @@ public class CreateOrderService implements CreateOrderUseCase {
         List<Long> skuIds = cartItems.stream().map(i -> i.skuId()).toList();
         Map<Long, PricedSkuInfo> priceBySkuId = productPort.batchPrice(skuIds).stream()
                 .collect(Collectors.toMap(PricedSkuInfo::skuId, Function.identity()));
+        // 秒殺項目跟一般商品長得一樣（同一顆 SKU 只會展示一種樣子），這裡先問過 tengan-seckill 目前
+        // 誰是活躍秒殺，價格改用秒殺價，名稱/圖片仍照舊查 tengan-product（見 Phase 9 規劃第 4.2 節）。
+        Map<Long, ActiveSeckillSku> activeSeckillBySkuId = seckillPort.checkActive(skuIds);
 
         List<OrderItem> orderItems = cartItems.stream().map(cartItem -> {
             PricedSkuInfo sku = priceBySkuId.get(cartItem.skuId());
-            BigDecimal subtotal = sku.price().multiply(BigDecimal.valueOf(cartItem.count()));
-            return new OrderItem(null, sku.skuId(), sku.spuId(), sku.name(), sku.mainImage(), sku.price(),
+            ActiveSeckillSku seckill = activeSeckillBySkuId.get(cartItem.skuId());
+            BigDecimal unitPrice = seckill != null ? seckill.seckillPrice() : sku.price();
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(cartItem.count()));
+            return new OrderItem(null, sku.skuId(), sku.spuId(), sku.name(), sku.mainImage(), unitPrice,
                     cartItem.count(), subtotal);
         }).toList();
         BigDecimal totalAmount = orderItems.stream().map(OrderItem::subtotal).reduce(BigDecimal.ZERO,
@@ -109,12 +121,30 @@ public class CreateOrderService implements CreateOrderUseCase {
         BigDecimal pointsDiscountAmount = BigDecimal.ZERO;
         BigDecimal payAmount;
         try {
-            var lockItems = orderItems.stream().map(i -> new LockItem(i.skuId(), i.count())).toList();
-            var lockResult = inventoryPort.lock(orderSn, lockItems);
-            if (!lockResult.success()) {
-                throw new InventoryShortageException(lockResult.shortageSkuIds());
+            // 秒殺項目最先處理（最可能失敗、競爭最激烈的資源），優先嘗試，搶不到就盡早失敗，
+            // 不浪費後面一般商品鎖庫存的成本（見 Phase 9 規劃第 4.2 節「處理順序」）。
+            for (CheckedCartItem cartItem : cartItems) {
+                if (!activeSeckillBySkuId.containsKey(cartItem.skuId())) {
+                    continue;
+                }
+                Long skuId = cartItem.skuId();
+                int count = cartItem.count();
+                Long memberId = command.memberId();
+                seckillPort.reserve(skuId, memberId, count);
+                compensations.push(() -> seckillPort.release(skuId, memberId, count));
             }
-            compensations.push(() -> inventoryPort.release(orderSn));
+
+            // 一般商品只鎖「不是秒殺」的那些——秒殺項目全程不動真實庫存，只在場次結束後的結算
+            // 步驟一次性同步實際賣出量（見 Phase 9 規劃第 3、6 節）。
+            var lockItems = cartItems.stream().filter(item -> !activeSeckillBySkuId.containsKey(item.skuId()))
+                    .map(item -> new LockItem(item.skuId(), item.count())).toList();
+            if (!lockItems.isEmpty()) {
+                var lockResult = inventoryPort.lock(orderSn, lockItems);
+                if (!lockResult.success()) {
+                    throw new InventoryShortageException(lockResult.shortageSkuIds());
+                }
+                compensations.push(() -> inventoryPort.release(orderSn));
+            }
 
             if (command.couponId() != null) {
                 couponPort.consume(command.couponId(), orderSn);
