@@ -164,7 +164,14 @@ const order = ref<OrderDetail | null>(null)
 async function load() {
   loading.value = true
   try {
-    order.value = await fetchOrderDetail(String(route.params.orderSn))
+    const result = await fetchOrderDetail(String(route.params.orderSn))
+    // 秒殺訂單非同步落地中極少見會被連到這頁（一般都先經過 /order/pay），保守起見還是要處理型別。
+    if ('processing' in result) {
+      toast.add({ title: '訂單處理中，請稍後再查看', color: 'orange', timeout: 3000 })
+      navigateTo('/order/list')
+      return
+    }
+    order.value = result
   } catch {
     toast.add({ title: '找不到此訂單', color: 'red', timeout: 3000 })
     navigateTo('/order/list')

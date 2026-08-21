@@ -1,4 +1,5 @@
 import type { CartItem } from '../../types/cart'
+import type { PublicSeckillSku } from './seckill'
 
 /** tengan-cart 回應欄位（name/mainImage）跟前端既有 CartItem 型別（skuName/image）欄位名稱不同，集中在這裡轉換一次。 */
 export interface BackendCartLine {
@@ -14,7 +15,8 @@ export interface BackendCartLine {
   available: boolean
 }
 
-export function toCartItem(line: BackendCartLine): CartItem {
+export function toCartItem(line: BackendCartLine, seckillMap: Map<number, PublicSeckillSku>): CartItem {
+  const seckill = seckillMap.get(line.skuId)
   return {
     itemId: line.itemId,
     skuId: line.skuId,
@@ -25,5 +27,7 @@ export function toCartItem(line: BackendCartLine): CartItem {
     count: line.count,
     checked: line.checked,
     available: line.available,
+    seckillPrice: seckill?.seckillPrice,
+    seckillRemaining: seckill?.remaining,
   }
 }

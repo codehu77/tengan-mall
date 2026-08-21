@@ -35,11 +35,18 @@
               <img :src="item.image" :alt="item.skuName" class="w-full h-full object-cover" />
             </NuxtLink>
             <NuxtLink :to="item.spuId ? `/item/${item.spuId}` : '#'" class="flex-1 text-sm text-gray-700 hover:text-red-500 transition line-clamp-2">
+              <UBadge v-if="item.seckillPrice != null" color="red" variant="solid" size="xs" class="mr-1">限時搶購</UBadge>
               {{ item.skuName }}
               <span v-if="!item.available" class="text-xs text-gray-400">（已下架）</span>
             </NuxtLink>
-            <div class="w-24 text-center text-sm text-gray-700">
-              NT$ {{ item.price.toLocaleString() }}
+            <div class="w-24 text-center text-sm">
+              <template v-if="item.seckillPrice != null">
+                <div class="text-red-600 font-medium">NT$ {{ item.seckillPrice.toLocaleString() }}</div>
+                <div class="text-gray-400 text-xs line-through">NT$ {{ item.price.toLocaleString() }}</div>
+              </template>
+              <template v-else>
+                <span class="text-gray-700">NT$ {{ item.price.toLocaleString() }}</span>
+              </template>
             </div>
             <div class="w-28 flex items-center justify-center">
               <div class="flex items-center border border-gray-200 rounded overflow-hidden">
@@ -55,7 +62,7 @@
               </div>
             </div>
             <div class="w-24 text-center text-sm font-medium text-red-600">
-              NT$ {{ (item.price * item.count).toLocaleString() }}
+              NT$ {{ (unitPrice(item) * item.count).toLocaleString() }}
             </div>
             <div class="w-12 text-center">
               <button
@@ -132,9 +139,14 @@ const { fetchCartItems, removeFromCart, updateQty, toggleChecked, toggleAllCheck
 
 const items = ref<CartItem[]>(await fetchCartItems())
 
+/** 有秒殺價就用秒殺價——活動結束後 item.seckillPrice 自然變 undefined，這裡不用另外判斷「是否過期」。 */
+function unitPrice(item: CartItem) {
+  return item.seckillPrice ?? item.price
+}
+
 const allChecked = computed(() => items.value.length > 0 && items.value.every(i => i.checked))
 const checkedCount = computed(() => items.value.filter(i => i.checked).reduce((sum, i) => sum + i.count, 0))
-const checkedSubtotal = computed(() => items.value.filter(i => i.checked).reduce((sum, i) => sum + i.price * i.count, 0))
+const checkedSubtotal = computed(() => items.value.filter(i => i.checked).reduce((sum, i) => sum + unitPrice(i) * i.count, 0))
 const totalAmount = computed(() => checkedSubtotal.value + (checkedSubtotal.value > 0 && checkedSubtotal.value < 990 ? 80 : 0))
 
 async function toggleAll() {

@@ -10,4 +10,7 @@ export interface CartItem {
   checked: boolean
   /** sku 已被刪除時 false（下架仍算 true——後端不因下架隱藏購物車項目，只有真的刪除才會）。 */
   available: boolean
+  /** 只有目前活躍秒殺的 sku 才有值；活動結束後自動變回 undefined，不是「過期」這種特殊狀態。 */
+  seckillPrice?: number
+  seckillRemaining?: number
 }

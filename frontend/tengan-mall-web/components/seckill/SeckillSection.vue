@@ -1,5 +1,72 @@
+<script setup lang="ts">
+import type { SeckillActivity } from '~/composables/useSeckill'
+
+const props = defineProps<{
+  activities: SeckillActivity[]
+}>()
+
+// 輪播常數：w-48 = 192px, gap-4 = 16px
+const VISIBLE = 5
+const CARD_STEP = 192 + 16
+
+const selectedActivityId = ref(props.activities[0]?.id ?? null)
+const currentIndex = ref(0)
+
+const currentActivity = computed(() =>
+  props.activities.find(a => a.id === selectedActivityId.value) ?? props.activities[0]
+)
+
+const currentSkus = computed(() => currentActivity.value?.skus ?? [])
+
+const hasPrev = computed(() => currentIndex.value > 0)
+const hasNext = computed(() => currentIndex.value + VISIBLE < currentSkus.value.length)
+
+function prev() { if (hasPrev.value) currentIndex.value-- }
+function next() { if (hasNext.value) currentIndex.value++ }
+
+function selectActivity(id: number) {
+  selectedActivityId.value = id
+  currentIndex.value = 0
+  updateRemaining()
+}
+
+const activityLabel: Record<SeckillActivity['activityType'], string> = {
+  FLASH_SALE: '限時搶購',
+  LAUNCH: '首發',
+}
+
+const remaining = ref(0)
+
+function updateRemaining() {
+  const activity = currentActivity.value
+  if (!activity) return
+  remaining.value = Math.max(0, Math.floor((new Date(activity.endTime).getTime() - Date.now()) / 1000))
+}
+
+const hh = computed(() => String(Math.floor(remaining.value / 3600)).padStart(2, '0'))
+const mm = computed(() => String(Math.floor((remaining.value % 3600) / 60)).padStart(2, '0'))
+const ss = computed(() => String(remaining.value % 60).padStart(2, '0'))
+
+function discountLabel(sku: { seckillPrice: number; originalPrice: number }) {
+  if (sku.originalPrice <= 0) return ''
+  const off = Math.round((1 - sku.seckillPrice / sku.originalPrice) * 10)
+  return `${off}折`
+}
+
+let timer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  updateRemaining()
+  timer = setInterval(updateRemaining, 1000)
+})
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
+</script>
+
 <template>
-  <section class="mb-10">
+  <section v-if="currentActivity" class="mb-10">
 
     <!-- 標題列 -->
     <div class="flex items-center gap-4 mb-4">
@@ -8,10 +75,10 @@
       <div class="flex items-center gap-3 shrink-0">
         <div class="flex items-center gap-2 bg-red-500 text-white px-3 py-1.5 rounded-lg">
           <UIcon name="i-heroicons-bolt" class="w-4 h-4" />
-          <span class="font-bold text-sm tracking-wide">限時搶購</span>
+          <span class="font-bold text-sm tracking-wide">{{ activityLabel[currentActivity.activityType] }}</span>
         </div>
         <div class="flex items-center gap-1.5 text-sm">
-          <span class="text-gray-400 text-xs">{{ countdownLabel }}</span>
+          <span class="text-gray-400 text-xs">距結束</span>
           <div class="flex items-center gap-1">
             <span class="bg-gray-800 text-white text-xs font-mono px-1.5 py-0.5 rounded">{{ hh }}</span>
             <span class="text-gray-500 font-bold text-xs">:</span>
@@ -22,21 +89,21 @@
         </div>
       </div>
 
-      <!-- 中：搶購時段 -->
-      <div class="flex items-center gap-2 flex-1">
+      <!-- 中：多場活動同時進行時才顯示切換 tab -->
+      <div v-if="activities.length > 1" class="flex items-center gap-2 flex-1">
         <button
-          v-for="session in activeSessions"
-          :key="session.sessionId"
+          v-for="activity in activities"
+          :key="activity.id"
           class="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap"
-          :class="session.active
+          :class="activity.id === currentActivity.id
             ? 'border border-red-500 text-red-500 bg-red-50'
             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
-          @click="selectSession(session.sessionId)"
+          @click="selectActivity(activity.id)"
         >
-          <span class="font-mono">{{ session.time }}</span>
-          <span>{{ session.label }}</span>
+          {{ activityLabel[activity.activityType] }}
         </button>
       </div>
+      <div v-else class="flex-1" />
 
       <!-- 右：看更多 -->
       <NuxtLink to="/seckill" class="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1 transition-colors shrink-0">
@@ -64,36 +131,36 @@
           :style="{ transform: `translateX(-${currentIndex * CARD_STEP}px)` }"
         >
           <div
-            v-for="item in currentSessionItems"
-            :key="item.id"
+            v-for="sku in currentSkus"
+            :key="sku.skuId"
             class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer shrink-0 w-48 overflow-hidden"
-            @click="navigateTo(`/item/${item.skuId}`)"
+            @click="navigateTo(`/item/${sku.spuId}`)"
           >
             <!-- 商品圖 -->
             <div class="relative">
               <img
-                :src="item.skuInfoVo.skuDefaultImg"
-                :alt="item.skuInfoVo.skuTitle"
+                :src="sku.mainImage"
+                :alt="sku.name"
                 class="w-full h-48 object-cover"
               />
               <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                {{ discountLabel(item) }}
+                {{ discountLabel(sku) }}
               </span>
             </div>
 
             <!-- 商品資訊 -->
             <div class="p-3">
               <p class="text-sm text-gray-700 line-clamp-2 mb-2 leading-relaxed">
-                {{ item.skuInfoVo.skuName }}
+                {{ sku.name }}
               </p>
               <p class="text-red-500 font-bold text-lg leading-none mb-1">
-                NT$ {{ item.seckillPrice.toLocaleString() }}
+                NT$ {{ sku.seckillPrice.toLocaleString() }}
               </p>
               <p class="text-gray-400 text-xs line-through mb-2">
-                NT$ {{ item.skuInfoVo.price.toLocaleString() }}
+                NT$ {{ sku.originalPrice.toLocaleString() }}
               </p>
               <p class="text-xs text-gray-500">
-                剩餘 <span class="font-semibold text-gray-700">{{ item.seckillCount }}</span> 件
+                剩餘 <span class="font-semibold text-gray-700">{{ sku.remaining }}</span> 件
               </p>
             </div>
           </div>
@@ -113,75 +180,3 @@
 
   </section>
 </template>
-
-<script setup lang="ts">
-import type { SeckillItem, SeckillSession } from '~/mocks/seckill'
-
-const props = defineProps<{
-  itemsBySession: Record<number, SeckillItem[]>
-  sessions: SeckillSession[]
-}>()
-
-// 輪播常數：w-48 = 192px, gap-4 = 16px
-const VISIBLE = 5
-const CARD_STEP = 192 + 16  // 每次移動一張卡片的寬度
-
-const activeSessions = ref(props.sessions.map(s => ({ ...s })))
-const currentIndex = ref(0)
-
-const currentSession = computed(() =>
-  activeSessions.value.find(s => s.active) ?? activeSessions.value[0]
-)
-
-const currentSessionItems = computed(() => {
-  const id = currentSession.value?.sessionId ?? 1
-  return props.itemsBySession[id] ?? []
-})
-
-const hasPrev = computed(() => currentIndex.value > 0)
-const hasNext = computed(() => currentIndex.value + VISIBLE < currentSessionItems.value.length)
-
-function prev() { if (hasPrev.value) currentIndex.value-- }
-function next() { if (hasNext.value) currentIndex.value++ }
-
-const countdownLabel = computed(() =>
-  currentSession.value.status === 'ongoing' ? '距結束' : '距開始'
-)
-
-const remaining = ref(0)
-
-function updateRemaining() {
-  const s = currentSession.value
-  const target = s.status === 'ongoing' ? s.endTime : s.startTime
-  remaining.value = Math.max(0, Math.floor((target - Date.now()) / 1000))
-}
-
-function selectSession(id: number) {
-  activeSessions.value.forEach(s => { s.active = s.sessionId === id })
-  currentIndex.value = 0
-  updateRemaining()
-}
-
-const hh = computed(() => String(Math.floor(remaining.value / 3600)).padStart(2, '0'))
-const mm = computed(() => String(Math.floor((remaining.value % 3600) / 60)).padStart(2, '0'))
-const ss = computed(() => String(remaining.value % 60).padStart(2, '0'))
-
-function discountLabel(item: SeckillItem) {
-  const off = Math.round((1 - item.seckillPrice / item.skuInfoVo.price) * 10)
-  return `${off}折`
-}
-
-let timer: ReturnType<typeof setInterval> | null = null
-
-onMounted(() => {
-  updateRemaining()
-  timer = setInterval(updateRemaining, 1000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
-</script>
-
-<style scoped>
-</style>

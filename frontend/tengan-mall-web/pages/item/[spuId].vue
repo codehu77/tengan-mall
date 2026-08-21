@@ -51,8 +51,25 @@
               <span>已售出 <b class="text-gray-600">{{ currentSku.saleCount.toLocaleString() }}</b> 件</span>
             </div>
 
-            <!-- 價格（淡橘底） -->
-            <div class="bg-orange-50 rounded-lg px-5 py-4 flex items-baseline gap-2">
+            <!-- 價格：有活躍秒殺才顯示搶購價+倒數，活動結束後 activeSeckillSku 自然變 null，變回一般價格 -->
+            <div v-if="activeSeckillSku" class="bg-red-50 rounded-lg px-5 py-4 space-y-2">
+              <div class="flex items-center gap-2">
+                <UBadge color="red" variant="solid">限時搶購</UBadge>
+                <span class="text-xs text-gray-500 font-mono">距結束 {{ hh }}:{{ mm }}:{{ ss }}</span>
+              </div>
+              <div class="flex items-baseline gap-2">
+                <span class="text-3xl font-bold text-red-600">
+                  NT$ {{ activeSeckillSku.seckillPrice.toLocaleString() }}
+                </span>
+                <span class="text-sm text-gray-400 line-through">
+                  NT$ {{ currentSku.price.toLocaleString() }}
+                </span>
+              </div>
+              <p class="text-xs text-gray-500">
+                剩餘 {{ activeSeckillSku.remaining }} 件・每人限購 {{ activeSeckillSku.limitPerUser }} 件
+              </p>
+            </div>
+            <div v-else class="bg-orange-50 rounded-lg px-5 py-4 flex items-baseline gap-2">
               <span class="text-sm text-gray-400">優惠價</span>
               <span class="text-3xl font-bold text-red-600">
                 NT$ {{ currentSku.price.toLocaleString() }}
@@ -158,6 +175,7 @@ const { addToCart } = useCart()
 
 const spuId = Number(route.params.spuId)
 const { data: spu } = await useProductDetail(spuId)
+const { data: seckillData } = await useSeckill()
 
 const activeImg = ref(0)
 const qty = ref(1)
@@ -171,6 +189,36 @@ const defaultSkuId = skus.value.length > 0
 const selectedSkuId = ref(defaultSkuId)
 
 const currentSku = computed(() => skus.value.find(s => s.id === selectedSkuId.value) ?? skus.value[0])
+
+// 目前這顆 sku 是不是活躍秒殺——activeSeckillSku 為 null 就是一般模式，活動結束後 useSeckill() 的資料
+// 自然不會再包含這個 skuId，這裡不用寫「是否過期」的額外判斷。
+const activeSeckillSku = computed(() => {
+  const skuId = currentSku.value?.id
+  if (!skuId) return null
+  for (const activity of seckillData.value?.activities ?? []) {
+    const sku = activity.skus.find(s => s.skuId === skuId)
+    if (sku) return { ...sku, endTime: activity.endTime }
+  }
+  return null
+})
+
+const remaining = ref(0)
+function updateRemaining() {
+  if (!activeSeckillSku.value) return
+  remaining.value = Math.max(0, Math.floor((new Date(activeSeckillSku.value.endTime).getTime() - Date.now()) / 1000))
+}
+const hh = computed(() => String(Math.floor(remaining.value / 3600)).padStart(2, '0'))
+const mm = computed(() => String(Math.floor((remaining.value % 3600) / 60)).padStart(2, '0'))
+const ss = computed(() => String(remaining.value % 60).padStart(2, '0'))
+
+let seckillTimer: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  updateRemaining()
+  seckillTimer = setInterval(updateRemaining, 1000)
+})
+onUnmounted(() => {
+  if (seckillTimer) clearInterval(seckillTimer)
+})
 
 // spu 共通圖 + 目前這顆 sku 的專屬圖，切換 sku 時 activeImg 歸零，等同大圖/縮圖跳到對應 sku 的圖
 const images = computed(() => {

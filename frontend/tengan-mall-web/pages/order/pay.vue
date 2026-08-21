@@ -6,6 +6,11 @@
 
       <div v-if="loading" class="bg-white rounded-lg py-16 text-center text-gray-400">載入中...</div>
 
+      <div v-else-if="processing" class="bg-white rounded-lg py-16 text-center text-gray-400">
+        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto mb-3 animate-spin" />
+        <p>訂單處理中，請稍候...</p>
+      </div>
+
       <template v-else-if="order">
         <!-- 訂單資訊 -->
         <div class="bg-white rounded-lg p-6">
@@ -93,6 +98,30 @@ const loading = ref(true)
 const order = ref<OrderDetail | null>(null)
 const initiating = ref(false)
 const confirmingLinePay = ref(false)
+const processing = ref(false)
+
+/** 含秒殺項目的訂單非同步落地中，全專案第一個輪詢機制——固定間隔、有上限次數，不要無限重試。 */
+const POLL_INTERVAL_MS = 1500
+const MAX_POLL_ATTEMPTS = 20
+
+async function pollOrderDetail(orderSn: string, attempt = 0) {
+  const result = await fetchOrderDetail(orderSn)
+  if (!('processing' in result)) {
+    processing.value = false
+    order.value = result
+    return
+  }
+  processing.value = true
+  loading.value = false
+  if (attempt >= MAX_POLL_ATTEMPTS) {
+    processing.value = false
+    toast.add({ title: '處理時間較長，請稍後至訂單列表查看', color: 'orange', timeout: 5000 })
+    navigateTo('/order/list')
+    return
+  }
+  await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS))
+  return pollOrderDetail(orderSn, attempt + 1)
+}
 
 const payButtonLabel = computed(() => {
   if (!order.value) return ''
@@ -140,7 +169,7 @@ onMounted(async () => {
   }
 
   try {
-    order.value = await fetchOrderDetail(orderSn)
+    await pollOrderDetail(orderSn)
   } catch {
     toast.add({ title: '找不到此訂單', color: 'red', timeout: 3000 })
     navigateTo('/order/list')
@@ -197,7 +226,10 @@ function submitEcpayForm(form: EcpayFormData) {
  */
 async function handleRefreshStatus() {
   if (!order.value) return
-  order.value = await fetchOrderDetail(order.value.orderSn)
+  const result = await fetchOrderDetail(order.value.orderSn)
+  if (!('processing' in result)) {
+    order.value = result
+  }
 }
 
 async function handleCancel() {

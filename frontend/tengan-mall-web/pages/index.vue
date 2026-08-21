@@ -7,7 +7,7 @@
     </div>
 
     <!-- 限時搶購 -->
-    <SeckillSection :items-by-session="seckillItemsBySession" :sessions="seckillSessions" />
+    <SeckillSection v-if="seckillActivities.length > 0" :activities="seckillActivities" />
 
     <!-- 熱門商品 -->
     <section>
@@ -26,9 +26,10 @@
 
 <script setup lang="ts">
 import { MOCK_PRODUCTS } from '~/mocks/products'
-import { MOCK_SECKILL_ITEMS_BY_SESSION, MOCK_SECKILL_SESSIONS } from '~/mocks/seckill'
 
+// 首頁「熱門商品」區塊維持 mock，不在這次秒殺前台整合範圍內（後端還沒有對應的推薦商品端點）。
 const mockProducts = MOCK_PRODUCTS
-const seckillItemsBySession = MOCK_SECKILL_ITEMS_BY_SESSION
-const seckillSessions = MOCK_SECKILL_SESSIONS
+
+const { data: seckillData } = await useSeckill()
+const seckillActivities = computed(() => seckillData.value?.activities ?? [])
 </script>

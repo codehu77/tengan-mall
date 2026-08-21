@@ -88,6 +88,15 @@ export interface OrderDetail {
   items: OrderItem[]
 }
 
+/**
+ * 含秒殺項目的訂單改走 MQ 非同步落地，提交後到真正寫進 DB 之間有一段空窗期——後端 202 對應這個
+ * 型別，前端據此顯示「處理中」並輪詢，不是把它當成錯誤（見 tengan-order 規劃第 5 節）。
+ */
+export interface OrderProcessing {
+  processing: true
+  orderSn: string
+}
+
 export const ORDER_STATUS_META: Record<OrderStatus, { label: string; color: string }> = {
   1: { label: '待付款', color: 'orange' },
   2: { label: '已付款', color: 'blue' },

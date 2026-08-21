@@ -3,6 +3,7 @@ import type {
   CreateOrderResult,
   OrderConfirmResult,
   OrderDetail,
+  OrderProcessing,
   OrderStatus,
   OrderSummary,
 } from '~/types/order'
@@ -24,7 +25,7 @@ export function useOrder() {
     return fetch('/api/orders', { query: { status, page, pageSize } })
   }
 
-  async function fetchOrderDetail(orderSn: string): Promise<OrderDetail> {
+  async function fetchOrderDetail(orderSn: string): Promise<OrderDetail | OrderProcessing> {
     return fetch(`/api/orders/${orderSn}`)
   }
 
