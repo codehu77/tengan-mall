@@ -10,6 +10,7 @@ import com.tengan.mall.order.application.port.OrderEventPort;
 import com.tengan.mall.order.application.port.OrderTokenPort;
 import com.tengan.mall.order.application.port.PricedSkuInfo;
 import com.tengan.mall.order.application.port.ProductPort;
+import com.tengan.mall.order.application.port.SeckillOrderPendingPort;
 import com.tengan.mall.order.application.port.SeckillPort;
 import com.tengan.mall.order.application.port.WalletPort;
 import com.tengan.mall.order.domain.exception.CouponNotApplicableException;
@@ -56,13 +57,15 @@ public class CreateOrderService implements CreateOrderUseCase {
     private final WalletPort walletPort;
     private final InventoryPort inventoryPort;
     private final SeckillPort seckillPort;
+    private final SeckillOrderPendingPort seckillOrderPendingPort;
     private final OrderRepository orderRepository;
     private final OrderEventPort orderEventPort;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
 
     public CreateOrderService(OrderTokenPort orderTokenPort, CartPort cartPort, ProductPort productPort,
             CouponPort couponPort, WalletPort walletPort, InventoryPort inventoryPort, SeckillPort seckillPort,
-            OrderRepository orderRepository, OrderEventPort orderEventPort, SnowflakeIdGenerator snowflakeIdGenerator) {
+            SeckillOrderPendingPort seckillOrderPendingPort, OrderRepository orderRepository,
+            OrderEventPort orderEventPort, SnowflakeIdGenerator snowflakeIdGenerator) {
         this.orderTokenPort = orderTokenPort;
         this.cartPort = cartPort;
         this.productPort = productPort;
@@ -70,6 +73,7 @@ public class CreateOrderService implements CreateOrderUseCase {
         this.walletPort = walletPort;
         this.inventoryPort = inventoryPort;
         this.seckillPort = seckillPort;
+        this.seckillOrderPendingPort = seckillOrderPendingPort;
         this.orderRepository = orderRepository;
         this.orderEventPort = orderEventPort;
         this.snowflakeIdGenerator = snowflakeIdGenerator;
@@ -167,8 +171,18 @@ public class CreateOrderService implements CreateOrderUseCase {
                     command.pointsUsed(), pointsDiscountAmount, receiver.receiverName(), receiver.receiverPhone(),
                     receiver.city(), receiver.district(), receiver.postalCode(), receiver.street(), command.remark(),
                     totalAmount, discountAmount, payAmount, orderItems);
-            // 只有這裡碰資料庫，且只有這裡（OrderRepositoryImpl.save）標 @Transactional
-            orderRepository.save(order);
+
+            if (activeSeckillBySkuId.isEmpty()) {
+                // 一般訂單：只有這裡碰資料庫，且只有這裡（OrderRepositoryImpl.save）標 @Transactional
+                orderRepository.save(order);
+            } else {
+                // 含秒殺項目：不在請求執行緒內同步寫 DB，改發事件交給 MaterializeSeckillOrderService
+                // 非同步落地，保護資料庫不被搶購瞬間大量成功保留的寫入量沖垮（見 Phase 9 規劃第 5 節）。
+                // 如果這裡發送失敗，會被下面的 catch 接住觸發整筆訂單回滾——這正是我們要的：
+                // 連「交給非同步落地」這件事都做不到，就不該回應使用者搶購成功。
+                seckillOrderPendingPort.markPending(orderSn, command.memberId());
+                orderEventPort.publishSeckillOrderCreated(order);
+            }
 
         } catch (RuntimeException e) {
             while (!compensations.isEmpty()) {
@@ -181,9 +195,13 @@ public class CreateOrderService implements CreateOrderUseCase {
             throw e;
         }
 
-        // 6. 非關鍵路徑：訂單已經成立，這兩步失敗不該讓下單請求失敗（已知限制，見規劃文件五、）
-        safely(() -> orderEventPort.publishOrderCreatedAndScheduleTimeout(orderSn));
-        safely(() -> cartPort.removeItemsAfterOrder(command.memberId(), skuIds));
+        // 6. 非關鍵路徑：訂單已經成立，這兩步失敗不該讓下單請求失敗（已知限制，見規劃文件五、）。
+        // 含秒殺項目的訂單此時還沒真的寫進 DB（非同步落地中），這兩步改由
+        // MaterializeSeckillOrderService 在訂單真正落地後才觸發，這裡不用做。
+        if (activeSeckillBySkuId.isEmpty()) {
+            safely(() -> orderEventPort.publishOrderCreatedAndScheduleTimeout(orderSn));
+            safely(() -> cartPort.removeItemsAfterOrder(command.memberId(), skuIds));
+        }
 
         return new CreateOrderResult(orderSn, payAmount);
     }

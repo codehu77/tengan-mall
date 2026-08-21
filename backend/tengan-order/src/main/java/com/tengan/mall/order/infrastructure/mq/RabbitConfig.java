@@ -40,9 +40,14 @@ public class RabbitConfig {
     /** tengan-order 自己不消費這個 routing key，只是生產者——tengan-inventory 訂閱它觸發扣庫存（見 Phase 7 規劃）。 */
     public static final String ROUTING_KEY_PAID = "order.paid";
 
+    /** Phase 9：秒殺配額保留成功後改走非同步落地，保護資料庫不被搶購瞬間大量成功保留的寫入量沖垮。 */
+    public static final String ROUTING_KEY_SECKILL_ORDER = "order.seckill.order";
+
     public static final String DELAY_QUEUE = "order.delay.queue";
     public static final String CLOSE_QUEUE = "order.close.queue";
     public static final String CLOSE_DLQ = "order.close.dlq";
+    public static final String SECKILL_ORDER_QUEUE = "order.seckill.order.queue";
+    public static final String SECKILL_ORDER_DLQ = "order.seckill.order.dlq";
 
     @Value("${tengan.order.unpaid-timeout-ms}")
     private long unpaidTimeoutMs;
@@ -81,6 +86,29 @@ public class RabbitConfig {
         return QueueBuilder.durable(CLOSE_DLQ).build();
     }
 
+    /**
+     * Phase 9：秒殺訂單非同步落地佇列——跟 order.delay.queue 那種「同一服務自己做延遲執行」不同，
+     * 這裡是同一服務裡「同步保留配額成功 → 丟事件 → 非同步才真正寫 order/order_item」，生產者
+     * （CreateOrderService）跟消費者（SeckillOrderListener）都在 tengan-order 內，只是分離
+     * 「決定成敗」跟「真正落地」兩個時間點，保護資料庫不被搶購瞬間大量成功保留的寫入量沖垮
+     * （見 Phase 9 規劃第 5 節）。消費失敗一樣用 Spring Retry + DLQ，不無限 requeue，跟
+     * order.close.queue 同一個理由：這關係到金流/庫存正確性。
+     */
+    @Bean
+    public Queue orderSeckillOrderQueue() {
+        return QueueBuilder.durable(SECKILL_ORDER_QUEUE).build();
+    }
+
+    @Bean
+    public Binding orderSeckillOrderBinding(Queue orderSeckillOrderQueue, TopicExchange orderEventExchange) {
+        return BindingBuilder.bind(orderSeckillOrderQueue).to(orderEventExchange).with(ROUTING_KEY_SECKILL_ORDER);
+    }
+
+    @Bean
+    public Queue orderSeckillOrderDlq() {
+        return QueueBuilder.durable(SECKILL_ORDER_DLQ).build();
+    }
+
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
@@ -96,6 +124,21 @@ public class RabbitConfig {
                 .maxAttempts(3)
                 .backOffOptions(1000, 2.0, 10000)
                 .recoverer(new RepublishMessageRecoverer(rabbitTemplate, "", CLOSE_DLQ))
+                .build();
+        factory.setAdviceChain(retryInterceptor);
+        return factory;
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory orderSeckillOrderListenerContainerFactory(
+            ConnectionFactory connectionFactory, RabbitTemplate rabbitTemplate, MessageConverter jsonMessageConverter) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(jsonMessageConverter);
+        RetryOperationsInterceptor retryInterceptor = RetryInterceptorBuilder.stateless()
+                .maxAttempts(3)
+                .backOffOptions(1000, 2.0, 10000)
+                .recoverer(new RepublishMessageRecoverer(rabbitTemplate, "", SECKILL_ORDER_DLQ))
                 .build();
         factory.setAdviceChain(retryInterceptor);
         return factory;

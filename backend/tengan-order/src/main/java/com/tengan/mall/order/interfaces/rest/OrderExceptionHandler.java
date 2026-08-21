@@ -7,6 +7,7 @@ import com.tengan.mall.order.domain.exception.OrderAccessDeniedException;
 import com.tengan.mall.order.domain.exception.OrderCancellationNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderMarkPaidNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderNotFoundException;
+import com.tengan.mall.order.domain.exception.OrderProcessingException;
 import com.tengan.mall.order.domain.exception.OrderReceiptNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderShipmentNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderTokenInvalidException;
@@ -37,6 +38,12 @@ public class OrderExceptionHandler {
     public ResponseEntity<InventoryShortageResponse> handleInventoryShortage(InventoryShortageException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new InventoryShortageResponse(e.getMessage(), e.getShortageSkuIds()));
+    }
+
+    /** 秒殺訂單非同步落地中——202 讓前端知道要繼續輪詢，不是錯誤（見 Phase 9 規劃第 5 節）。 */
+    @ExceptionHandler(OrderProcessingException.class)
+    public ResponseEntity<Map<String, String>> handleProcessing(OrderProcessingException e) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of("message", e.getMessage()));
     }
 
     @ExceptionHandler({OrderTokenInvalidException.class, EmptyCartException.class,
