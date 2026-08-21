@@ -36,7 +36,12 @@ import org.springframework.stereotype.Component;
  * 之後每加一個服務的 internal 端點，就幫需要呼叫它的 client 多加一組 scope，不用這次就把後台清單裡
  * 列的全部 scope 一次註冊完。Phase 8 新增 tengan-wallet 網域：`tengan-wallet` 本身不主動呼叫任何服務
  * （純 Resource Server），所以不用新增它自己的 client，只需要幫會呼叫它的 tengan-order（下單 Saga 核銷
- * 點數/確認收貨 reserve/排程 earn/取消 revert）跟 tengan-admin（行銷管理頁）補 wallet.read/wallet.write。</p>
+ * 點數/確認收貨 reserve/排程 earn/取消 revert）跟 tengan-admin（行銷管理頁）補 wallet.read/wallet.write。
+ * Phase 9 新增 tengan-seckill 網域：`tengan-seckill` 會主動呼叫 tengan-inventory 的結算端點，所以
+ * 新增它自己的 client（只給 inventory.seckill.write，不是一般的 inventory.write——秒殺結算跟一般
+ * 訂單扣庫存刻意用不同 scope 隔開，見微服務前台API待開發清單.md「服務間身份驗證」章節）；同時幫
+ * 會呼叫 tengan-seckill 的 tengan-order（訂單建立 Saga 查詢/保留/釋放配額）跟 tengan-admin（秒殺
+ * 活動管理頁）補 seckill.read/seckill.write。</p>
  */
 @Component
 public class RegisteredClientSeeder implements ApplicationRunner {
@@ -46,6 +51,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private static final String CART_CLIENT_ID = "tengan-cart";
     private static final String ORDER_CLIENT_ID = "tengan-order";
     private static final String PAYMENT_CLIENT_ID = "tengan-payment";
+    private static final String SECKILL_CLIENT_ID = "tengan-seckill";
 
     private final RegisteredClientRepository registeredClientRepository;
     private final PasswordEncoder passwordEncoder;
@@ -54,6 +60,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private final String cartClientSecret;
     private final String orderClientSecret;
     private final String paymentClientSecret;
+    private final String seckillClientSecret;
 
     public RegisteredClientSeeder(RegisteredClientRepository registeredClientRepository,
             PasswordEncoder passwordEncoder,
@@ -61,7 +68,8 @@ public class RegisteredClientSeeder implements ApplicationRunner {
             @Value("${tengan.oauth2.search-client-secret:tengan-search-secret}") String searchClientSecret,
             @Value("${tengan.oauth2.cart-client-secret:tengan-cart-secret}") String cartClientSecret,
             @Value("${tengan.oauth2.order-client-secret:tengan-order-secret}") String orderClientSecret,
-            @Value("${tengan.oauth2.payment-client-secret:tengan-payment-secret}") String paymentClientSecret) {
+            @Value("${tengan.oauth2.payment-client-secret:tengan-payment-secret}") String paymentClientSecret,
+            @Value("${tengan.oauth2.seckill-client-secret:tengan-seckill-secret}") String seckillClientSecret) {
         this.registeredClientRepository = registeredClientRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminClientSecret = adminClientSecret;
@@ -69,6 +77,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
         this.cartClientSecret = cartClientSecret;
         this.orderClientSecret = orderClientSecret;
         this.paymentClientSecret = paymentClientSecret;
+        this.seckillClientSecret = seckillClientSecret;
     }
 
     @Override
@@ -76,12 +85,14 @@ public class RegisteredClientSeeder implements ApplicationRunner {
         seedIfAbsent(ADMIN_CLIENT_ID, adminClientSecret, "product.read", "product.write", "search.write",
                 "member.read", "account.read", "account.write", "inventory.read", "inventory.write", "coupon.read",
                 "coupon.write", "order.read", "order.write", "payment.read", "payment.write", "wallet.read",
-                "wallet.write");
+                "wallet.write", "seckill.read", "seckill.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
         seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
         seedIfAbsent(ORDER_CLIENT_ID, orderClientSecret, "cart.read", "cart.write", "product.read",
-                "inventory.write", "coupon.read", "coupon.write", "wallet.read", "wallet.write");
+                "inventory.write", "coupon.read", "coupon.write", "wallet.read", "wallet.write", "seckill.read",
+                "seckill.write");
         seedIfAbsent(PAYMENT_CLIENT_ID, paymentClientSecret, "order.read", "order.write", "wallet.write");
+        seedIfAbsent(SECKILL_CLIENT_ID, seckillClientSecret, "inventory.seckill.write");
     }
 
     /**
