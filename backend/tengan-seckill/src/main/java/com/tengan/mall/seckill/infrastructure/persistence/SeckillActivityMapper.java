@@ -16,4 +16,7 @@ public interface SeckillActivityMapper extends BaseMapper<SeckillActivityPO> {
 
     @Select("SELECT * FROM seckill_activity WHERE status = 3 AND end_time <= #{cutoff} ORDER BY end_time ASC")
     List<SeckillActivityPO> findActiveEndedBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    @Select("SELECT * FROM seckill_activity WHERE status = 3 ORDER BY start_time ASC")
+    List<SeckillActivityPO> findActive();
 }

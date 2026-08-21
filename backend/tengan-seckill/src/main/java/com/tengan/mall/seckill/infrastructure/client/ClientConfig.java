@@ -15,8 +15,9 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.web.client.RestClient;
 
 /**
- * tengan-seckill 結算時呼叫 tengan-inventory 的 /internal/** 要帶 Service JWT，比照 tengan-order
- * 的既有模式（client_credentials，服務對服務授權）。client 註冊資訊在 Nacos tengan-mall-seckill.yaml。
+ * tengan-seckill 呼叫 tengan-inventory（結算）/tengan-product（公開展示端點補商品資訊）的
+ * /internal/** 都要帶 Service JWT，比照 tengan-order 的既有模式（client_credentials，服務對服務授權）。
+ * client 註冊資訊在 Nacos tengan-mall-seckill.yaml。
  */
 @Configuration
 public class ClientConfig {
@@ -36,6 +37,16 @@ public class ClientConfig {
 
     @Bean
     public RestClient inventoryRestClient(@Value("${tengan.inventory.base-url}") String baseUrl) {
+        return buildRestClient(baseUrl);
+    }
+
+    @Bean
+    public RestClient productRestClient(@Value("${tengan.product.base-url}") String baseUrl) {
+        return buildRestClient(baseUrl);
+    }
+
+    /** 回應 DTO 只取用得到的欄位子集，關掉 FAIL_ON_UNKNOWN_PROPERTIES（比照 tengan-order 呼叫其他服務的既有模式）。 */
+    private RestClient buildRestClient(String baseUrl) {
         ObjectMapper objectMapper = new ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return RestClient.builder()

@@ -41,7 +41,9 @@ import org.springframework.stereotype.Component;
  * 新增它自己的 client（只給 inventory.seckill.write，不是一般的 inventory.write——秒殺結算跟一般
  * 訂單扣庫存刻意用不同 scope 隔開，見微服務前台API待開發清單.md「服務間身份驗證」章節）；同時幫
  * 會呼叫 tengan-seckill 的 tengan-order（訂單建立 Saga 查詢/保留/釋放配額）跟 tengan-admin（秒殺
- * 活動管理頁）補 seckill.read/seckill.write。</p>
+ * 活動管理頁）補 seckill.read/seckill.write。Phase 9 前台整合再補一筆：`tengan-seckill` 自己的公開
+ * 展示端點（`GET /api/public/seckill/activities`）要補商品名稱/圖片，多給它 product.read 呼叫
+ * tengan-product。</p>
  */
 @Component
 public class RegisteredClientSeeder implements ApplicationRunner {
@@ -92,7 +94,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
                 "inventory.write", "coupon.read", "coupon.write", "wallet.read", "wallet.write", "seckill.read",
                 "seckill.write");
         seedIfAbsent(PAYMENT_CLIENT_ID, paymentClientSecret, "order.read", "order.write", "wallet.write");
-        seedIfAbsent(SECKILL_CLIENT_ID, seckillClientSecret, "inventory.seckill.write");
+        seedIfAbsent(SECKILL_CLIENT_ID, seckillClientSecret, "inventory.seckill.write", "product.read");
     }
 
     /**

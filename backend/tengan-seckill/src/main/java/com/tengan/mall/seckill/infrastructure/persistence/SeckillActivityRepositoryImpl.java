@@ -67,6 +67,11 @@ public class SeckillActivityRepositoryImpl implements SeckillActivityRepository 
         return mapper.findActiveEndedBefore(toLocalDateTime(cutoff)).stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<SeckillActivity> findActive() {
+        return mapper.findActive().stream().map(this::toDomain).toList();
+    }
+
     private SeckillActivity toDomain(SeckillActivityPO po) {
         return SeckillActivity.reconstitute(po.getId(), po.getActivityType(), toInstant(po.getStartTime()),
                 toInstant(po.getEndTime()), po.getStatus(), toInstant(po.getCreatedAt()));

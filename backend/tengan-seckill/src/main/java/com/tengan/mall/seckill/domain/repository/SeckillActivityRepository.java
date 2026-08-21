@@ -23,4 +23,7 @@ public interface SeckillActivityRepository {
 
     /** status=ACTIVE 且 endTime<=cutoff——結算排程的候選（見規劃第 6 節）。 */
     List<SeckillActivity> findActiveEndedBefore(Instant cutoff);
+
+    /** status=ACTIVE，不限時間——公開展示端點用（見規劃文件第 1 節）。 */
+    List<SeckillActivity> findActive();
 }
