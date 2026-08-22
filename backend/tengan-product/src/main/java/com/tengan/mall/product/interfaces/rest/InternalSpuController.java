@@ -1,5 +1,6 @@
 package com.tengan.mall.product.interfaces.rest;
 
+import com.tengan.mall.product.application.spu.BatchGetSpuSummariesUseCase;
 import com.tengan.mall.product.application.spu.CreateSpuCommand;
 import com.tengan.mall.product.application.spu.CreateSpuUseCase;
 import com.tengan.mall.product.application.spu.DeleteSpuCommand;
@@ -31,6 +32,7 @@ import com.tengan.mall.product.interfaces.rest.dto.SkuSaleAttrValueRequest;
 import com.tengan.mall.product.interfaces.rest.dto.SkuSaleAttrValueResponse;
 import com.tengan.mall.product.interfaces.rest.dto.SpuBaseAttrValueRequest;
 import com.tengan.mall.product.interfaces.rest.dto.SpuBaseAttrValueResponse;
+import com.tengan.mall.product.interfaces.rest.dto.SpuBatchSummaryResponse;
 import com.tengan.mall.product.interfaces.rest.dto.SpuDetailResponse;
 import com.tengan.mall.product.interfaces.rest.dto.SpuImageRequest;
 import com.tengan.mall.product.interfaces.rest.dto.SpuImageResponse;
@@ -63,11 +65,13 @@ public class InternalSpuController {
     private final UnlistSpuUseCase unlistSpuUseCase;
     private final DeleteSpuUseCase deleteSpuUseCase;
     private final DuplicateSpuUseCase duplicateSpuUseCase;
+    private final BatchGetSpuSummariesUseCase batchGetSpuSummariesUseCase;
 
     public InternalSpuController(ListSpusUseCase listSpusUseCase, GetSpuDetailUseCase getSpuDetailUseCase,
             CreateSpuUseCase createSpuUseCase, UpdateSpuUseCase updateSpuUseCase,
             PublishSpuUseCase publishSpuUseCase, UnlistSpuUseCase unlistSpuUseCase,
-            DeleteSpuUseCase deleteSpuUseCase, DuplicateSpuUseCase duplicateSpuUseCase) {
+            DeleteSpuUseCase deleteSpuUseCase, DuplicateSpuUseCase duplicateSpuUseCase,
+            BatchGetSpuSummariesUseCase batchGetSpuSummariesUseCase) {
         this.listSpusUseCase = listSpusUseCase;
         this.getSpuDetailUseCase = getSpuDetailUseCase;
         this.createSpuUseCase = createSpuUseCase;
@@ -76,6 +80,16 @@ public class InternalSpuController {
         this.unlistSpuUseCase = unlistSpuUseCase;
         this.deleteSpuUseCase = deleteSpuUseCase;
         this.duplicateSpuUseCase = duplicateSpuUseCase;
+        this.batchGetSpuSummariesUseCase = batchGetSpuSummariesUseCase;
+    }
+
+    /** 供 tengan-seckill 展示端點分組用（只要 name/mainImage，見 BatchGetSpuSummariesUseCase 說明）。 */
+    @GetMapping("/batch")
+    @PreAuthorize("hasAuthority('SCOPE_product.read')")
+    public List<SpuBatchSummaryResponse> batchGet(@RequestParam List<Long> ids) {
+        return batchGetSpuSummariesUseCase.get(ids).stream()
+                .map(s -> new SpuBatchSummaryResponse(s.id(), s.name(), s.mainImage()))
+                .toList();
     }
 
     @GetMapping

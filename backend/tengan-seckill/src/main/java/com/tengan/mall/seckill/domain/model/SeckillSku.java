@@ -41,8 +41,8 @@ public class SeckillSku {
         if (seckillPrice == null || seckillPrice.signum() < 0) {
             throw new IllegalArgumentException("seckillPrice 不可為負數");
         }
-        if (seckillCount <= 0) {
-            throw new IllegalArgumentException("seckillCount 必須大於 0");
+        if (seckillCount < 0) {
+            throw new IllegalArgumentException("seckillCount 不可為負數");
         }
         if (limitPerUser <= 0) {
             throw new IllegalArgumentException("limitPerUser 必須大於 0");

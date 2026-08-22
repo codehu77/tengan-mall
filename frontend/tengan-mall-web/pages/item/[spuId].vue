@@ -88,12 +88,16 @@
                   v-for="opt in attr.options"
                   :key="opt"
                   class="px-4 py-2 rounded border text-base transition"
-                  :class="selectedAttrs[attr.attrName] === opt
-                    ? 'border-red-500 bg-red-50 text-red-600'
-                    : 'border-gray-200 text-gray-700 hover:border-red-300'"
+                  :class="isOptionSoldOut(attr.attrName, opt)
+                    ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                    : selectedAttrs[attr.attrName] === opt
+                      ? 'border-red-500 bg-red-50 text-red-600'
+                      : 'border-gray-200 text-gray-700 hover:border-red-300'"
+                  :disabled="isOptionSoldOut(attr.attrName, opt)"
                   @click="selectAttr(attr.attrName, opt)"
                 >
                   {{ opt }}
+                  <span v-if="isOptionSoldOut(attr.attrName, opt)" class="text-xs">（已售完）</span>
                 </button>
               </div>
             </div>
@@ -191,20 +195,43 @@ const selectedSkuId = ref(defaultSkuId)
 const currentSku = computed(() => skus.value.find(s => s.id === selectedSkuId.value) ?? skus.value[0])
 
 // 目前這顆 sku 是不是活躍秒殺——只認 ACTIVE 場次+首發，PUBLISHED（還沒開賣）的場次不算，
-// 活動結束後 useSeckill() 的資料自然不會再包含這個 skuId，這裡不用寫「是否過期」的額外判斷。
+// remaining=0（賣完/被設 0）也不算，活動結束後 useSeckill() 的資料自然不會再包含這個 skuId，
+// 這裡不用寫「是否過期」的額外判斷。
 const activeSeckillSku = computed(() => {
   const skuId = currentSku.value?.id
   if (!skuId) return null
   for (const session of seckillData.value?.flashSaleSessions ?? []) {
     if (session.status !== 'ACTIVE') continue
-    const sku = session.skus.find(s => s.skuId === skuId)
+    const product = session.products.find(p => p.spuId === spuId)
+    const sku = product?.skus.find(s => s.skuId === skuId && s.remaining > 0)
     if (sku) return { ...sku, endTime: session.endTime }
   }
   for (const launch of seckillData.value?.launches ?? []) {
-    const sku = launch.skus.find(s => s.skuId === skuId)
+    const product = launch.products.find(p => p.spuId === spuId)
+    const sku = product?.skus.find(s => s.skuId === skuId && s.remaining > 0)
     if (sku) return { ...sku, endTime: launch.endTime }
   }
   return null
+})
+
+// 這個 SPU 在目前活躍的秒殺活動裡，哪些規格已經沒名額（remaining=0，不管是後台故意設 0 還是被搶完）——
+// 這些規格的按鈕整場活動期間都要反灰、禁止選擇，連原價都不能買（跟使用者確認過的行為，見「秒殺改成綁 SPU」規劃文件）。
+const soldOutSeckillSkuIds = computed(() => {
+  const ids = new Set<number>()
+  for (const session of seckillData.value?.flashSaleSessions ?? []) {
+    if (session.status !== 'ACTIVE') continue
+    const product = session.products.find(p => p.spuId === spuId)
+    for (const sku of product?.skus ?? []) {
+      if (sku.remaining <= 0) ids.add(sku.skuId)
+    }
+  }
+  for (const launch of seckillData.value?.launches ?? []) {
+    const product = launch.products.find(p => p.spuId === spuId)
+    for (const sku of product?.skus ?? []) {
+      if (sku.remaining <= 0) ids.add(sku.skuId)
+    }
+  }
+  return ids
 })
 
 const remaining = ref(0)
@@ -252,14 +279,25 @@ const selectedAttrs = computed<Record<string, string>>(() => {
   return result
 })
 
-// 純前端狀態切換，不 router.replace——MOMO 那種「選規格不換網址」的體驗
-function selectAttr(attrName: string, value: string) {
+// 選了某個屬性值（連同目前其餘已選屬性）會對應到哪顆 sku——選規格按鈕本身跟「是否售完反灰」共用同一套匹配邏輯
+function resolveSkuForAttrChange(attrName: string, value: string) {
   const target = { ...selectedAttrs.value, [attrName]: value }
-  const match = skus.value.find(sku =>
+  return skus.value.find(sku =>
     sku.saleAttrValues.length === Object.keys(target).length
     && sku.saleAttrValues.every(av => target[av.attrName] === av.attrValue)
   )
-  if (!match) return
+}
+
+/** 秒殺名額用完的規格按鈕直接禁止點擊，連原價都不能買（見 soldOutSeckillSkuIds 的說明）。 */
+function isOptionSoldOut(attrName: string, value: string) {
+  const match = resolveSkuForAttrChange(attrName, value)
+  return !!match && soldOutSeckillSkuIds.value.has(match.id)
+}
+
+// 純前端狀態切換，不 router.replace——MOMO 那種「選規格不換網址」的體驗
+function selectAttr(attrName: string, value: string) {
+  const match = resolveSkuForAttrChange(attrName, value)
+  if (!match || soldOutSeckillSkuIds.value.has(match.id)) return
   selectedSkuId.value = match.id
   activeImg.value = 0
 }

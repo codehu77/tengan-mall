@@ -6,4 +6,7 @@ import java.util.List;
 public interface ProductPort {
 
     List<SkuInfo> batchGet(List<Long> skuIds);
+
+    /** 供公開展示端點的 SPU 分組卡片補名稱/圖片用。 */
+    List<SpuInfo> batchGetSpu(List<Long> spuIds);
 }

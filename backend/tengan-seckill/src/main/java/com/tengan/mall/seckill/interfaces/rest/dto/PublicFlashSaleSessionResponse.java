@@ -4,5 +4,5 @@ import java.time.Instant;
 import java.util.List;
 
 public record PublicFlashSaleSessionResponse(Long activityId, Long sessionId, String sessionName, Instant startTime,
-        Instant endTime, String status, List<PublicSkuResponse> skus) {
+        Instant endTime, String status, List<PublicProductResponse> products) {
 }

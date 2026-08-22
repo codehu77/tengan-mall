@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FlashSaleSession } from '~/composables/useSeckill'
+import type { FlashSaleSession, SeckillProduct } from '~/composables/useSeckill'
 
 const props = defineProps<{
   flashSaleSessions: FlashSaleSession[]
@@ -18,10 +18,14 @@ const currentSession = computed(() =>
   props.flashSaleSessions.find(s => s.activityId === selectedActivityId.value) ?? props.flashSaleSessions[0]
 )
 
-const currentSkus = computed(() => currentSession.value?.skus ?? [])
+/** 一個商品（SPU）一張卡，不是一個規格一張卡；全部規格都賣完的商品不顯示（瀏覽用的輪播，跟商品詳情頁
+ * 用同一份原始資料但不同呈現目的——詳情頁要顯示已售完狀態，這裡直接跳過）。 */
+const visibleProducts = computed(() =>
+  (currentSession.value?.products ?? []).filter(p => p.skus.some(s => s.remaining > 0))
+)
 
 const hasPrev = computed(() => currentIndex.value > 0)
-const hasNext = computed(() => currentIndex.value + VISIBLE < currentSkus.value.length)
+const hasNext = computed(() => currentIndex.value + VISIBLE < visibleProducts.value.length)
 
 function prev() { if (hasPrev.value) currentIndex.value-- }
 function next() { if (hasNext.value) currentIndex.value++ }
@@ -53,10 +57,19 @@ const hh = computed(() => String(Math.floor(remaining.value / 3600)).padStart(2,
 const mm = computed(() => String(Math.floor((remaining.value % 3600) / 60)).padStart(2, '0'))
 const ss = computed(() => String(remaining.value % 60).padStart(2, '0'))
 
+/** 卡片代表價：同一活動同一商品理論上共用同一個秒殺價，取第一個還有貨的規格。 */
+function representativeSku(product: SeckillProduct) {
+  return product.skus.find(s => s.remaining > 0) ?? product.skus[0]
+}
+
 function discountLabel(sku: { seckillPrice: number; originalPrice: number }) {
   if (sku.originalPrice <= 0) return ''
   const off = Math.round((1 - sku.seckillPrice / sku.originalPrice) * 10)
   return `${off}折`
+}
+
+function totalRemaining(product: SeckillProduct) {
+  return product.skus.reduce((sum, s) => sum + s.remaining, 0)
 }
 
 let timer: ReturnType<typeof setInterval> | null = null
@@ -119,7 +132,7 @@ onUnmounted(() => {
 
     </div>
 
-    <!-- 商品輪播 -->
+    <!-- 商品輪播：一個商品一張卡 -->
     <div class="relative">
 
       <!-- 左箭頭 -->
@@ -137,39 +150,39 @@ onUnmounted(() => {
           :style="{ transform: `translateX(-${currentIndex * CARD_STEP}px)` }"
         >
           <div
-            v-for="sku in currentSkus"
-            :key="sku.skuId"
+            v-for="product in visibleProducts"
+            :key="product.spuId"
             class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer shrink-0 w-48 overflow-hidden"
-            @click="navigateTo(`/item/${sku.spuId}`)"
+            @click="navigateTo(`/item/${product.spuId}`)"
           >
             <!-- 商品圖 -->
             <div class="relative">
               <img
-                :src="sku.mainImage"
-                :alt="sku.name"
+                :src="product.mainImage"
+                :alt="product.name"
                 class="w-full h-48 object-cover"
               />
               <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                {{ discountLabel(sku) }}
+                {{ discountLabel(representativeSku(product)) }}
               </span>
             </div>
 
             <!-- 商品資訊：標題固定保留兩行高度，卡片內容高度才會一致，不會因標題長短而參差不齊 -->
             <div class="p-3">
               <p class="text-sm text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem] leading-5">
-                {{ sku.name }}
+                {{ product.name }}
               </p>
               <p class="text-red-500 font-bold text-lg leading-none mb-1">
-                NT$ {{ sku.seckillPrice.toLocaleString() }}
+                NT$ {{ representativeSku(product).seckillPrice.toLocaleString() }}
               </p>
               <p class="text-gray-400 text-xs line-through mb-2">
-                NT$ {{ sku.originalPrice.toLocaleString() }}
+                NT$ {{ representativeSku(product).originalPrice.toLocaleString() }}
               </p>
               <span
                 class="inline-block text-xs px-2 py-0.5 rounded-full"
                 :class="currentSession.status === 'ACTIVE' ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-400'"
               >
-                {{ currentSession.status === 'ACTIVE' ? `剩餘 ${sku.remaining} 件` : '尚未開賣' }}
+                {{ currentSession.status === 'ACTIVE' ? `剩餘 ${totalRemaining(product)} 件` : '尚未開賣' }}
               </span>
             </div>
           </div>

@@ -4,5 +4,5 @@ import java.time.Instant;
 import java.util.List;
 
 public record PublicLaunchResponse(Long activityId, Instant startTime, Instant endTime,
-        List<PublicSkuResponse> skus) {
+        List<PublicProductResponse> products) {
 }

@@ -1,9 +1,10 @@
 package com.tengan.mall.seckill.interfaces.rest;
 
-import com.tengan.mall.seckill.application.display.ActiveSkuView;
+import com.tengan.mall.seckill.application.display.ActiveProductView;
 import com.tengan.mall.seckill.application.display.ListActiveActivitiesUseCase;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicFlashSaleSessionResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicLaunchResponse;
+import com.tengan.mall.seckill.interfaces.rest.dto.PublicProductResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicSeckillDisplayResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicSkuResponse;
 import java.util.List;
@@ -27,19 +28,22 @@ public class PublicSeckillController {
         var display = listActiveActivitiesUseCase.list();
         var flashSaleSessions = display.flashSaleSessions().stream()
                 .map(s -> new PublicFlashSaleSessionResponse(s.activityId(), s.sessionId(), s.sessionName(),
-                        s.startTime(), s.endTime(), s.status(), toSkuResponses(s.skus())))
+                        s.startTime(), s.endTime(), s.status(), toProductResponses(s.products())))
                 .toList();
         var launches = display.launches().stream()
                 .map(l -> new PublicLaunchResponse(l.activityId(), l.startTime(), l.endTime(),
-                        toSkuResponses(l.skus())))
+                        toProductResponses(l.products())))
                 .toList();
         return new PublicSeckillDisplayResponse(flashSaleSessions, launches);
     }
 
-    private List<PublicSkuResponse> toSkuResponses(List<ActiveSkuView> skus) {
-        return skus.stream()
-                .map(s -> new PublicSkuResponse(s.skuId(), s.spuId(), s.name(), s.mainImage(), s.originalPrice(),
-                        s.seckillPrice(), s.limitPerUser(), s.remaining()))
+    private List<PublicProductResponse> toProductResponses(List<ActiveProductView> products) {
+        return products.stream()
+                .map(p -> new PublicProductResponse(p.spuId(), p.name(), p.mainImage(),
+                        p.skus().stream()
+                                .map(s -> new PublicSkuResponse(s.skuId(), s.variantLabel(), s.originalPrice(),
+                                        s.seckillPrice(), s.limitPerUser(), s.remaining()))
+                                .toList()))
                 .toList();
     }
 }

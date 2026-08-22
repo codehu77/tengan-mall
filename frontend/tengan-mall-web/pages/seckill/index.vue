@@ -1,7 +1,18 @@
 <script setup lang="ts">
+import type { SeckillProduct } from '~/composables/useSeckill'
+
 const { data: seckillData } = await useSeckill()
 const flashSaleSessions = computed(() => seckillData.value?.flashSaleSessions ?? [])
 const launches = computed(() => seckillData.value?.launches ?? [])
+
+/** 卡片代表值：同一活動同一商品理論上共用同一個秒殺價，取第一個還有貨的規格。 */
+function representativeSku(product: SeckillProduct) {
+  return product.skus.find(s => s.remaining > 0) ?? product.skus[0]
+}
+
+function totalRemaining(product: SeckillProduct) {
+  return product.skus.reduce((sum, s) => sum + s.remaining, 0)
+}
 
 function discountLabel(sku: { seckillPrice: number; originalPrice: number }) {
   if (sku.originalPrice <= 0) return ''
@@ -24,7 +35,7 @@ function sessionLabel(session: { sessionName: string | null; startTime: string; 
       目前沒有進行中的活動
     </div>
 
-    <!-- 限時搶購：依場次分組，PUBLISHED 場次只能預覽（還沒開賣） -->
+    <!-- 限時搶購：依場次分組，PUBLISHED 場次只能預覽（還沒開賣）；一個商品一張卡，不分規格 -->
     <section v-if="flashSaleSessions.length > 0" class="mb-10">
       <h2 class="text-lg font-semibold text-gray-700 mb-4">
         <UBadge color="red" variant="solid">限時搶購</UBadge>
@@ -39,26 +50,26 @@ function sessionLabel(session: { sessionName: string | null; startTime: string; 
 
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
           <div
-            v-for="sku in session.skus"
-            :key="sku.skuId"
+            v-for="product in session.products"
+            :key="product.spuId"
             class="bg-white rounded-xl shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden"
-            @click="navigateTo(`/item/${sku.spuId}`)"
+            @click="navigateTo(`/item/${product.spuId}`)"
           >
             <div class="relative aspect-square overflow-hidden bg-gray-50">
-              <img :src="sku.mainImage" :alt="sku.name" class="w-full h-full object-cover" />
+              <img :src="product.mainImage" :alt="product.name" class="w-full h-full object-cover" />
               <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                {{ discountLabel(sku) }}
+                {{ discountLabel(representativeSku(product)) }}
               </span>
             </div>
             <div class="p-3">
-              <p class="text-sm text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem]">{{ sku.name }}</p>
-              <p class="text-red-500 font-bold text-lg leading-none mb-1">NT$ {{ sku.seckillPrice.toLocaleString() }}</p>
-              <p class="text-gray-400 text-xs line-through mb-2">NT$ {{ sku.originalPrice.toLocaleString() }}</p>
+              <p class="text-sm text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem]">{{ product.name }}</p>
+              <p class="text-red-500 font-bold text-lg leading-none mb-1">NT$ {{ representativeSku(product).seckillPrice.toLocaleString() }}</p>
+              <p class="text-gray-400 text-xs line-through mb-2">NT$ {{ representativeSku(product).originalPrice.toLocaleString() }}</p>
               <span
                 class="inline-block text-xs px-2 py-0.5 rounded-full"
                 :class="session.status === 'ACTIVE' ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-400'"
               >
-                {{ session.status === 'ACTIVE' ? `剩餘 ${sku.remaining} 件` : '尚未開賣' }}
+                {{ session.status === 'ACTIVE' ? `剩餘 ${totalRemaining(product)} 件` : '尚未開賣' }}
               </span>
             </div>
           </div>
@@ -66,7 +77,7 @@ function sessionLabel(session: { sessionName: string | null; startTime: string; 
       </div>
     </section>
 
-    <!-- 首發：不分場次，一個活動一區塊 -->
+    <!-- 首發：不分場次，一個活動一區塊；一個商品一張卡 -->
     <section v-for="launch in launches" :key="launch.activityId" class="mb-10">
       <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
         <UBadge color="red" variant="solid">首發</UBadge>
@@ -77,23 +88,23 @@ function sessionLabel(session: { sessionName: string | null; startTime: string; 
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
         <div
-          v-for="sku in launch.skus"
-          :key="sku.skuId"
+          v-for="product in launch.products"
+          :key="product.spuId"
           class="bg-white rounded-xl shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden"
-          @click="navigateTo(`/item/${sku.spuId}`)"
+          @click="navigateTo(`/item/${product.spuId}`)"
         >
           <div class="relative aspect-square overflow-hidden bg-gray-50">
-            <img :src="sku.mainImage" :alt="sku.name" class="w-full h-full object-cover" />
+            <img :src="product.mainImage" :alt="product.name" class="w-full h-full object-cover" />
             <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-              {{ discountLabel(sku) }}
+              {{ discountLabel(representativeSku(product)) }}
             </span>
           </div>
           <div class="p-3">
-            <p class="text-sm text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem]">{{ sku.name }}</p>
-            <p class="text-red-500 font-bold text-lg leading-none mb-1">NT$ {{ sku.seckillPrice.toLocaleString() }}</p>
-            <p class="text-gray-400 text-xs line-through mb-2">NT$ {{ sku.originalPrice.toLocaleString() }}</p>
+            <p class="text-sm text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem]">{{ product.name }}</p>
+            <p class="text-red-500 font-bold text-lg leading-none mb-1">NT$ {{ representativeSku(product).seckillPrice.toLocaleString() }}</p>
+            <p class="text-gray-400 text-xs line-through mb-2">NT$ {{ representativeSku(product).originalPrice.toLocaleString() }}</p>
             <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500">
-              剩餘 {{ sku.remaining }} 件
+              剩餘 {{ totalRemaining(product) }} 件
             </span>
           </div>
         </div>

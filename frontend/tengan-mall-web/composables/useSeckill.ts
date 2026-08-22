@@ -1,12 +1,17 @@
 export interface SeckillSku {
   skuId: number
-  spuId: number
-  name: string
-  mainImage: string
+  variantLabel: string
   originalPrice: number
   seckillPrice: number
   limitPerUser: number
   remaining: number
+}
+
+export interface SeckillProduct {
+  spuId: number
+  name: string
+  mainImage: string
+  skus: SeckillSku[]
 }
 
 /** status 是 "ACTIVE"（現正瘋搶，可下單）或 "PUBLISHED"（準時開搶，只能預覽）。 */
@@ -17,14 +22,14 @@ export interface FlashSaleSession {
   startTime: string
   endTime: string
   status: 'ACTIVE' | 'PUBLISHED'
-  skus: SeckillSku[]
+  products: SeckillProduct[]
 }
 
 export interface Launch {
   activityId: number
   startTime: string
   endTime: string
-  skus: SeckillSku[]
+  products: SeckillProduct[]
 }
 
 export interface SeckillDisplayResult {

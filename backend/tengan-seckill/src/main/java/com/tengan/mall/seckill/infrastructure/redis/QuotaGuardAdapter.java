@@ -31,9 +31,13 @@ public class QuotaGuardAdapter {
         this.redisTemplate = redisTemplate;
     }
 
-    /** 預熱時（重新）設定配額。 */
+    /** 預熱/後台編輯已上線活動配額時用——先刪再設，強制覆蓋成絕對值（`RSemaphore.trySetPermits`
+     * 對已存在的 key 是no-op，只在第一次預熱時管用；後台編輯配額也會呼叫這支，用「先刪再設」繞開
+     * 這個限制，讓每次呼叫都是可靠的絕對值覆蓋，不是條件式的）。刻意不做「保留已賣出數量」的差值
+     * 扣抵——後台編輯配額就是覆蓋成新設定的值，這是這個專案刻意的簡化，不是遺漏。 */
     public void initSemaphore(Long skuId, int permits, Instant expireAt) {
         RSemaphore semaphore = redissonClient.getSemaphore(stockKey(skuId));
+        semaphore.delete();
         semaphore.trySetPermits(permits);
         semaphore.expireAt(Date.from(expireAt));
     }
@@ -75,6 +79,11 @@ public class QuotaGuardAdapter {
     /** 結算排程用：{@code seckillCount - availablePermits()} 即為實際賣出量。 */
     public int availablePermits(Long skuId) {
         return redissonClient.getSemaphore(stockKey(skuId)).availablePermits();
+    }
+
+    /** 商品被從已上線活動移除時清掉配額鎖，避免 Redis key 還在、讓已經被拿掉的規格繼續可以被搶購。 */
+    public void clear(Long skuId) {
+        redissonClient.getSemaphore(stockKey(skuId)).delete();
     }
 
     private String stockKey(Long skuId) {

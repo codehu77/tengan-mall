@@ -45,6 +45,11 @@ public class SeckillCacheAdapter {
         }
     }
 
+    /** 商品被從已上線活動移除時清掉這把快取，讓 CheckActiveSkusService/ReserveQuotaService 立刻查不到、不再誤判成活躍秒殺。 */
+    public void evict(Long skuId) {
+        redisTemplate.delete(key(skuId));
+    }
+
     public Optional<ActiveSeckillInfo> lookup(Long skuId) {
         String json = redisTemplate.opsForValue().get(key(skuId));
         if (json == null) {

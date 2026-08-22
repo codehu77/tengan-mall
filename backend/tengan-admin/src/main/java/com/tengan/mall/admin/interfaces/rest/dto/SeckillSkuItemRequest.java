@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
+/** seckillCount 允許 0——代表這個規格不參與/名額用完，跟被搶完歸零是同一種狀態（見 tengan-seckill SeckillSku 網域說明）。 */
 public record SeckillSkuItemRequest(@NotNull Long skuId, @NotNull @DecimalMin("0") BigDecimal seckillPrice,
-        @Min(1) int seckillCount, @Min(1) int limitPerUser) {
+        @Min(0) int seckillCount, @Min(1) int limitPerUser) {
 }

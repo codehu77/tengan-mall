@@ -1,6 +1,7 @@
 package com.tengan.mall.admin.infrastructure.seckill;
 
 import com.tengan.mall.admin.application.port.CreateSeckillActivityPayload;
+import com.tengan.mall.admin.application.port.ReplaceProductSkusPayload;
 import com.tengan.mall.admin.application.port.SeckillActivityDetail;
 import com.tengan.mall.admin.application.port.SeckillActivityItem;
 import com.tengan.mall.admin.application.port.SeckillActivityPort;
@@ -76,6 +77,16 @@ public class SeckillActivityAdapter implements SeckillActivityPort {
     public void updateActivitySkus(Long id, UpdateSeckillActivitySkusPayload payload) {
         seckillRestClient.put()
                 .uri(BASE_PATH + "/{id}/skus", id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .body(payload)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    @Override
+    public void replaceProductSkus(Long activityId, Long spuId, ReplaceProductSkusPayload payload) {
+        seckillRestClient.put()
+                .uri(BASE_PATH + "/{id}/products/{spuId}/skus", activityId, spuId)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
                 .body(payload)
                 .retrieve()

@@ -5,6 +5,8 @@ import com.tengan.mall.seckill.application.activity.CreateActivityUseCase;
 import com.tengan.mall.seckill.application.activity.DeleteActivityUseCase;
 import com.tengan.mall.seckill.application.activity.GetActivityUseCase;
 import com.tengan.mall.seckill.application.activity.ListActivitiesUseCase;
+import com.tengan.mall.seckill.application.activity.ReplaceProductSkusCommand;
+import com.tengan.mall.seckill.application.activity.ReplaceProductSkusUseCase;
 import com.tengan.mall.seckill.application.activity.SkuItem;
 import com.tengan.mall.seckill.application.activity.UpdateActivitySkusCommand;
 import com.tengan.mall.seckill.application.activity.UpdateActivitySkusUseCase;
@@ -31,6 +33,7 @@ import com.tengan.mall.seckill.interfaces.rest.dto.CreateActivityRequest;
 import com.tengan.mall.seckill.interfaces.rest.dto.CreateActivityResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.CreateSessionResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.ReleaseRequest;
+import com.tengan.mall.seckill.interfaces.rest.dto.ReplaceProductSkusRequest;
 import com.tengan.mall.seckill.interfaces.rest.dto.ReserveRequest;
 import com.tengan.mall.seckill.interfaces.rest.dto.ReserveResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.SessionListResponse;
@@ -60,6 +63,7 @@ public class InternalSeckillController {
     private final CreateActivityUseCase createActivityUseCase;
     private final DeleteActivityUseCase deleteActivityUseCase;
     private final UpdateActivitySkusUseCase updateActivitySkusUseCase;
+    private final ReplaceProductSkusUseCase replaceProductSkusUseCase;
     private final ListActivitiesUseCase listActivitiesUseCase;
     private final GetActivityUseCase getActivityUseCase;
     private final ReserveQuotaUseCase reserveQuotaUseCase;
@@ -73,7 +77,7 @@ public class InternalSeckillController {
 
     public InternalSeckillController(CreateActivityUseCase createActivityUseCase,
             DeleteActivityUseCase deleteActivityUseCase, UpdateActivitySkusUseCase updateActivitySkusUseCase,
-            ListActivitiesUseCase listActivitiesUseCase,
+            ReplaceProductSkusUseCase replaceProductSkusUseCase, ListActivitiesUseCase listActivitiesUseCase,
             GetActivityUseCase getActivityUseCase, ReserveQuotaUseCase reserveQuotaUseCase,
             ReleaseQuotaUseCase releaseQuotaUseCase, CheckActiveSkusUseCase checkActiveSkusUseCase,
             CreateSessionUseCase createSessionUseCase, UpdateSessionUseCase updateSessionUseCase,
@@ -82,6 +86,7 @@ public class InternalSeckillController {
         this.createActivityUseCase = createActivityUseCase;
         this.deleteActivityUseCase = deleteActivityUseCase;
         this.updateActivitySkusUseCase = updateActivitySkusUseCase;
+        this.replaceProductSkusUseCase = replaceProductSkusUseCase;
         this.listActivitiesUseCase = listActivitiesUseCase;
         this.getActivityUseCase = getActivityUseCase;
         this.reserveQuotaUseCase = reserveQuotaUseCase;
@@ -148,6 +153,19 @@ public class InternalSeckillController {
                 .map(i -> new SkuItem(i.skuId(), i.seckillPrice(), i.seckillCount(), i.limitPerUser()))
                 .toList();
         updateActivitySkusUseCase.update(new UpdateActivitySkusCommand(id, items));
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 供 tengan-admin 「設定活動商品」列表頁的新增/編輯/刪除單一商品用（見 ReplaceProductSkusService 說明）；
+     * 只覆蓋這個商品範圍的既有列，其餘商品不受影響，跟上面 updateSkus 的整批覆蓋是兩種語意。 */
+    @PutMapping("/activities/{id}/products/{spuId}/skus")
+    @PreAuthorize("hasAuthority('SCOPE_seckill.write')")
+    public ResponseEntity<Void> replaceProductSkus(@PathVariable Long id, @PathVariable Long spuId,
+            @Valid @RequestBody ReplaceProductSkusRequest request) {
+        var items = request.items().stream()
+                .map(i -> new SkuItem(i.skuId(), i.seckillPrice(), i.seckillCount(), i.limitPerUser()))
+                .toList();
+        replaceProductSkusUseCase.replace(new ReplaceProductSkusCommand(id, request.skuIds(), items));
         return ResponseEntity.noContent().build();
     }
 

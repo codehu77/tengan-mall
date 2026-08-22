@@ -40,6 +40,30 @@ public class SeckillSkuRepositoryImpl implements SeckillSkuRepository {
     }
 
     @Override
+    @Transactional
+    public List<SeckillSku> replaceForActivityAndSkuIds(Long activityId, List<Long> skuIdsScope,
+            List<SeckillSku> newSkus) {
+        if (!skuIdsScope.isEmpty()) {
+            mapper.delete(new LambdaQueryWrapper<SeckillSkuPO>().eq(SeckillSkuPO::getActivityId, activityId)
+                    .in(SeckillSkuPO::getSkuId, skuIdsScope));
+        }
+        for (SeckillSku sku : newSkus) {
+            SeckillSkuPO po = new SeckillSkuPO();
+            po.setActivityId(sku.getActivityId());
+            po.setSkuId(sku.getSkuId());
+            po.setSeckillPrice(sku.getSeckillPrice());
+            po.setSeckillCount(sku.getSeckillCount());
+            po.setLimitPerUser(sku.getLimitPerUser());
+            po.setSoldCount(sku.getSoldCount());
+            po.setSettledAt(toLocalDateTime(sku.getSettledAt()));
+            po.setCreatedAt(toLocalDateTime(sku.getCreatedAt()));
+            mapper.insert(po);
+            sku.assignId(po.getId());
+        }
+        return newSkus;
+    }
+
+    @Override
     public List<SeckillSku> findByActivityId(Long activityId) {
         return mapper.selectList(new LambdaQueryWrapper<SeckillSkuPO>().eq(SeckillSkuPO::getActivityId, activityId))
                 .stream().map(this::toDomain).toList();

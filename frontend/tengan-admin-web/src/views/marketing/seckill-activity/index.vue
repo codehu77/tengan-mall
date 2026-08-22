@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { h, ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
@@ -8,18 +9,17 @@ import type { TableColumns } from "@pureadmin/table";
 import {
   type ActivityItem,
   getActivityList,
-  getActivity,
   createActivity,
   deleteActivity,
-  updateActivitySkus,
   triggerWarmUpNow
 } from "@/api/seckillActivity";
 import activityForm from "./form.vue";
-import skusForm from "./skusForm.vue";
 
 defineOptions({
   name: "MarketingSeckillActivity"
 });
+
+const router = useRouter();
 
 const loading = ref(true);
 const dataList = ref<Array<ActivityItem>>([]);
@@ -101,40 +101,11 @@ function openCreateDialog() {
   });
 }
 
-const skusFormRef = ref();
-
-/** 目錄型節點 DRAFT 活動要先設定商品才會轉成 PUBLISHED（見 tengan-seckill UpdateActivitySkusService 說明）。 */
-async function openSkusDialog(row: ActivityItem) {
-  const detail = await getActivity(row.id);
-  const initialSkus = detail.skus.map(s => ({
-    skuId: s.skuId,
-    seckillPrice: s.seckillPrice,
-    seckillCount: s.seckillCount,
-    limitPerUser: s.limitPerUser
-  }));
-
-  addDialog({
-    title: `設定活動商品（${activityTypeLabel[row.activityType]}）`,
-    width: "50%",
-    draggable: true,
-    closeOnClickModal: false,
-    contentRenderer: () => h(skusForm, { ref: skusFormRef, initialSkus }),
-    beforeSure: (done, { closeLoading }) => {
-      const items = skusFormRef.value.getSkuItems();
-      if (items.length === 0) {
-        message("至少要設定一項商品", { type: "warning" });
-        closeLoading();
-        return;
-      }
-      updateActivitySkus(row.id, items)
-        .then(() => {
-          message("商品設定成功", { type: "success" });
-          done();
-          onSearch();
-        })
-        .catch(() => closeLoading());
-    }
-  });
+/** 目錄型節點 DRAFT 活動要先設定商品才會轉成 PUBLISHED（見 tengan-seckill UpdateActivitySkusService 說明）。
+ * 「設定商品」改成獨立路由頁面（不是 dialog）——商品一多 dialog 塞不下，逐筆新增/編輯/刪除也需要
+ * 完整版面，比照 products/spu 列表頁+獨立編輯頁的既有模式（見「設定活動商品改成列表頁」規劃）。 */
+function openProducts(row: ActivityItem) {
+  router.push(`/marketing/seckill-activity/${row.id}/products`);
 }
 
 // 不用等 WarmUpScheduler 固定的每日四個時間點，demo/測試新建的場次（例如剛設定好的「夜貓場」）
@@ -209,7 +180,7 @@ onMounted(() => {
             </el-tag>
           </template>
           <template #operation="{ row }">
-            <el-button link type="primary" @click="openSkusDialog(row)">
+            <el-button link type="primary" @click="openProducts(row)">
               設定商品
             </el-button>
             <el-button link type="danger" @click="onDelete(row)">
