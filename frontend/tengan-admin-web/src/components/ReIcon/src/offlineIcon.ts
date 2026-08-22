@@ -19,6 +19,8 @@ import EpList from "~icons/ep/list?raw";
 import EpOfficeBuilding from "~icons/ep/office-building?raw";
 import EpShoppingCart from "~icons/ep/shopping-cart?raw";
 import EpTicket from "~icons/ep/ticket?raw";
+import EpAlarmClock from "~icons/ep/alarm-clock?raw";
+import EpClock from "~icons/ep/clock?raw";
 
 // https://icon-sets.iconify.design/ri/?keyword=ri
 import RiSearchLine from "~icons/ri/search-line?raw";
@@ -45,6 +47,8 @@ const icons = [
   ["OfficeBuilding", EpOfficeBuilding],
   ["ShoppingCart", EpShoppingCart],
   ["Ticket", EpTicket],
+  ["AlarmClock", EpAlarmClock],
+  ["Clock", EpClock],
   // Remix Icon: https://github.com/Remix-Design/RemixIcon
   ["ri/search-line", RiSearchLine],
   ["ri/information-line", RiInformationLine]
