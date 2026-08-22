@@ -1,5 +1,6 @@
-package com.tengan.mall.payment.application.subscription;
+package com.tengan.mall.payment.infrastructure.scheduler;
 
+import com.tengan.mall.payment.application.subscription.ReconcileSubscriptionUseCase;
 import com.tengan.mall.payment.domain.repository.SubscriptionRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

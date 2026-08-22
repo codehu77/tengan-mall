@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 /**
  * 只停用未來續訂，**不**立刻降級——使用者已經付過的那一期還沒到期，權益要維持到
  * {@link com.tengan.mall.payment.domain.model.Subscription#getPaidUntil()} 才由
- * {@link SubscriptionExpiryScheduler} 排程降級（見規劃文件核心設計決策）。
+ * {@link com.tengan.mall.payment.infrastructure.scheduler.SubscriptionExpiryScheduler} 排程降級（見規劃文件核心設計決策）。
  *
  * <p>已知限制：ECPay 的「信用卡定期定額訂單作業」API（{@code Action=Cancel}）用 AES-GCM 加密，
  * 跟全站其他 ECPay 端點統一使用的 {@code CheckMacValue} 雜湊比對是不同機制，這次規劃時查證

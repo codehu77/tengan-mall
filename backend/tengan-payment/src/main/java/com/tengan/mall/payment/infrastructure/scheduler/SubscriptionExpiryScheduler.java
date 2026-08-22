@@ -1,4 +1,4 @@
-package com.tengan.mall.payment.application.subscription;
+package com.tengan.mall.payment.infrastructure.scheduler;
 
 import com.tengan.mall.payment.application.port.WalletPort;
 import com.tengan.mall.payment.domain.repository.SubscriptionRepository;

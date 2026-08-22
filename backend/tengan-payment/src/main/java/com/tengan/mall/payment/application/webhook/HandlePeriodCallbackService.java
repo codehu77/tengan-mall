@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 處理 ECPay `PeriodReturnURL` 通知——第一期跟後續每一期都是同一支處理，沒有特判邏輯。冪等以
  * `gwsr`（ECPay 這期的授權交易單號）為鍵。`RtnCode=1` 才延長 `paidUntil`+升級等級；失敗只累計
  * 連續失敗次數，達到 6 次才標記 `CANCELLED`——不管成功或失敗，都不會在這裡呼叫降級，降級統一交給
- * {@link com.tengan.mall.payment.application.subscription.SubscriptionExpiryScheduler}。
+ * {@link com.tengan.mall.payment.infrastructure.scheduler.SubscriptionExpiryScheduler}。
  */
 @Service
 public class HandlePeriodCallbackService implements HandlePeriodCallbackUseCase {
