@@ -2,12 +2,14 @@ package com.tengan.mall.member.interfaces.rest;
 
 import com.tengan.mall.member.application.member.GetMemberDetailUseCase;
 import com.tengan.mall.member.application.member.GetMemberStatsTodayUseCase;
+import com.tengan.mall.member.application.member.GetMembersByIdsUseCase;
 import com.tengan.mall.member.application.member.ListMembersUseCase;
 import com.tengan.mall.member.application.member.MemberSummary;
 import com.tengan.mall.member.application.member.SearchMembersQuery;
 import com.tengan.mall.member.interfaces.rest.dto.MemberListResponse;
 import com.tengan.mall.member.interfaces.rest.dto.MemberStatsTodayResponse;
 import com.tengan.mall.member.interfaces.rest.dto.MemberSummaryResponse;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,12 +28,15 @@ public class InternalMemberController {
     private final ListMembersUseCase listMembersUseCase;
     private final GetMemberDetailUseCase getMemberDetailUseCase;
     private final GetMemberStatsTodayUseCase getMemberStatsTodayUseCase;
+    private final GetMembersByIdsUseCase getMembersByIdsUseCase;
 
     public InternalMemberController(ListMembersUseCase listMembersUseCase,
-            GetMemberDetailUseCase getMemberDetailUseCase, GetMemberStatsTodayUseCase getMemberStatsTodayUseCase) {
+            GetMemberDetailUseCase getMemberDetailUseCase, GetMemberStatsTodayUseCase getMemberStatsTodayUseCase,
+            GetMembersByIdsUseCase getMembersByIdsUseCase) {
         this.listMembersUseCase = listMembersUseCase;
         this.getMemberDetailUseCase = getMemberDetailUseCase;
         this.getMemberStatsTodayUseCase = getMemberStatsTodayUseCase;
+        this.getMembersByIdsUseCase = getMembersByIdsUseCase;
     }
 
     @GetMapping
@@ -46,6 +51,13 @@ public class InternalMemberController {
     @PreAuthorize("hasAuthority('SCOPE_member.read')")
     public MemberSummaryResponse detail(@PathVariable Long id) {
         return toResponse(getMemberDetailUseCase.get(id));
+    }
+
+    /** 批次查詢，供 tengan-admin 組付款/訂閱列表的會員帳號/暱稱顯示用，避免逐列各查一次。 */
+    @GetMapping("/batch")
+    @PreAuthorize("hasAuthority('SCOPE_member.read')")
+    public List<MemberSummaryResponse> batch(@RequestParam List<Long> ids) {
+        return getMembersByIdsUseCase.get(ids).stream().map(this::toResponse).toList();
     }
 
     @GetMapping("/stats/today")

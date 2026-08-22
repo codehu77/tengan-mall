@@ -3,7 +3,9 @@ package com.tengan.mall.payment.infrastructure.persistence;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.tengan.mall.payment.domain.model.SubscriptionPayment;
 import com.tengan.mall.payment.domain.repository.SubscriptionPaymentRepository;
+import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -33,5 +35,24 @@ public class SubscriptionPaymentRepositoryImpl implements SubscriptionPaymentRep
     public boolean existsByGwsr(String gwsr) {
         return mapper.selectCount(new LambdaQueryWrapper<SubscriptionPaymentPO>()
                 .eq(SubscriptionPaymentPO::getGwsr, gwsr)) > 0;
+    }
+
+    @Override
+    public List<SubscriptionPayment> findBySubscriptionId(Long subscriptionId) {
+        return mapper
+                .selectList(new LambdaQueryWrapper<SubscriptionPaymentPO>()
+                        .eq(SubscriptionPaymentPO::getSubscriptionId, subscriptionId)
+                        .orderByAsc(SubscriptionPaymentPO::getProcessDate))
+                .stream().map(this::toDomain).toList();
+    }
+
+    private SubscriptionPayment toDomain(SubscriptionPaymentPO po) {
+        return SubscriptionPayment.reconstitute(po.getId(), po.getSubscriptionId(), po.getGwsr(), po.getSuccess(),
+                po.getAmount(), po.getTotalSuccessTimes(), toInstant(po.getProcessDate()),
+                toInstant(po.getCreatedAt()));
+    }
+
+    private Instant toInstant(java.time.LocalDateTime dateTime) {
+        return dateTime == null ? null : dateTime.atZone(ZoneId.systemDefault()).toInstant();
     }
 }

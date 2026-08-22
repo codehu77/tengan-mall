@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
 import { message } from "@/utils/message";
-import { ElMessageBox } from "element-plus";
 import { PureTableBar } from "@/components/RePureTableBar";
 import type { TableColumns } from "@pureadmin/table";
 import {
@@ -9,8 +8,7 @@ import {
   type PaymentMethodConfig,
   getPaymentRecordList,
   getPaymentMethods,
-  updatePaymentMethodStatus,
-  triggerReconcileNow
+  updatePaymentMethodStatus
 } from "@/api/payment";
 
 defineOptions({
@@ -55,16 +53,57 @@ const statusTagType: Record<number, "warning" | "success" | "info"> = {
 const columns: TableColumns[] = [
   { label: "訂單編號", prop: "orderSn", minWidth: 170 },
   { label: "會員 ID", prop: "memberId", minWidth: 90 },
-  { label: "金額", prop: "amount", minWidth: 100, formatter: row => `NT$ ${row.amount}` },
-  { label: "付款方式", prop: "method", minWidth: 100, formatter: row => methodLabel(row.method) },
+  {
+    label: "會員帳號",
+    prop: "memberUsername",
+    minWidth: 140,
+    formatter: row => memberLabel(row)
+  },
+  {
+    label: "金額",
+    prop: "amount",
+    minWidth: 100,
+    formatter: row => `NT$ ${row.amount}`
+  },
+  {
+    label: "付款方式",
+    prop: "method",
+    minWidth: 100,
+    formatter: row => methodLabel(row.method)
+  },
   { label: "狀態", prop: "status", minWidth: 90, slot: "status" },
-  { label: "金流交易編號", prop: "gatewayTradeNo", minWidth: 160, formatter: row => row.gatewayTradeNo ?? "-" },
-  { label: "付款時間", prop: "paidAt", minWidth: 170, formatter: row => (row.paidAt ? formatTime(row.paidAt) : "-") },
-  { label: "建立時間", prop: "createdAt", minWidth: 170, formatter: row => formatTime(row.createdAt) }
+  {
+    label: "金流交易編號",
+    prop: "gatewayTradeNo",
+    minWidth: 160,
+    formatter: row => row.gatewayTradeNo ?? "-"
+  },
+  {
+    label: "付款時間",
+    prop: "paidAt",
+    minWidth: 170,
+    formatter: row => (row.paidAt ? formatTime(row.paidAt) : "-")
+  },
+  {
+    label: "建立時間",
+    prop: "createdAt",
+    minWidth: 170,
+    formatter: row => formatTime(row.createdAt)
+  }
 ];
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString("zh-TW", { hour12: false });
+}
+
+/** 即時向 tengan-member 批次組裝，查不到（時序邊角案例）時顯示原始 memberId 別讓欄位空白。 */
+function memberLabel(row: PaymentRecord) {
+  if (!row.memberUsername) {
+    return `#${row.memberId}`;
+  }
+  return row.memberNickname
+    ? `${row.memberUsername}（${row.memberNickname}）`
+    : row.memberUsername;
 }
 
 function methodLabel(method: string) {
@@ -125,32 +164,11 @@ function onToggleMethod(config: PaymentMethodConfig) {
   updatePaymentMethodStatus(config.method, next)
     .then(() => {
       config.enabled = next;
-      message(`已${next ? "啟用" : "停用"}「${methodLabel(config.method)}」`, { type: "success" });
+      message(`已${next ? "啟用" : "停用"}「${methodLabel(config.method)}」`, {
+        type: "success"
+      });
     })
     .catch(error => showError(error, "更新付款方式狀態失敗"));
-}
-
-// Phase 8.6 排程式查帳收尾：手動立即查帳（不限卡多久，一次查完目前所有 PENDING），demo 用，
-// 不用等排程的 40 分鐘門檻或下一輪掃描週期。
-const reconcileLoading = ref(false);
-
-async function onReconcileNow() {
-  reconcileLoading.value = true;
-  try {
-    const result = await triggerReconcileNow();
-    await ElMessageBox.alert(
-      `一般訂單：查了 ${result.paymentChecked} 筆，${result.paymentConverged} 筆確認已付款、${result.paymentFailed} 筆確認未付款<br/>` +
-        `訂閱首期：查了 ${result.subscriptionChecked} 筆，${result.subscriptionConverged} 筆確認成功、${result.subscriptionFailed} 筆確認失敗<br/>` +
-        `訂閱續期：查了 ${result.renewalChecked} 筆，${result.renewalRecovered} 筆確認續訂成功`,
-      "立即查帳結果",
-      { confirmButtonText: "確定", dangerouslyUseHTMLString: true }
-    );
-    onSearch();
-  } catch (error) {
-    showError(error, "立即查帳失敗");
-  } finally {
-    reconcileLoading.value = false;
-  }
 }
 
 onMounted(() => {
@@ -166,26 +184,47 @@ onMounted(() => {
         <span>付款方式啟用/停用</span>
       </template>
       <div v-loading="methodConfigsLoading" class="flex gap-8">
-        <div v-for="config in methodConfigs" :key="config.method" class="flex items-center gap-2">
+        <div
+          v-for="config in methodConfigs"
+          :key="config.method"
+          class="flex items-center gap-2"
+        >
           <span>{{ methodLabel(config.method) }}</span>
-          <el-switch :model-value="config.enabled" @change="onToggleMethod(config)" />
+          <el-switch
+            :model-value="config.enabled"
+            @change="onToggleMethod(config)"
+          />
         </div>
       </div>
     </el-card>
 
     <el-form :inline="true" :model="searchForm" class="mb-2">
       <el-form-item label="訂單編號">
-        <el-input v-model="searchForm.orderSn" placeholder="請輸入訂單編號" clearable style="width: 200px" />
+        <el-input
+          v-model="searchForm.orderSn"
+          placeholder="請輸入訂單編號"
+          clearable
+          style="width: 200px"
+        />
       </el-form-item>
       <el-form-item label="付款方式">
-        <el-select v-model="searchForm.method" placeholder="不限" clearable style="width: 140px">
-          <el-option v-for="m in methodOptions" :key="m.value" :label="m.label" :value="m.value" />
+        <el-select
+          v-model="searchForm.method"
+          placeholder="不限"
+          clearable
+          style="width: 140px"
+        >
+          <el-option
+            v-for="m in methodOptions"
+            :key="m.value"
+            :label="m.label"
+            :value="m.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="onSearch">查詢</el-button>
         <el-button @click="onReset">重置</el-button>
-        <el-button type="warning" :loading="reconcileLoading" @click="onReconcileNow">立即查帳</el-button>
       </el-form-item>
     </el-form>
 

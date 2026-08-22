@@ -1,6 +1,7 @@
 package com.tengan.mall.member.domain.repository;
 
 import com.tengan.mall.member.domain.model.Member;
+import java.util.List;
 import java.util.Optional;
 
 public interface MemberRepository {
@@ -8,6 +9,9 @@ public interface MemberRepository {
     Member save(Member member);
 
     Optional<Member> findById(Long id);
+
+    /** 供其他服務透過 tengan-admin 批次組裝顯示用（例如付款/訂閱列表要秀會員帳號），不保證回傳順序。 */
+    List<Member> findByIds(List<Long> ids);
 
     boolean existsById(Long id);
 

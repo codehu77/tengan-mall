@@ -59,4 +59,9 @@ public interface SubscriptionRepository {
      * 手動立即查帳呼叫時 cutoff 傳「現在」。
      */
     List<Subscription> findStuckActive(Instant cutoff, int limit);
+
+    /** 後台訂閱管理列表用：memberId/status 皆可為 null（不篩選），依 createdAt 新到舊排序。 */
+    List<Subscription> search(Long memberId, Integer status, int page, int pageSize);
+
+    long countSearch(Long memberId, Integer status);
 }

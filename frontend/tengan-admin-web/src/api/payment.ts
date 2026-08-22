@@ -5,6 +5,8 @@ export type PaymentRecord = {
   id: number;
   orderSn: string;
   memberId: number;
+  memberUsername?: string;
+  memberNickname?: string;
   method: string;
   amount: number;
   status: number;
@@ -26,7 +28,9 @@ export type PaymentRecordQuery = {
 };
 
 export const getPaymentRecordList = (params: PaymentRecordQuery) => {
-  return http.request<PaymentRecordListResult>("get", "/api/admin/payments", { params });
+  return http.request<PaymentRecordListResult>("get", "/api/admin/payments", {
+    params
+  });
 };
 
 export type PaymentMethodConfig = {
@@ -35,13 +39,20 @@ export type PaymentMethodConfig = {
 };
 
 export const getPaymentMethods = () => {
-  return http.request<Array<PaymentMethodConfig>>("get", "/api/admin/payments/methods");
+  return http.request<Array<PaymentMethodConfig>>(
+    "get",
+    "/api/admin/payments/methods"
+  );
 };
 
 export const updatePaymentMethodStatus = (method: string, enabled: boolean) => {
-  return http.request<void>("put", `/api/admin/payments/methods/${method}/status`, {
-    data: { enabled }
-  });
+  return http.request<void>(
+    "put",
+    `/api/admin/payments/methods/${method}/status`,
+    {
+      data: { enabled }
+    }
+  );
 };
 
 /** 對齊 tengan-admin ReconcileNowResponse——converged+failed 可能小於 checked（單筆查 ECPay 失敗時）。 */
@@ -59,5 +70,8 @@ export type ReconcileNowResult = {
 };
 
 export const triggerReconcileNow = () => {
-  return http.request<ReconcileNowResult>("post", "/api/admin/payments/reconcile-now");
+  return http.request<ReconcileNowResult>(
+    "post",
+    "/api/admin/payments/reconcile-now"
+  );
 };

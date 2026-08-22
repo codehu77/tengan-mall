@@ -1,6 +1,7 @@
 package com.tengan.mall.payment.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tengan.mall.payment.domain.model.Subscription;
 import com.tengan.mall.payment.domain.repository.SubscriptionRepository;
 import java.time.Instant;
@@ -99,6 +100,23 @@ public class SubscriptionRepositoryImpl implements SubscriptionRepository {
     @Override
     public List<Subscription> findStuckActive(Instant cutoff, int limit) {
         return mapper.findStuckActive(toLocalDateTime(cutoff), limit).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Subscription> search(Long memberId, Integer status, int page, int pageSize) {
+        Page<SubscriptionPO> result = mapper.selectPage(new Page<>(page, pageSize),
+                buildSearchWrapper(memberId, status).orderByDesc(SubscriptionPO::getCreatedAt));
+        return result.getRecords().stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public long countSearch(Long memberId, Integer status) {
+        return mapper.selectCount(buildSearchWrapper(memberId, status));
+    }
+
+    private LambdaQueryWrapper<SubscriptionPO> buildSearchWrapper(Long memberId, Integer status) {
+        return new LambdaQueryWrapper<SubscriptionPO>().eq(memberId != null, SubscriptionPO::getMemberId, memberId)
+                .apply(status != null, "status = {0}", status);
     }
 
     private Subscription toDomain(SubscriptionPO po) {

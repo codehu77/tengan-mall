@@ -8,6 +8,7 @@ import com.tengan.mall.member.domain.repository.MemberPage;
 import com.tengan.mall.member.domain.repository.MemberRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -34,6 +35,14 @@ public class MemberRepositoryImpl implements MemberRepository {
     @Override
     public Optional<Member> findById(Long id) {
         return Optional.ofNullable(memberMapper.selectById(id)).map(this::toDomain);
+    }
+
+    @Override
+    public List<Member> findByIds(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return memberMapper.selectBatchIds(ids).stream().map(this::toDomain).toList();
     }
 
     @Override

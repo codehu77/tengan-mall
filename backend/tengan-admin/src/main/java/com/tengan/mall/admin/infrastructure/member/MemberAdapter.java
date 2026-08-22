@@ -3,6 +3,9 @@ package com.tengan.mall.admin.infrastructure.member;
 import com.tengan.mall.admin.application.port.MemberItem;
 import com.tengan.mall.admin.application.port.MemberListResult;
 import com.tengan.mall.admin.application.port.MemberPort;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -42,5 +45,20 @@ public class MemberAdapter implements MemberPort {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
                 .retrieve()
                 .body(MemberItem.class);
+    }
+
+    @Override
+    public List<MemberItem> getMembers(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        String joinedIds = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
+        List<MemberItem> items = memberRestClient.get()
+                .uri(uriBuilder -> uriBuilder.path(BASE_PATH + "/batch").queryParam("ids", joinedIds).build())
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .body(new ParameterizedTypeReference<List<MemberItem>>() {
+                });
+        return items == null ? List.of() : items;
     }
 }
