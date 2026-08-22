@@ -146,7 +146,7 @@ public class SearchSkusService implements SearchSkusUseCase {
         // spuMainImage 是後補欄位，舊資料重建索引前可能還沒有值，退回 sku 自己的圖當備援。
         String image = (d.getSpuMainImage() != null && !d.getSpuMainImage().isBlank())
                 ? d.getSpuMainImage() : d.getMainImage();
-        return new SkuSearchItem(d.getSkuId(), d.getSpuId(), d.getSkuName(), d.getPrice(), image,
+        return new SkuSearchItem(d.getSkuId(), d.getSpuId(), d.getSkuName(), d.getSpuName(), d.getPrice(), image,
                 d.getSaleCount() == null ? 0 : d.getSaleCount(), d.getBrandId(), d.getBrandName());
     }
 

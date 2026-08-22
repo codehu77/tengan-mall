@@ -168,24 +168,25 @@ const total = computed(() => data.value?.total ?? 0)
 const aggregations = computed<SearchAggregations>(() => data.value?.aggregations ?? { brands: [], attrs: [] })
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / itemsPerPage)))
 
-// 搜尋結果要在還有貨的商品卡上標「限時搶購」徽章+改顯示秒殺價，跟商品詳情頁/首頁限時搶購卡邏輯一致：
-// 只認 ACTIVE 場次+還有名額的 sku。
+// 搜尋結果要在還有貨的商品卡上標「限時搶購」徽章+改顯示秒殺價，跟首頁限時搶購卡邏輯一致：只要這個
+// SPU「任一規格」還有名額就算——不能只認搜尋索引到的那一顆 sku，秒殺活動很可能是特賣別的顏色，
+// 索引到的代表 sku 沒貨不代表整個商品沒得搶（真實 bug：首頁用 spuId 判斷、這裡原本用 skuId 判斷，
+// 兩邊對不上，見使用者實測回報「首頁4個、搜尋頁只有2個」）。
 const { data: seckillData } = useSeckill()
-const activeSeckillSkuMap = computed(() => {
+const activeSeckillProductMap = computed(() => {
   const map = new Map<number, { seckillPrice: number; originalPrice: number }>()
   for (const session of seckillData.value?.flashSaleSessions ?? []) {
     if (session.status !== 'ACTIVE') continue
     for (const product of session.products) {
-      for (const sku of product.skus) {
-        if (sku.remaining > 0) map.set(sku.skuId, sku)
-      }
+      const sku = product.skus.find(s => s.remaining > 0)
+      if (sku) map.set(product.spuId, sku)
     }
   }
   return map
 })
 
 function toProduct(item: SearchItem): Product {
-  const seckillSku = activeSeckillSkuMap.value.get(item.skuId)
+  const seckillSku = activeSeckillProductMap.value.get(item.spuId)
   return {
     skuId: item.skuId,
     spuId: item.spuId,
