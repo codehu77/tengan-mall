@@ -12,7 +12,7 @@
     <!-- 熱門商品 -->
     <section>
       <h2 class="text-2xl font-bold text-gray-800 mb-4">熱門商品</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <ProductCard
           v-for="product in mockProducts"
           :key="product.skuId"

@@ -19,6 +19,10 @@ export interface Product {
   skuDefaultImg: string
   saleCount: number
   categoryId: number
+  /** 目前是否正處於進行中的限時搶購（ACTIVE 場次），用於商品卡右上角徽章。 */
+  isSeckill?: boolean
+  /** isSeckill 為 true 時，price 已經換成秒殺價，這裡放原價供劃線對比顯示（跟首頁限時搶購卡一致）。 */
+  originalPrice?: number
 }
 
 export const MOCK_CATEGORIES: Category[] = [

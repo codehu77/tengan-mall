@@ -2,6 +2,7 @@ export interface SearchItem {
   skuId: number
   spuId: number
   skuName: string
+  spuName: string
   price: number
   mainImage: string
   saleCount: number

@@ -5,34 +5,27 @@ const props = defineProps<{
   flashSaleSessions: FlashSaleSession[]
 }>()
 
-// 輪播常數：w-48 = 192px, gap-4 = 16px
-const VISIBLE = 5
-const CARD_STEP = 192 + 16
+// 首頁只當作預告區塊，固定顯示一排（最多 5 個），要看全部到 /seckill 頁面（該頁跟搜尋頁同款 grid）。
+const ROW_SIZE = 5
 
 /** 預設選中 ACTIVE 那一場（現正瘋搶），沒有的話選第一個待開賣場次。 */
 const defaultSession = props.flashSaleSessions.find(s => s.status === 'ACTIVE') ?? props.flashSaleSessions[0]
 const selectedActivityId = ref(defaultSession?.activityId ?? null)
-const currentIndex = ref(0)
 
 const currentSession = computed(() =>
   props.flashSaleSessions.find(s => s.activityId === selectedActivityId.value) ?? props.flashSaleSessions[0]
 )
 
-/** 一個商品（SPU）一張卡，不是一個規格一張卡；全部規格都賣完的商品不顯示（瀏覽用的輪播，跟商品詳情頁
- * 用同一份原始資料但不同呈現目的——詳情頁要顯示已售完狀態，這裡直接跳過）。 */
+/** 一個商品（SPU）一張卡，不是一個規格一張卡；全部規格都賣完的商品不顯示（瀏覽用的預告區，跟商品詳情頁
+ * 用同一份原始資料但不同呈現目的——詳情頁要顯示已售完狀態，這裡直接跳過）。只取一排份量。 */
 const visibleProducts = computed(() =>
-  (currentSession.value?.products ?? []).filter(p => p.skus.some(s => s.remaining > 0))
+  (currentSession.value?.products ?? [])
+    .filter(p => p.skus.some(s => s.remaining > 0))
+    .slice(0, ROW_SIZE)
 )
-
-const hasPrev = computed(() => currentIndex.value > 0)
-const hasNext = computed(() => currentIndex.value + VISIBLE < visibleProducts.value.length)
-
-function prev() { if (hasPrev.value) currentIndex.value-- }
-function next() { if (hasNext.value) currentIndex.value++ }
 
 function selectSession(activityId: number) {
   selectedActivityId.value = activityId
-  currentIndex.value = 0
   updateRemaining()
 }
 
@@ -132,72 +125,45 @@ onUnmounted(() => {
 
     </div>
 
-    <!-- 商品輪播：一個商品一張卡 -->
-    <div class="relative">
-
-      <!-- 左箭頭 -->
-      <button
-        v-if="hasPrev"
-        class="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-gray-50 hover:scale-125 transition-all duration-200 border border-gray-100"
-        @click="prev"
+    <!-- 商品格線：跟搜尋頁統一大小，一排 5 個 -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div
+        v-for="product in visibleProducts"
+        :key="product.spuId"
+        class="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden cursor-pointer"
+        @click="navigateTo(`/item/${product.spuId}`)"
       >
-        <UIcon name="i-heroicons-chevron-left" class="w-5 h-5 text-gray-500" />
-      </button>
+        <!-- 商品圖 -->
+        <div class="relative aspect-square overflow-hidden bg-gray-50">
+          <img
+            :src="product.mainImage"
+            :alt="product.name"
+            class="w-full h-full object-cover"
+          />
+          <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+            {{ discountLabel(representativeSku(product)) }}
+          </span>
+        </div>
 
-      <div class="overflow-hidden">
-        <div
-          class="flex gap-4 transition-transform duration-300"
-          :style="{ transform: `translateX(-${currentIndex * CARD_STEP}px)` }"
-        >
-          <div
-            v-for="product in visibleProducts"
-            :key="product.spuId"
-            class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer shrink-0 w-48 overflow-hidden"
-            @click="navigateTo(`/item/${product.spuId}`)"
+        <!-- 商品資訊：標題固定保留兩行高度，卡片內容高度才會一致，不會因標題長短而參差不齊 -->
+        <div class="p-3">
+          <p class="text-base text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem]">
+            {{ product.name }}
+          </p>
+          <p class="text-red-600 font-bold text-xl leading-none mb-1">
+            NT$ {{ representativeSku(product).seckillPrice.toLocaleString() }}
+          </p>
+          <p class="text-gray-400 text-xs line-through mb-2">
+            NT$ {{ representativeSku(product).originalPrice.toLocaleString() }}
+          </p>
+          <span
+            class="inline-block text-xs px-2 py-0.5 rounded-full"
+            :class="currentSession.status === 'ACTIVE' ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-400'"
           >
-            <!-- 商品圖 -->
-            <div class="relative">
-              <img
-                :src="product.mainImage"
-                :alt="product.name"
-                class="w-full h-48 object-cover"
-              />
-              <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-                {{ discountLabel(representativeSku(product)) }}
-              </span>
-            </div>
-
-            <!-- 商品資訊：標題固定保留兩行高度，卡片內容高度才會一致，不會因標題長短而參差不齊 -->
-            <div class="p-3">
-              <p class="text-sm text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem] leading-5">
-                {{ product.name }}
-              </p>
-              <p class="text-red-500 font-bold text-lg leading-none mb-1">
-                NT$ {{ representativeSku(product).seckillPrice.toLocaleString() }}
-              </p>
-              <p class="text-gray-400 text-xs line-through mb-2">
-                NT$ {{ representativeSku(product).originalPrice.toLocaleString() }}
-              </p>
-              <span
-                class="inline-block text-xs px-2 py-0.5 rounded-full"
-                :class="currentSession.status === 'ACTIVE' ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-400'"
-              >
-                {{ currentSession.status === 'ACTIVE' ? `剩餘 ${totalRemaining(product)} 件` : '尚未開賣' }}
-              </span>
-            </div>
-          </div>
+            {{ currentSession.status === 'ACTIVE' ? `剩餘 ${totalRemaining(product)} 件` : '尚未開賣' }}
+          </span>
         </div>
       </div>
-
-      <!-- 右箭頭 -->
-      <button
-        v-if="hasNext"
-        class="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white shadow-md rounded-full flex items-center justify-center hover:bg-gray-50 hover:scale-125 transition-all duration-200 border border-gray-100"
-        @click="next"
-      >
-        <UIcon name="i-heroicons-chevron-right" class="w-5 h-5 text-gray-500" />
-      </button>
-
     </div>
 
   </section>

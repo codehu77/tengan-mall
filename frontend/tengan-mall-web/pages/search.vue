@@ -168,15 +168,34 @@ const total = computed(() => data.value?.total ?? 0)
 const aggregations = computed<SearchAggregations>(() => data.value?.aggregations ?? { brands: [], attrs: [] })
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / itemsPerPage)))
 
+// 搜尋結果要在還有貨的商品卡上標「限時搶購」徽章+改顯示秒殺價，跟商品詳情頁/首頁限時搶購卡邏輯一致：
+// 只認 ACTIVE 場次+還有名額的 sku。
+const { data: seckillData } = useSeckill()
+const activeSeckillSkuMap = computed(() => {
+  const map = new Map<number, { seckillPrice: number; originalPrice: number }>()
+  for (const session of seckillData.value?.flashSaleSessions ?? []) {
+    if (session.status !== 'ACTIVE') continue
+    for (const product of session.products) {
+      for (const sku of product.skus) {
+        if (sku.remaining > 0) map.set(sku.skuId, sku)
+      }
+    }
+  }
+  return map
+})
+
 function toProduct(item: SearchItem): Product {
+  const seckillSku = activeSeckillSkuMap.value.get(item.skuId)
   return {
     skuId: item.skuId,
     spuId: item.spuId,
-    skuName: item.skuName,
-    price: item.price,
+    skuName: item.spuName || item.skuName,
+    price: seckillSku ? seckillSku.seckillPrice : item.price,
     skuDefaultImg: item.mainImage,
     saleCount: item.saleCount,
     categoryId: 0,
+    isSeckill: !!seckillSku,
+    originalPrice: seckillSku?.originalPrice,
   }
 }
 
