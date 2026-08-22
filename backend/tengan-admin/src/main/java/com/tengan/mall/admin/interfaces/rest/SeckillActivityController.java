@@ -11,8 +11,10 @@ import com.tengan.mall.admin.interfaces.rest.dto.SeckillActivityListResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.SeckillActivityResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.SeckillSkuResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.UpdateSeckillActivitySkusRequest;
+import com.tengan.mall.admin.interfaces.rest.dto.WarmUpNowResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,7 +42,7 @@ public class SeckillActivityController {
     public SeckillActivityListResponse listActivities() {
         var items = seckillActivityPort.listActivities().stream()
                 .map(a -> new SeckillActivityResponse(a.id(), a.activityType(), a.startTime(), a.endTime(),
-                        a.status()))
+                        a.sessionId(), a.activityDate(), a.sessionName(), a.status()))
                 .toList();
         return new SeckillActivityListResponse(items, items.size());
     }
@@ -54,15 +56,22 @@ public class SeckillActivityController {
                         s.limitPerUser(), s.soldCount(), s.settledAt()))
                 .toList();
         return new SeckillActivityDetailResponse(detail.id(), detail.activityType(), detail.startTime(),
-                detail.endTime(), detail.status(), skus);
+                detail.endTime(), detail.sessionId(), detail.activityDate(), detail.sessionName(), detail.status(),
+                skus);
     }
 
     @PostMapping("/activities")
     @PreAuthorize("hasAuthority('seckill:activity:write')")
     public CreateSeckillActivityResponse createActivity(@Valid @RequestBody CreateSeckillActivityRequest request) {
-        Long id = seckillActivityPort.createActivity(
-                new CreateSeckillActivityPayload(request.activityType(), request.startTime(), request.endTime()));
+        Long id = seckillActivityPort.createActivity(new CreateSeckillActivityPayload(request.activityType(),
+                request.sessionId(), request.activityDate(), request.startTime(), request.endTime()));
         return new CreateSeckillActivityResponse(id);
+    }
+
+    @DeleteMapping("/activities/{id}")
+    @PreAuthorize("hasAuthority('seckill:activity:write')")
+    public void deleteActivity(@PathVariable Long id) {
+        seckillActivityPort.deleteActivity(id);
     }
 
     @PutMapping("/activities/{id}/skus")
@@ -72,5 +81,11 @@ public class SeckillActivityController {
                 .map(i -> new SeckillSkuItemPayload(i.skuId(), i.seckillPrice(), i.seckillCount(), i.limitPerUser()))
                 .toList();
         seckillActivityPort.updateActivitySkus(id, new UpdateSeckillActivitySkusPayload(items));
+    }
+
+    @PostMapping("/warmup-now")
+    @PreAuthorize("hasAuthority('seckill:activity:warmup')")
+    public WarmUpNowResponse warmUpNow() {
+        return new WarmUpNowResponse(seckillActivityPort.triggerWarmUpNow());
     }
 }

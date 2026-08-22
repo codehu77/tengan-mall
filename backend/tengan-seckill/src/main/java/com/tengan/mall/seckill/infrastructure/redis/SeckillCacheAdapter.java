@@ -30,10 +30,10 @@ public class SeckillCacheAdapter {
         this.objectMapper = objectMapper;
     }
 
-    /** 預熱寫入，TTL 精確設在 endTime。 */
+    /** 預熱寫入，TTL 精確設在 endTime；startTime 存進去供呼叫端判斷「是不是真的已經開賣」（見 ActiveSeckillInfo 說明）。 */
     public void publish(Long skuId, Long activityId, java.math.BigDecimal seckillPrice, int limitPerUser,
-            Instant endTime) {
-        var info = new ActiveSeckillInfo(activityId, seckillPrice, limitPerUser);
+            Instant startTime, Instant endTime) {
+        var info = new ActiveSeckillInfo(activityId, seckillPrice, limitPerUser, startTime);
         try {
             String json = objectMapper.writeValueAsString(info);
             Duration ttl = Duration.between(Instant.now(), endTime);

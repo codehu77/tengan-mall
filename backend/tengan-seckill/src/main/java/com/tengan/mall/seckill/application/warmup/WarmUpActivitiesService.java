@@ -52,7 +52,7 @@ public class WarmUpActivitiesService implements WarmUpActivitiesUseCase {
             Instant semaphoreExpireAt = activity.getEndTime().plus(Duration.ofMinutes(settlementGraceMinutes));
             for (var sku : skus) {
                 cacheAdapter.publish(sku.getSkuId(), activity.getId(), sku.getSeckillPrice(), sku.getLimitPerUser(),
-                        activity.getEndTime());
+                        activity.getStartTime(), activity.getEndTime());
                 quotaGuardAdapter.initSemaphore(sku.getSkuId(), sku.getSeckillCount(), semaphoreExpireAt);
             }
             activity.activate();

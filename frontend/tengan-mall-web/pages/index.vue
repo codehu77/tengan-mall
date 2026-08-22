@@ -7,7 +7,7 @@
     </div>
 
     <!-- 限時搶購 -->
-    <SeckillSection v-if="seckillActivities.length > 0" :activities="seckillActivities" />
+    <SeckillSection v-if="flashSaleSessions.length > 0" :flash-sale-sessions="flashSaleSessions" />
 
     <!-- 熱門商品 -->
     <section>
@@ -31,5 +31,5 @@ import { MOCK_PRODUCTS } from '~/mocks/products'
 const mockProducts = MOCK_PRODUCTS
 
 const { data: seckillData } = await useSeckill()
-const seckillActivities = computed(() => seckillData.value?.activities ?? [])
+const flashSaleSessions = computed(() => seckillData.value?.flashSaleSessions ?? [])
 </script>

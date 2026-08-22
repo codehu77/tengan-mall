@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { h, ref, onMounted } from "vue";
+import { ElMessageBox } from "element-plus";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -9,7 +10,9 @@ import {
   getActivityList,
   getActivity,
   createActivity,
-  updateActivitySkus
+  deleteActivity,
+  updateActivitySkus,
+  triggerWarmUpNow
 } from "@/api/seckillActivity";
 import activityForm from "./form.vue";
 import skusForm from "./skusForm.vue";
@@ -38,13 +41,21 @@ const statusLabel: Record<
 
 const columns: TableColumns[] = [
   { label: "活動類型", minWidth: 100, formatter: row => activityTypeLabel[row.activityType] },
-  { label: "活動時間", minWidth: 220, formatter: row => `${formatTime(row.startTime)} ~ ${formatTime(row.endTime)}` },
+  { label: "活動時間", minWidth: 220, formatter: row => formatActivityTime(row) },
   { label: "狀態", minWidth: 90, slot: "status" },
-  { label: "操作", fixed: "right", width: 140, slot: "operation" }
+  { label: "操作", fixed: "right", width: 200, slot: "operation" }
 ];
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString("zh-TW", { hour12: false });
+}
+
+/** FLASH_SALE 顯示場次名稱+日期比原始 startTime~endTime 更直觀；LAUNCH 維持原樣。 */
+function formatActivityTime(row: ActivityItem) {
+  if (row.activityType === "FLASH_SALE" && row.sessionName && row.activityDate) {
+    return `${row.sessionName}（${row.activityDate}）`;
+  }
+  return `${formatTime(row.startTime)} ~ ${formatTime(row.endTime)}`;
 }
 
 async function onSearch() {
@@ -59,6 +70,8 @@ const formRef = ref();
 function openCreateDialog() {
   const formInline = {
     activityType: "FLASH_SALE" as const,
+    sessionId: null,
+    activityDate: null,
     startTime: "",
     endTime: ""
   };
@@ -124,6 +137,46 @@ async function openSkusDialog(row: ActivityItem) {
   });
 }
 
+// 不用等 WarmUpScheduler 固定的每日四個時間點，demo/測試新建的場次（例如剛設定好的「夜貓場」）
+// 可以立刻從 PUBLISHED 轉 ACTIVE，不用乾等到下一個排程時間點。
+const warmUpLoading = ref(false);
+
+async function onWarmUpNow() {
+  warmUpLoading.value = true;
+  try {
+    const { count } = await triggerWarmUpNow();
+    await ElMessageBox.alert(`已預熱 ${count} 個活動`, "立即預熱結果", {
+      confirmButtonText: "確定"
+    });
+    onSearch();
+  } catch (error: any) {
+    message(error?.response?.data?.message ?? "立即預熱失敗", {
+      type: "error"
+    });
+  } finally {
+    warmUpLoading.value = false;
+  }
+}
+
+function onDelete(row: ActivityItem) {
+  ElMessageBox.confirm(
+    `確定要刪除這場「${activityTypeLabel[row.activityType]}」活動嗎？`,
+    "提示",
+    { type: "warning" }
+  ).then(() => {
+    deleteActivity(row.id)
+      .then(() => {
+        message("刪除成功", { type: "success" });
+        onSearch();
+      })
+      .catch((error: any) => {
+        message(error?.response?.data?.message ?? "刪除失敗", {
+          type: "error"
+        });
+      });
+  });
+}
+
 onMounted(() => {
   onSearch();
 });
@@ -135,6 +188,9 @@ onMounted(() => {
       <template #buttons>
         <el-button type="primary" @click="openCreateDialog">
           新增活動
+        </el-button>
+        <el-button type="warning" :loading="warmUpLoading" @click="onWarmUpNow">
+          立即預熱
         </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">
@@ -155,6 +211,9 @@ onMounted(() => {
           <template #operation="{ row }">
             <el-button link type="primary" @click="openSkusDialog(row)">
               設定商品
+            </el-button>
+            <el-button link type="danger" @click="onDelete(row)">
+              刪除
             </el-button>
           </template>
         </pure-table>

@@ -1,22 +1,24 @@
 <script setup lang="ts">
-import type { SeckillActivity } from '~/composables/useSeckill'
+import type { FlashSaleSession } from '~/composables/useSeckill'
 
 const props = defineProps<{
-  activities: SeckillActivity[]
+  flashSaleSessions: FlashSaleSession[]
 }>()
 
 // 輪播常數：w-48 = 192px, gap-4 = 16px
 const VISIBLE = 5
 const CARD_STEP = 192 + 16
 
-const selectedActivityId = ref(props.activities[0]?.id ?? null)
+/** 預設選中 ACTIVE 那一場（現正瘋搶），沒有的話選第一個待開賣場次。 */
+const defaultSession = props.flashSaleSessions.find(s => s.status === 'ACTIVE') ?? props.flashSaleSessions[0]
+const selectedActivityId = ref(defaultSession?.activityId ?? null)
 const currentIndex = ref(0)
 
-const currentActivity = computed(() =>
-  props.activities.find(a => a.id === selectedActivityId.value) ?? props.activities[0]
+const currentSession = computed(() =>
+  props.flashSaleSessions.find(s => s.activityId === selectedActivityId.value) ?? props.flashSaleSessions[0]
 )
 
-const currentSkus = computed(() => currentActivity.value?.skus ?? [])
+const currentSkus = computed(() => currentSession.value?.skus ?? [])
 
 const hasPrev = computed(() => currentIndex.value > 0)
 const hasNext = computed(() => currentIndex.value + VISIBLE < currentSkus.value.length)
@@ -24,24 +26,28 @@ const hasNext = computed(() => currentIndex.value + VISIBLE < currentSkus.value.
 function prev() { if (hasPrev.value) currentIndex.value-- }
 function next() { if (hasNext.value) currentIndex.value++ }
 
-function selectActivity(id: number) {
-  selectedActivityId.value = id
+function selectSession(activityId: number) {
+  selectedActivityId.value = activityId
   currentIndex.value = 0
   updateRemaining()
 }
 
-const activityLabel: Record<SeckillActivity['activityType'], string> = {
-  FLASH_SALE: '限時搶購',
-  LAUNCH: '首發',
+function sessionTabLabel(session: FlashSaleSession) {
+  const hhmm = new Date(session.startTime).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })
+  return session.status === 'ACTIVE' ? `${hhmm} 現正瘋搶` : `${hhmm} 準時開搶`
 }
 
+/** ACTIVE 倒數到結束時間；PUBLISHED（還沒開賣）倒數到開賣時間。 */
 const remaining = ref(0)
 
 function updateRemaining() {
-  const activity = currentActivity.value
-  if (!activity) return
-  remaining.value = Math.max(0, Math.floor((new Date(activity.endTime).getTime() - Date.now()) / 1000))
+  const session = currentSession.value
+  if (!session) return
+  const target = session.status === 'ACTIVE' ? session.endTime : session.startTime
+  remaining.value = Math.max(0, Math.floor((new Date(target).getTime() - Date.now()) / 1000))
 }
+
+const countdownLabel = computed(() => currentSession.value?.status === 'ACTIVE' ? '距結束' : '距開賣')
 
 const hh = computed(() => String(Math.floor(remaining.value / 3600)).padStart(2, '0'))
 const mm = computed(() => String(Math.floor((remaining.value % 3600) / 60)).padStart(2, '0'))
@@ -66,7 +72,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section v-if="currentActivity" class="mb-10">
+  <section v-if="currentSession" class="mb-10">
 
     <!-- 標題列 -->
     <div class="flex items-center gap-4 mb-4">
@@ -75,10 +81,10 @@ onUnmounted(() => {
       <div class="flex items-center gap-3 shrink-0">
         <div class="flex items-center gap-2 bg-red-500 text-white px-3 py-1.5 rounded-lg">
           <UIcon name="i-heroicons-bolt" class="w-4 h-4" />
-          <span class="font-bold text-sm tracking-wide">{{ activityLabel[currentActivity.activityType] }}</span>
+          <span class="font-bold text-sm tracking-wide">限時搶購</span>
         </div>
         <div class="flex items-center gap-1.5 text-sm">
-          <span class="text-gray-400 text-xs">距結束</span>
+          <span class="text-gray-400 text-xs">{{ countdownLabel }}</span>
           <div class="flex items-center gap-1">
             <span class="bg-gray-800 text-white text-xs font-mono px-1.5 py-0.5 rounded">{{ hh }}</span>
             <span class="text-gray-500 font-bold text-xs">:</span>
@@ -89,18 +95,18 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- 中：多場活動同時進行時才顯示切換 tab -->
-      <div v-if="activities.length > 1" class="flex items-center gap-2 flex-1">
+      <!-- 中：今天有多個場次才顯示切換 tab（現正瘋搶 + 其餘準時開搶） -->
+      <div v-if="flashSaleSessions.length > 1" class="flex items-center gap-2 flex-1 overflow-x-auto">
         <button
-          v-for="activity in activities"
-          :key="activity.id"
+          v-for="session in flashSaleSessions"
+          :key="session.activityId"
           class="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap"
-          :class="activity.id === currentActivity.id
+          :class="session.activityId === currentSession.activityId
             ? 'border border-red-500 text-red-500 bg-red-50'
             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'"
-          @click="selectActivity(activity.id)"
+          @click="selectSession(session.activityId)"
         >
-          {{ activityLabel[activity.activityType] }}
+          {{ sessionTabLabel(session) }}
         </button>
       </div>
       <div v-else class="flex-1" />
@@ -148,9 +154,9 @@ onUnmounted(() => {
               </span>
             </div>
 
-            <!-- 商品資訊 -->
+            <!-- 商品資訊：標題固定保留兩行高度，卡片內容高度才會一致，不會因標題長短而參差不齊 -->
             <div class="p-3">
-              <p class="text-sm text-gray-700 line-clamp-2 mb-2 leading-relaxed">
+              <p class="text-sm text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem] leading-5">
                 {{ sku.name }}
               </p>
               <p class="text-red-500 font-bold text-lg leading-none mb-1">
@@ -159,9 +165,12 @@ onUnmounted(() => {
               <p class="text-gray-400 text-xs line-through mb-2">
                 NT$ {{ sku.originalPrice.toLocaleString() }}
               </p>
-              <p class="text-xs text-gray-500">
-                剩餘 <span class="font-semibold text-gray-700">{{ sku.remaining }}</span> 件
-              </p>
+              <span
+                class="inline-block text-xs px-2 py-0.5 rounded-full"
+                :class="currentSession.status === 'ACTIVE' ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-400'"
+              >
+                {{ currentSession.status === 'ACTIVE' ? `剩餘 ${sku.remaining} 件` : '尚未開賣' }}
+              </span>
             </div>
           </div>
         </div>

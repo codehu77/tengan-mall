@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.tengan.mall.seckill.domain.model.ActivityStatus;
 import com.tengan.mall.seckill.domain.model.ActivityType;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @TableName("seckill_activity")
@@ -15,6 +16,8 @@ public class SeckillActivityPO {
     private ActivityType activityType;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private Long sessionId;
+    private LocalDate activityDate;
     private ActivityStatus status;
     private LocalDateTime createdAt;
 
@@ -48,6 +51,22 @@ public class SeckillActivityPO {
 
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
+    }
+
+    public Long getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(Long sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    public LocalDate getActivityDate() {
+        return activityDate;
+    }
+
+    public void setActivityDate(LocalDate activityDate) {
+        this.activityDate = activityDate;
     }
 
     public ActivityStatus getStatus() {

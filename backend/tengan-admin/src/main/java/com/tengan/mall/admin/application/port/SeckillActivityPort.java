@@ -11,5 +11,10 @@ public interface SeckillActivityPort {
 
     Long createActivity(CreateSeckillActivityPayload payload);
 
+    void deleteActivity(Long id);
+
     void updateActivitySkus(Long id, UpdateSeckillActivitySkusPayload payload);
+
+    /** 立即預熱：不用等排程固定的四個時間點，demo/測試新建場次時用（見 tengan-seckill InternalSeckillController 說明）。 */
+    int triggerWarmUpNow();
 }

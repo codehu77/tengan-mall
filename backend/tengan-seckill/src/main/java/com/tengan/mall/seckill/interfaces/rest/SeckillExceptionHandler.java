@@ -5,6 +5,7 @@ import com.tengan.mall.seckill.domain.exception.ActivityStatusTransitionNotAllow
 import com.tengan.mall.seckill.domain.exception.SeckillNotActiveException;
 import com.tengan.mall.seckill.domain.exception.SeckillPurchaseLimitExceededException;
 import com.tengan.mall.seckill.domain.exception.SeckillSoldOutException;
+import com.tengan.mall.seckill.domain.exception.SessionNotFoundException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class SeckillExceptionHandler {
 
-    @ExceptionHandler({ActivityNotFoundException.class, SeckillNotActiveException.class})
+    @ExceptionHandler({ActivityNotFoundException.class, SeckillNotActiveException.class,
+            SessionNotFoundException.class})
     public ResponseEntity<Map<String, String>> handleNotFound(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
     }

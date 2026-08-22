@@ -7,6 +7,7 @@ import com.tengan.mall.admin.application.port.SeckillActivityPort;
 import com.tengan.mall.admin.application.port.UpdateSeckillActivitySkusPayload;
 import com.tengan.mall.admin.infrastructure.seckill.dto.ActivityListEnvelope;
 import com.tengan.mall.admin.infrastructure.seckill.dto.IdEnvelope;
+import com.tengan.mall.admin.infrastructure.seckill.dto.WarmUpNowEnvelope;
 import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -63,6 +64,15 @@ public class SeckillActivityAdapter implements SeckillActivityPort {
     }
 
     @Override
+    public void deleteActivity(Long id) {
+        seckillRestClient.delete()
+                .uri(BASE_PATH + "/{id}", id)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    @Override
     public void updateActivitySkus(Long id, UpdateSeckillActivitySkusPayload payload) {
         seckillRestClient.put()
                 .uri(BASE_PATH + "/{id}/skus", id)
@@ -70,5 +80,15 @@ public class SeckillActivityAdapter implements SeckillActivityPort {
                 .body(payload)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    @Override
+    public int triggerWarmUpNow() {
+        WarmUpNowEnvelope envelope = seckillRestClient.post()
+                .uri("/internal/seckill/warmup-now")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .body(WarmUpNowEnvelope.class);
+        return envelope == null ? 0 : envelope.count();
     }
 }

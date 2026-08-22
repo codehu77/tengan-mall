@@ -6,6 +6,9 @@ export type ActivityItem = {
   activityType: "FLASH_SALE" | "LAUNCH";
   startTime: string;
   endTime: string;
+  sessionId: number | null;
+  activityDate: string | null;
+  sessionName: string | null;
   status: "DRAFT" | "PUBLISHED" | "ACTIVE" | "SETTLED";
 };
 
@@ -42,10 +45,13 @@ export const getActivity = (id: number) => {
   );
 };
 
+/** FLASH_SALE 填 sessionId+activityDate；LAUNCH 填 startTime+endTime（另一組留空）。 */
 export type CreateActivityData = {
   activityType: "FLASH_SALE" | "LAUNCH";
-  startTime: string;
-  endTime: string;
+  sessionId?: number | null;
+  activityDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
 };
 
 export const createActivity = (data: CreateActivityData) => {
@@ -54,6 +60,10 @@ export const createActivity = (data: CreateActivityData) => {
     "/api/admin/seckill/activities",
     { data }
   );
+};
+
+export const deleteActivity = (id: number) => {
+  return http.request<void>("delete", `/api/admin/seckill/activities/${id}`);
 };
 
 export type SkuItemInput = {
@@ -68,5 +78,13 @@ export const updateActivitySkus = (id: number, items: Array<SkuItemInput>) => {
     "put",
     `/api/admin/seckill/activities/${id}/skus`,
     { data: { items } }
+  );
+};
+
+/** 不用等 WarmUpScheduler 固定的每日四個時間點，demo/測試新建的場次可以立刻從 PUBLISHED 轉 ACTIVE。 */
+export const triggerWarmUpNow = () => {
+  return http.request<{ count: number }>(
+    "post",
+    "/api/admin/seckill/warmup-now"
   );
 };

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tengan.mall.seckill.domain.model.SeckillActivity;
 import com.tengan.mall.seckill.domain.repository.SeckillActivityRepository;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -25,6 +26,8 @@ public class SeckillActivityRepositoryImpl implements SeckillActivityRepository 
         po.setActivityType(activity.getActivityType());
         po.setStartTime(toLocalDateTime(activity.getStartTime()));
         po.setEndTime(toLocalDateTime(activity.getEndTime()));
+        po.setSessionId(activity.getSessionId());
+        po.setActivityDate(activity.getActivityDate());
         po.setStatus(activity.getStatus());
         po.setCreatedAt(toLocalDateTime(activity.getCreatedAt()));
         mapper.insert(po);
@@ -38,6 +41,11 @@ public class SeckillActivityRepositoryImpl implements SeckillActivityRepository 
         po.setId(activity.getId());
         po.setStatus(activity.getStatus());
         mapper.updateById(po);
+    }
+
+    @Override
+    public void delete(Long id) {
+        mapper.deleteById(id);
     }
 
     @Override
@@ -72,9 +80,15 @@ public class SeckillActivityRepositoryImpl implements SeckillActivityRepository 
         return mapper.findActive().stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<SeckillActivity> findFlashSaleSessionsOnDate(LocalDate date) {
+        return mapper.findFlashSaleSessionsOnDate(date).stream().map(this::toDomain).toList();
+    }
+
     private SeckillActivity toDomain(SeckillActivityPO po) {
         return SeckillActivity.reconstitute(po.getId(), po.getActivityType(), toInstant(po.getStartTime()),
-                toInstant(po.getEndTime()), po.getStatus(), toInstant(po.getCreatedAt()));
+                toInstant(po.getEndTime()), po.getSessionId(), po.getActivityDate(), po.getStatus(),
+                toInstant(po.getCreatedAt()));
     }
 
     private LocalDateTime toLocalDateTime(Instant instant) {

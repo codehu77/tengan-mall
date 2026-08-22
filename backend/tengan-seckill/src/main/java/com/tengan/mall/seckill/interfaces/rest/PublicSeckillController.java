@@ -1,9 +1,12 @@
 package com.tengan.mall.seckill.interfaces.rest;
 
+import com.tengan.mall.seckill.application.display.ActiveSkuView;
 import com.tengan.mall.seckill.application.display.ListActiveActivitiesUseCase;
-import com.tengan.mall.seckill.interfaces.rest.dto.PublicActivityListResponse;
-import com.tengan.mall.seckill.interfaces.rest.dto.PublicActivityResponse;
+import com.tengan.mall.seckill.interfaces.rest.dto.PublicFlashSaleSessionResponse;
+import com.tengan.mall.seckill.interfaces.rest.dto.PublicLaunchResponse;
+import com.tengan.mall.seckill.interfaces.rest.dto.PublicSeckillDisplayResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicSkuResponse;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,14 +23,23 @@ public class PublicSeckillController {
     }
 
     @GetMapping("/activities")
-    public PublicActivityListResponse listActivities() {
-        var activities = listActiveActivitiesUseCase.list().stream()
-                .map(a -> new PublicActivityResponse(a.id(), a.activityType().name(), a.startTime(), a.endTime(),
-                        a.skus().stream()
-                                .map(s -> new PublicSkuResponse(s.skuId(), s.spuId(), s.name(), s.mainImage(),
-                                        s.originalPrice(), s.seckillPrice(), s.limitPerUser(), s.remaining()))
-                                .toList()))
+    public PublicSeckillDisplayResponse listActivities() {
+        var display = listActiveActivitiesUseCase.list();
+        var flashSaleSessions = display.flashSaleSessions().stream()
+                .map(s -> new PublicFlashSaleSessionResponse(s.activityId(), s.sessionId(), s.sessionName(),
+                        s.startTime(), s.endTime(), s.status(), toSkuResponses(s.skus())))
                 .toList();
-        return new PublicActivityListResponse(activities);
+        var launches = display.launches().stream()
+                .map(l -> new PublicLaunchResponse(l.activityId(), l.startTime(), l.endTime(),
+                        toSkuResponses(l.skus())))
+                .toList();
+        return new PublicSeckillDisplayResponse(flashSaleSessions, launches);
+    }
+
+    private List<PublicSkuResponse> toSkuResponses(List<ActiveSkuView> skus) {
+        return skus.stream()
+                .map(s -> new PublicSkuResponse(s.skuId(), s.spuId(), s.name(), s.mainImage(), s.originalPrice(),
+                        s.seckillPrice(), s.limitPerUser(), s.remaining()))
+                .toList();
     }
 }

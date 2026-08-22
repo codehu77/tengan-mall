@@ -190,14 +190,19 @@ const selectedSkuId = ref(defaultSkuId)
 
 const currentSku = computed(() => skus.value.find(s => s.id === selectedSkuId.value) ?? skus.value[0])
 
-// 目前這顆 sku 是不是活躍秒殺——activeSeckillSku 為 null 就是一般模式，活動結束後 useSeckill() 的資料
-// 自然不會再包含這個 skuId，這裡不用寫「是否過期」的額外判斷。
+// 目前這顆 sku 是不是活躍秒殺——只認 ACTIVE 場次+首發，PUBLISHED（還沒開賣）的場次不算，
+// 活動結束後 useSeckill() 的資料自然不會再包含這個 skuId，這裡不用寫「是否過期」的額外判斷。
 const activeSeckillSku = computed(() => {
   const skuId = currentSku.value?.id
   if (!skuId) return null
-  for (const activity of seckillData.value?.activities ?? []) {
-    const sku = activity.skus.find(s => s.skuId === skuId)
-    if (sku) return { ...sku, endTime: activity.endTime }
+  for (const session of seckillData.value?.flashSaleSessions ?? []) {
+    if (session.status !== 'ACTIVE') continue
+    const sku = session.skus.find(s => s.skuId === skuId)
+    if (sku) return { ...sku, endTime: session.endTime }
+  }
+  for (const launch of seckillData.value?.launches ?? []) {
+    const sku = launch.skus.find(s => s.skuId === skuId)
+    if (sku) return { ...sku, endTime: launch.endTime }
   }
   return null
 })
