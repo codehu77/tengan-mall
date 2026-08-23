@@ -12,9 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 後台素材上傳（Banner 圖/商品圖），跟顧客頭像上傳分開命名空間。category 白名單（banner/product）
- * 的驗證交給 tengan-media 自己做（UploadImageService），這裡不重複驗證——驗證失敗時 tengan-media
- * 回的 400 會被既有的 {@link AdminExceptionHandler#handleDownstreamProductError} 原樣轉發。
+ * 後台素材上傳（Banner 圖/商品圖/品牌 Logo），跟顧客頭像上傳分開命名空間。category 白名單
+ * （banner/product/brand）的驗證交給 tengan-media 自己做（UploadImageService），這裡不重複驗證——
+ * 驗證失敗時 tengan-media 回的 400 會被既有的 {@link AdminExceptionHandler#handleDownstreamProductError}
+ * 原樣轉發。
  */
 @RestController
 @RequestMapping("/api/admin/media/images")
@@ -27,7 +28,8 @@ public class MediaUploadController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('media:banner:write') or hasAuthority('product:spu:write')")
+    @PreAuthorize("hasAuthority('media:banner:write') or hasAuthority('product:spu:write') "
+            + "or hasAuthority('product:brand:write')")
     public UploadImageResponse uploadImage(@RequestParam("file") MultipartFile file,
             @RequestParam("category") String category) {
         try {

@@ -10,7 +10,7 @@ defineOptions({
 
 interface Props {
   modelValue: string;
-  category: "banner" | "product";
+  category: "banner" | "product" | "brand";
   placeholder?: string;
 }
 

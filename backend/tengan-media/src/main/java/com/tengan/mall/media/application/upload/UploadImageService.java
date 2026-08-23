@@ -17,7 +17,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class UploadImageService implements UploadImageUseCase {
 
-    private static final Set<String> ALLOWED_CATEGORIES = Set.of("avatar", "banner", "product", "admin-avatar");
+    private static final Set<String> ALLOWED_CATEGORIES = Set.of("avatar", "banner", "product", "admin-avatar",
+            "brand");
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
     private static final long MAX_BYTES = 2L * 1024 * 1024;
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
+import ImageUrlInput from "@/components/ReUpload/ImageUrlInput.vue";
 
 defineOptions({
   name: "ProductBrandForm"
@@ -61,8 +62,17 @@ defineExpose({ getRef });
         clearable
       />
     </el-form-item>
-    <el-form-item label="Logo 網址">
-      <el-input v-model="newFormInline.logo" placeholder="圖片網址" clearable />
+    <el-form-item label="Logo">
+      <ImageUrlInput v-model="newFormInline.logo" category="brand" placeholder="圖片網址" />
+    </el-form-item>
+    <el-form-item v-if="newFormInline.logo" label=" ">
+      <el-image
+        :src="newFormInline.logo"
+        :preview-src-list="[newFormInline.logo]"
+        preview-teleported
+        fit="contain"
+        style="width: 120px; height: 48px; border-radius: 4px; background: var(--el-fill-color-light)"
+      />
     </el-form-item>
     <el-form-item label="簡介">
       <el-input

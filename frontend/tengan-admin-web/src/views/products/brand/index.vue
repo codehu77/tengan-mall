@@ -141,6 +141,8 @@ onMounted(() => {
             <el-image
               v-if="row.logo"
               :src="row.logo"
+              :preview-src-list="[row.logo]"
+              preview-teleported
               style="width: 60px; height: 24px"
               fit="contain"
             />

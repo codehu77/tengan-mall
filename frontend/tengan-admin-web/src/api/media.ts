@@ -43,7 +43,7 @@ export const deleteBanner = (id: number) => {
 };
 
 /**
- * category 限 "banner"（輪播圖）/"product"（商品圖），跟顧客頭像上傳分開命名空間。
+ * category 限 "banner"（輪播圖）/"product"（商品圖）/"brand"（品牌 Logo），跟顧客頭像上傳分開命名空間。
  *
  * `headers` 這裡刻意覆寫掉——這個專案的 axios 實例（utils/http/index.ts 的 defaultConfig）
  * 全域預設 `Content-Type: application/json`，axios 內建的 transformRequest 只要偵測到目前
@@ -54,7 +54,7 @@ export const deleteBanner = (id: number) => {
  * axios 就不會誤判，之後 xhr adapter 偵測到 body 真的是 FormData 時會自動把這個值換成瀏覽器
  * 產生的正確 `multipart/form-data; boundary=...`。
  */
-export const uploadImage = (file: File, category: "banner" | "product") => {
+export const uploadImage = (file: File, category: "banner" | "product" | "brand") => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("category", category);
