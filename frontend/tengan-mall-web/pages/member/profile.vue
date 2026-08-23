@@ -9,7 +9,20 @@
       <div class="flex items-center gap-4">
         <img :src="form.avatarUrl || FALLBACK_AVATAR" alt="頭像" class="w-20 h-20 rounded-full object-cover border border-gray-100" />
         <div class="flex-1 space-y-2">
-          <UInput v-model="form.avatarUrl" placeholder="貼上頭像圖片網址" />
+          <div class="flex gap-2">
+            <UInput v-model="form.avatarUrl" placeholder="貼上頭像圖片網址" class="flex-1" />
+            <UButton color="gray" variant="outline" :loading="uploading" @click="triggerFileSelect">
+              上傳照片
+            </UButton>
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="hidden"
+              @change="handleFileSelected"
+            />
+          </div>
+          <p v-if="uploadError" class="text-sm text-red-500">{{ uploadError }}</p>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="preset in PRESET_AVATARS"
@@ -72,7 +85,38 @@ const saving = ref(false)
 const error = ref('')
 const saved = ref(false)
 
+const uploading = ref(false)
+const uploadError = ref('')
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
 const form = reactive({ nickname: '', avatarUrl: '' })
+
+function triggerFileSelect() {
+  fileInputRef.value?.click()
+}
+
+async function handleFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  uploadError.value = ''
+  uploading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const { url } = await $fetch<{ url: string }>('/api/member/avatar', {
+      method: 'POST',
+      body: formData,
+    })
+    form.avatarUrl = url
+  } catch (e: any) {
+    uploadError.value = e.data?.message || e.statusMessage || '上傳失敗，請稍後再試'
+  } finally {
+    uploading.value = false
+    input.value = ''
+  }
+}
 
 onMounted(async () => {
   if (!memberStore.profile) {

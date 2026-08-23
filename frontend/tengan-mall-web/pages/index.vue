@@ -1,9 +1,13 @@
 <template>
   <div class="max-w-7xl mx-auto px-6 py-8">
 
-    <!-- Banner 佔位 -->
-    <div class="bg-red-50 border border-red-100 rounded-xl h-[280px] flex items-center justify-center mb-10">
-      <p class="text-red-400 text-xl">Banner 區域（待設計）</p>
+    <!-- 首頁輪播 Banner -->
+    <BannerCarousel v-if="banners.length > 0" :banners="banners" />
+    <div
+      v-else
+      class="bg-red-50 border border-red-100 rounded-xl h-[470px] flex items-center justify-center mb-10"
+    >
+      <p class="text-red-400 text-xl">尚未設定輪播圖</p>
     </div>
 
     <!-- 限時搶購 -->
@@ -32,4 +36,7 @@ const mockProducts = MOCK_PRODUCTS
 
 const { data: seckillData } = await useSeckill()
 const flashSaleSessions = computed(() => seckillData.value?.flashSaleSessions ?? [])
+
+const { data: bannerData } = await useBanners()
+const banners = computed(() => bannerData.value?.banners ?? [])
 </script>

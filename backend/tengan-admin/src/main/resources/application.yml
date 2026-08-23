@@ -1,11 +1,6 @@
 server:
   port: 9020
 
-app:
-  upload:
-    dir: ${ADMIN_UPLOAD_DIR:./data/admin-uploads}
-    public-base-url: /api/admin/static
-
 spring:
   application:
     name: tengan-mall-admin

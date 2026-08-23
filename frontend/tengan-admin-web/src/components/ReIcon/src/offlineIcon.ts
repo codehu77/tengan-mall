@@ -23,6 +23,7 @@ import EpAlarmClock from "~icons/ep/alarm-clock?raw";
 import EpClock from "~icons/ep/clock?raw";
 import EpCreditCard from "~icons/ep/credit-card?raw";
 import EpRefresh from "~icons/ep/refresh?raw";
+import EpPicture from "~icons/ep/picture?raw";
 
 // https://icon-sets.iconify.design/ri/?keyword=ri
 import RiSearchLine from "~icons/ri/search-line?raw";
@@ -53,6 +54,7 @@ const icons = [
   ["Clock", EpClock],
   ["CreditCard", EpCreditCard],
   ["Refresh", EpRefresh],
+  ["Picture", EpPicture],
   // Remix Icon: https://github.com/Remix-Design/RemixIcon
   ["ri/search-line", RiSearchLine],
   ["ri/information-line", RiInformationLine]

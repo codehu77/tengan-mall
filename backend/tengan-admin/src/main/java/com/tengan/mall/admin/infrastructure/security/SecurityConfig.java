@@ -14,13 +14,14 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * 三條鏈，比照 tengan-auth 的 SecurityConfig，tier 從 /api/customer/** 換成 /api/admin/**：
  * 1. public + jwks + actuator：完全放行。
- * 2. /api/admin/auth/login、/api/admin/auth/refresh、/api/admin/static/**：也放行——前兩支端點的
- *    本質都是「還沒有（或已過期）有效 access token」的情境（登入前本來就沒有 token，refresh 驗證的是
- *    opaque refresh token 不是 access token JWT），不能套用第 3 條鏈「強制持有效 access token」
- *    的規則，否則登入本身或 access token 過期後的換發都會變成無法自我修復的死結；後者是管理員頭像等
- *    靜態圖片，瀏覽器 <img> 標籤不會帶 Authorization header，也不能強制驗證。
+ * 2. /api/admin/auth/login、/api/admin/auth/refresh：也放行——這兩支端點的本質都是「還沒有
+ *    （或已過期）有效 access token」的情境（登入前本來就沒有 token，refresh 驗證的是 opaque
+ *    refresh token 不是 access token JWT），不能套用第 3 條鏈「強制持有效 access token」的規則，
+ *    否則登入本身或 access token 過期後的換發都會變成無法自我修復的死結。
  *    Gateway 的 UserJwtFilter 也要有對應的放行例外，兩邊要保持一致。
  * 3. 其餘 /api/admin/**：強制持有效 access token，下游驗簽解出 adminId + permissions。
+ *    （管理員頭像等圖片現在存進 MinIO 由 tengan-media 公開唯讀提供，不再是這個服務自己的
+ *    靜態資源，沒有「瀏覽器 &lt;img&gt; 標籤不帶 Authorization header」這個放行需求了。）
  */
 @Configuration
 @EnableWebSecurity
@@ -43,7 +44,7 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain unauthenticatedChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/api/admin/auth/login", "/api/admin/auth/refresh", "/api/admin/static/**")
+        http.securityMatcher("/api/admin/auth/login", "/api/admin/auth/refresh")
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();

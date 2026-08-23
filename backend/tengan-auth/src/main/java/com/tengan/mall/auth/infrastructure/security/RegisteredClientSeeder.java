@@ -43,7 +43,11 @@ import org.springframework.stereotype.Component;
  * 會呼叫 tengan-seckill 的 tengan-order（訂單建立 Saga 查詢/保留/釋放配額）跟 tengan-admin（秒殺
  * 活動管理頁）補 seckill.read/seckill.write。Phase 9 前台整合再補一筆：`tengan-seckill` 自己的公開
  * 展示端點（`GET /api/public/seckill/activities`）要補商品名稱/圖片，多給它 product.read 呼叫
- * tengan-product。</p>
+ * tengan-product。Phase 10 新增 tengan-media 網域：`tengan-media` 是純 Resource Server（不主動呼叫
+ * 任何服務，跟 tengan-wallet 同一種情況），所以不用新增它自己的 client，只需要幫會呼叫它的
+ * tengan-admin（Banner CRUD + 後台素材上傳）補 media.read/media.write。使用者事後要求「刪除商品要
+ * 連帶清掉 MinIO 圖片」，第一次讓 tengan-product 主動呼叫別的服務，新增 tengan-product 自己的 client
+ * （只給 media.write，不需要 media.read——它只刪不查）。</p>
  */
 @Component
 public class RegisteredClientSeeder implements ApplicationRunner {
@@ -54,6 +58,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private static final String ORDER_CLIENT_ID = "tengan-order";
     private static final String PAYMENT_CLIENT_ID = "tengan-payment";
     private static final String SECKILL_CLIENT_ID = "tengan-seckill";
+    private static final String PRODUCT_CLIENT_ID = "tengan-product";
 
     private final RegisteredClientRepository registeredClientRepository;
     private final PasswordEncoder passwordEncoder;
@@ -63,6 +68,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private final String orderClientSecret;
     private final String paymentClientSecret;
     private final String seckillClientSecret;
+    private final String productClientSecret;
 
     public RegisteredClientSeeder(RegisteredClientRepository registeredClientRepository,
             PasswordEncoder passwordEncoder,
@@ -71,7 +77,8 @@ public class RegisteredClientSeeder implements ApplicationRunner {
             @Value("${tengan.oauth2.cart-client-secret:tengan-cart-secret}") String cartClientSecret,
             @Value("${tengan.oauth2.order-client-secret:tengan-order-secret}") String orderClientSecret,
             @Value("${tengan.oauth2.payment-client-secret:tengan-payment-secret}") String paymentClientSecret,
-            @Value("${tengan.oauth2.seckill-client-secret:tengan-seckill-secret}") String seckillClientSecret) {
+            @Value("${tengan.oauth2.seckill-client-secret:tengan-seckill-secret}") String seckillClientSecret,
+            @Value("${tengan.oauth2.product-client-secret:tengan-product-secret}") String productClientSecret) {
         this.registeredClientRepository = registeredClientRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminClientSecret = adminClientSecret;
@@ -80,6 +87,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
         this.orderClientSecret = orderClientSecret;
         this.paymentClientSecret = paymentClientSecret;
         this.seckillClientSecret = seckillClientSecret;
+        this.productClientSecret = productClientSecret;
     }
 
     @Override
@@ -87,7 +95,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
         seedIfAbsent(ADMIN_CLIENT_ID, adminClientSecret, "product.read", "product.write", "search.write",
                 "member.read", "account.read", "account.write", "inventory.read", "inventory.write", "coupon.read",
                 "coupon.write", "order.read", "order.write", "payment.read", "payment.write", "wallet.read",
-                "wallet.write", "seckill.read", "seckill.write");
+                "wallet.write", "seckill.read", "seckill.write", "media.read", "media.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
         seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
         seedIfAbsent(ORDER_CLIENT_ID, orderClientSecret, "cart.read", "cart.write", "product.read",
@@ -95,6 +103,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
                 "seckill.write");
         seedIfAbsent(PAYMENT_CLIENT_ID, paymentClientSecret, "order.read", "order.write", "wallet.write");
         seedIfAbsent(SECKILL_CLIENT_ID, seckillClientSecret, "inventory.seckill.write", "product.read");
+        seedIfAbsent(PRODUCT_CLIENT_ID, productClientSecret, "media.write");
     }
 
     /**

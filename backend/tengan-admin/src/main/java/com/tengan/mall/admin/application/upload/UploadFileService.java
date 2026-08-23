@@ -27,7 +27,8 @@ public class UploadFileService implements UploadFileUseCase {
             throw new FileTooLargeException(MAX_BYTES);
         }
 
-        String url = fileStoragePort.store(command.content(), command.originalFilename(), command.category());
+        String url = fileStoragePort.store(command.content(), command.originalFilename(), command.contentType(),
+                command.category(), command.adminId());
         return new UploadFileResult(url);
     }
 }

@@ -9,6 +9,7 @@ import { Editor, Toolbar } from "@wangeditor/editor-for-vue";
 import type { IDomEditor } from "@wangeditor/editor";
 import { applyWangEditorTraditionalChinese } from "@/utils/wangEditorZhTw";
 import { message } from "@/utils/message";
+import ImageUrlInput from "@/components/ReUpload/ImageUrlInput.vue";
 
 applyWangEditorTraditionalChinese();
 import { type CategoryTreeItem, getCategoryTree } from "@/api/productCategory";
@@ -484,7 +485,7 @@ onMounted(async () => {
       </el-form-item>
       <el-form-item label="主圖">
         <div class="flex items-center gap-2">
-          <el-input v-model="form.mainImage" placeholder="圖片網址" style="width: 480px" />
+          <ImageUrlInput v-model="form.mainImage" category="product" />
           <el-image
             v-if="form.mainImage"
             :src="form.mainImage"
@@ -508,7 +509,7 @@ onMounted(async () => {
             :key="imgIdx"
             class="mb-2 flex items-center gap-2"
           >
-            <el-input v-model="img.imageUrl" placeholder="圖片網址" style="width: 320px" />
+            <ImageUrlInput v-model="img.imageUrl" category="product" placeholder="圖片網址" />
             <el-input-number v-model="img.sort" :min="0" style="width: 110px" />
             <el-image
               v-if="img.imageUrl"
@@ -603,7 +604,7 @@ onMounted(async () => {
           </el-form-item>
           <el-form-item label="主圖">
             <div class="flex items-center gap-2">
-              <el-input v-model="sku.mainImage" placeholder="圖片網址" style="width: 320px" />
+              <ImageUrlInput v-model="sku.mainImage" category="product" />
               <el-image
                 v-if="sku.mainImage"
                 :src="sku.mainImage"
@@ -627,7 +628,7 @@ onMounted(async () => {
           <el-form-item label="圖片列表">
             <div class="w-full">
               <div v-for="(img, imgIdx) in sku.images" :key="imgIdx" class="mb-2 flex items-center gap-2">
-                <el-input v-model="img.imageUrl" placeholder="圖片網址" style="width: 280px" />
+                <ImageUrlInput v-model="img.imageUrl" category="product" placeholder="圖片網址" />
                 <el-input-number v-model="img.sort" :min="0" style="width: 110px" />
                 <el-image
                   v-if="img.imageUrl"

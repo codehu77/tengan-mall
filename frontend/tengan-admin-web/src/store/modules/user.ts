@@ -11,6 +11,7 @@ import {
   type UserResult,
   type RefreshTokenResult,
   getLogin,
+  getMyProfile,
   refreshTokenApi,
   logoutApi
 } from "@/api/user";
@@ -74,9 +75,12 @@ export const useUserStore = defineStore("pure-user", {
     async loginByUsername(data) {
       return new Promise<UserResult>((resolve, reject) => {
         getLogin(data)
-          .then(result => {
+          .then(async result => {
             // 後端沒有回傳 expires（access token TTL 固定 15 分鐘，見
             // AdminAccessTokenIssuerAdapter），這裡自己算，只給前端「該不該提前換發」用。
+            // LoginResponse 本身刻意精簡，沒有 avatarUrl（見後端 AdminAuthController），
+            // 這裡先用空字串佔位，登入成功後立刻補一次 /me 把真正的頭像蓋上去——
+            // 不然每次重新登入頭像都會被洗回空字串，只有手動進個人資訊頁存檔過才會「看起來」是對的。
             setToken({
               accessToken: result.accessToken,
               refreshToken: result.refreshToken,
@@ -87,6 +91,16 @@ export const useUserStore = defineStore("pure-user", {
               roles: result.roleCodes,
               permissions: result.permissions
             });
+            try {
+              const profile = await getMyProfile();
+              this.SET_AVATAR(profile.avatarUrl ?? "");
+              const cached = storageLocal().getItem<DataInfo<number>>(userKey);
+              if (cached) {
+                storageLocal().setItem(userKey, { ...cached, avatar: profile.avatarUrl ?? "" });
+              }
+            } catch {
+              // 補頭像失敗不影響登入本身，頭像維持空字串（顯示預設圖）
+            }
             resolve(result);
           })
           .catch(error => {

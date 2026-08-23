@@ -5,7 +5,7 @@ export type UploadFileResult = {
   url: string;
 };
 
-/** 上傳圖片檔案（目前僅供頭像使用），走本機磁碟儲存，見後端 FileUploadController。 */
+/** 上傳圖片檔案（目前僅供管理員自己的頭像使用），透過 tengan-media 存進 MinIO，見後端 FileUploadController。 */
 export const uploadFile = (file: File) => {
   const formData = new FormData();
   formData.append("file", file);
