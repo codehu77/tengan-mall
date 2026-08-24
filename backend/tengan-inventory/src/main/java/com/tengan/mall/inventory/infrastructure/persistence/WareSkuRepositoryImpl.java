@@ -65,4 +65,9 @@ public class WareSkuRepositoryImpl implements WareSkuRepository {
     public boolean adjustStockDelta(Long wareId, Long skuId, int delta) {
         return wareSkuMapper.adjustStockDelta(wareId, skuId, delta) > 0;
     }
+
+    @Override
+    public int countLowStockSkus(int threshold) {
+        return wareSkuMapper.countLowStockSkus(threshold);
+    }
 }

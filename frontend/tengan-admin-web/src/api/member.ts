@@ -21,6 +21,8 @@ export type MemberListResult = {
 
 export type SearchMembersParams = {
   keyword?: string;
+  from?: string;
+  to?: string;
   pageNum: number;
   pageSize: number;
 };

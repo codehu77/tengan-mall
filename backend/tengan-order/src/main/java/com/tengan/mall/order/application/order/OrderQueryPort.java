@@ -1,5 +1,6 @@
 package com.tengan.mall.order.application.order;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -10,13 +11,24 @@ import java.util.Optional;
  */
 public interface OrderQueryPort {
 
-    List<OrderSummary> search(Long memberId, Integer status, int pageNum, int pageSize);
+    List<OrderSummary> search(Long memberId, Integer status, Instant createdFrom, Instant createdTo, int pageNum,
+            int pageSize);
 
-    long countSearch(Long memberId, Integer status);
+    long countSearch(Long memberId, Integer status, Instant createdFrom, Instant createdTo);
 
     Optional<OrderDetailView> findDetailByOrderSn(String orderSn);
 
     long countCreatedToday();
+
+    /** 供 dashboard「今日/本月/本年營收」用，見 {@link com.tengan.mall.order.application.admin.GetOrderStatsTodayService}。 */
+    BigDecimal revenueToday();
+
+    BigDecimal revenueThisMonth();
+
+    BigDecimal revenueThisYear();
+
+    /** 近 days 天的每日營收，缺訂單的日期補 0，依日期升序，固定回傳 days 筆。 */
+    List<DailyRevenue> revenueTrend(int days);
 
     /** status=COMPLETED AND points_credited=false AND receipt_time<=cutoff，供 PointsGrantScheduler 掃描。 */
     List<PointsGrantCandidate> findPendingPointsCredit(Instant cutoff, int limit);

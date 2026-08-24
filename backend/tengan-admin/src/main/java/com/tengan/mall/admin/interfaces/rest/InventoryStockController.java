@@ -48,9 +48,10 @@ public class InventoryStockController {
     @GetMapping
     @PreAuthorize("hasAuthority('inventory:stock:read')")
     public ListSkuStockResponse list(@RequestParam(required = false) Long wareId,
-            @RequestParam(required = false) Long keyword, @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
-        var result = inventoryStockPort.listSkus(wareId, keyword, page, pageSize);
+            @RequestParam(required = false) Long keyword,
+            @RequestParam(defaultValue = "false") boolean onlyLowStock,
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize) {
+        var result = inventoryStockPort.listSkus(wareId, keyword, onlyLowStock, page, pageSize);
         var skuIds = result.items().stream().map(SkuStockItem::skuId).distinct().toList();
         Map<Long, SkuItem> skuById = productSkuPort.batchGet(skuIds).stream()
                 .collect(Collectors.toMap(SkuItem::id, Function.identity()));

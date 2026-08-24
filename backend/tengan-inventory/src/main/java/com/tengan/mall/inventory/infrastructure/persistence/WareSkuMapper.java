@@ -40,6 +40,10 @@ public interface WareSkuMapper extends BaseMapper<WareSkuPO> {
     @Select("SELECT COUNT(*) FROM ware_sku WHERE ware_id = #{wareId} AND sku_id = #{skuId}")
     int countForWareSku(@Param("wareId") Long wareId, @Param("skuId") Long skuId);
 
+    @Select("SELECT COUNT(*) FROM (SELECT sku_id FROM ware_sku GROUP BY sku_id "
+            + "HAVING SUM(stock - locked_stock) < #{threshold}) t")
+    int countLowStockSkus(@Param("threshold") int threshold);
+
     @Insert("INSERT INTO ware_sku (ware_id, sku_id, stock, locked_stock) VALUES (#{wareId}, #{skuId}, #{initialStock}, 0)")
     int insertInitialStock(@Param("wareId") Long wareId, @Param("skuId") Long skuId,
             @Param("initialStock") int initialStock);

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { h, ref, reactive, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { ElMessageBox } from "element-plus";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
@@ -18,6 +19,8 @@ defineOptions({
   name: "OrderList"
 });
 
+const route = useRoute();
+
 const loading = ref(true);
 const dataList = ref<Array<OrderSummary>>([]);
 const pagination = reactive({
@@ -27,9 +30,17 @@ const pagination = reactive({
   background: true
 });
 
-const searchForm = reactive<{ status?: number }>({
-  status: undefined
+const searchForm = reactive<{ status?: number; dateRange: [string, string] | null }>({
+  status: undefined,
+  dateRange: null
 });
+
+/** 比照 system/log/index.vue 的既有模式：picker 顯示用 [Date, Date]，searchForm 維持 ISO 字串給後端用。 */
+const dateRangePicker = ref<[Date, Date] | null>(null);
+
+function onDateRangeChange(value: [Date, Date] | null) {
+  searchForm.dateRange = value ? [value[0].toISOString(), value[1].toISOString()] : null;
+}
 
 /** 1=PENDING_PAYMENT 2=PAID 3=SHIPPED 4=COMPLETED 5=CANCELLED（跟 tengan-order OrderStatus 對齊）。 */
 const statusOptions = [
@@ -74,6 +85,8 @@ async function onSearch() {
   loading.value = true;
   const { items, total } = await getOrderList({
     status: searchForm.status,
+    from: searchForm.dateRange?.[0],
+    to: searchForm.dateRange?.[1],
     page: pagination.currentPage,
     pageSize: pagination.pageSize
   });
@@ -84,6 +97,8 @@ async function onSearch() {
 
 function onReset() {
   searchForm.status = undefined;
+  searchForm.dateRange = null;
+  dateRangePicker.value = null;
   pagination.currentPage = 1;
   onSearch();
 }
@@ -139,7 +154,16 @@ function onCancel(row: OrderSummary) {
   });
 }
 
+/** 支援從 dashboard 卡片點過來直接帶篩選條件（?status=2 或 ?from=...&to=...）。 */
 onMounted(() => {
+  const { status, from, to } = route.query;
+  if (typeof status === "string") {
+    searchForm.status = Number(status);
+  }
+  if (typeof from === "string" && typeof to === "string") {
+    searchForm.dateRange = [from, to];
+    dateRangePicker.value = [new Date(from), new Date(to)];
+  }
   onSearch();
 });
 </script>
@@ -151,6 +175,15 @@ onMounted(() => {
         <el-select v-model="searchForm.status" placeholder="不限" clearable style="width: 140px">
           <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value" />
         </el-select>
+      </el-form-item>
+      <el-form-item label="建立時間">
+        <el-date-picker
+          v-model="dateRangePicker"
+          type="datetimerange"
+          start-placeholder="開始時間"
+          end-placeholder="結束時間"
+          @change="onDateRangeChange"
+        />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="onSearch">查詢</el-button>

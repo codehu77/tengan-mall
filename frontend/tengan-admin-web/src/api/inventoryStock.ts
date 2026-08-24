@@ -19,6 +19,7 @@ export type SkuStockListResult = {
 export type SkuStockQuery = {
   wareId?: number;
   keyword?: number;
+  onlyLowStock?: boolean;
   page: number;
   pageSize: number;
 };

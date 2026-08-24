@@ -3,6 +3,7 @@ package com.tengan.mall.admin.infrastructure.member;
 import com.tengan.mall.admin.application.port.MemberItem;
 import com.tengan.mall.admin.application.port.MemberListResult;
 import com.tengan.mall.admin.application.port.MemberPort;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.core.ParameterizedTypeReference;
@@ -24,12 +25,18 @@ public class MemberAdapter implements MemberPort {
     }
 
     @Override
-    public MemberListResult listMembers(String keyword, int pageNum, int pageSize) {
+    public MemberListResult listMembers(String keyword, Instant from, Instant to, int pageNum, int pageSize) {
         return memberRestClient.get()
                 .uri(uriBuilder -> {
                     uriBuilder.path(BASE_PATH).queryParam("pageNum", pageNum).queryParam("pageSize", pageSize);
                     if (keyword != null && !keyword.isBlank()) {
                         uriBuilder.queryParam("keyword", keyword);
+                    }
+                    if (from != null) {
+                        uriBuilder.queryParam("from", from);
+                    }
+                    if (to != null) {
+                        uriBuilder.queryParam("to", to);
                     }
                     return uriBuilder.build();
                 })

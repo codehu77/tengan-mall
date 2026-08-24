@@ -3,8 +3,12 @@ package com.tengan.mall.admin.infrastructure.order;
 import com.tengan.mall.admin.application.port.OrderDetail;
 import com.tengan.mall.admin.application.port.OrderPageResult;
 import com.tengan.mall.admin.application.port.OrderPort;
+import com.tengan.mall.admin.application.port.OrderTodayStats;
+import com.tengan.mall.admin.application.port.RevenueTrendPoint;
 import com.tengan.mall.admin.infrastructure.order.dto.AdminCancelOrderPayload;
 import com.tengan.mall.admin.infrastructure.order.dto.OrderListEnvelope;
+import com.tengan.mall.admin.infrastructure.order.dto.RevenueTrendEnvelope;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpHeaders;
@@ -24,9 +28,11 @@ public class OrderAdapter implements OrderPort {
     }
 
     @Override
-    public OrderPageResult listOrders(Integer status, int page, int pageSize) {
+    public OrderPageResult listOrders(Integer status, Instant from, Instant to, int page, int pageSize) {
         String uri = UriComponentsBuilder.fromPath("/internal/orders")
                 .queryParamIfPresent("status", Optional.ofNullable(status))
+                .queryParamIfPresent("from", Optional.ofNullable(from))
+                .queryParamIfPresent("to", Optional.ofNullable(to))
                 .queryParam("page", page)
                 .queryParam("pageSize", pageSize)
                 .build().toUriString();
@@ -37,6 +43,25 @@ public class OrderAdapter implements OrderPort {
                 .body(OrderListEnvelope.class);
         return envelope == null ? new OrderPageResult(List.of(), 0)
                 : new OrderPageResult(envelope.items(), envelope.total());
+    }
+
+    @Override
+    public OrderTodayStats getTodayStats() {
+        return orderRestClient.get()
+                .uri("/internal/orders/stats/today")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .body(OrderTodayStats.class);
+    }
+
+    @Override
+    public List<RevenueTrendPoint> getRevenueTrend(int days) {
+        RevenueTrendEnvelope envelope = orderRestClient.get()
+                .uri("/internal/orders/stats/revenue-trend?days={days}", days)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .body(RevenueTrendEnvelope.class);
+        return envelope == null ? List.of() : envelope.points();
     }
 
     @Override

@@ -9,7 +9,7 @@ import java.util.List;
  */
 public interface WareSkuQueryPort {
 
-    List<WareSkuQueryItem> search(Long wareId, Long skuIdKeyword, int pageNum, int pageSize);
+    List<WareSkuQueryItem> search(Long wareId, Long skuIdKeyword, boolean onlyLowStock, int pageNum, int pageSize);
 
-    long countSearch(Long wareId, Long skuIdKeyword);
+    long countSearch(Long wareId, Long skuIdKeyword, boolean onlyLowStock);
 }

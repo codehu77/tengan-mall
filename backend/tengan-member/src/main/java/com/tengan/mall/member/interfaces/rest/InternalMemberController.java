@@ -9,6 +9,7 @@ import com.tengan.mall.member.application.member.SearchMembersQuery;
 import com.tengan.mall.member.interfaces.rest.dto.MemberListResponse;
 import com.tengan.mall.member.interfaces.rest.dto.MemberStatsTodayResponse;
 import com.tengan.mall.member.interfaces.rest.dto.MemberSummaryResponse;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,8 +43,9 @@ public class InternalMemberController {
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_member.read')")
     public MemberListResponse list(@RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
             @RequestParam(defaultValue = "1") int pageNum, @RequestParam(defaultValue = "10") int pageSize) {
-        var result = listMembersUseCase.search(new SearchMembersQuery(keyword, pageNum, pageSize));
+        var result = listMembersUseCase.search(new SearchMembersQuery(keyword, from, to, pageNum, pageSize));
         return new MemberListResponse(result.items().stream().map(this::toResponse).toList(), result.total());
     }
 

@@ -18,6 +18,8 @@ export type OrderListResult = {
 
 export type OrderQuery = {
   status?: number;
+  from?: string;
+  to?: string;
   page: number;
   pageSize: number;
 };

@@ -12,9 +12,9 @@ public class ListSkuStockService implements ListSkuStockUseCase {
     }
 
     @Override
-    public ListSkuStockResult list(Long wareId, Long skuIdKeyword, int pageNum, int pageSize) {
-        var items = wareSkuQueryPort.search(wareId, skuIdKeyword, pageNum, pageSize);
-        long total = wareSkuQueryPort.countSearch(wareId, skuIdKeyword);
+    public ListSkuStockResult list(Long wareId, Long skuIdKeyword, boolean onlyLowStock, int pageNum, int pageSize) {
+        var items = wareSkuQueryPort.search(wareId, skuIdKeyword, onlyLowStock, pageNum, pageSize);
+        long total = wareSkuQueryPort.countSearch(wareId, skuIdKeyword, onlyLowStock);
         return new ListSkuStockResult(items, total);
     }
 }

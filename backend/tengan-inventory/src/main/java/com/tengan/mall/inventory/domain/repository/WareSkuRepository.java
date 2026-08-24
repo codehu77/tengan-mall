@@ -9,6 +9,9 @@ import java.util.List;
  */
 public interface WareSkuRepository {
 
+    /** 低庫存門檻，demo 用示範值，供 dashboard 計數跟庫存列表頁「只看低庫存」共用同一個定義。 */
+    int LOW_STOCK_THRESHOLD = 10;
+
     /** 彙總所有倉庫的可用庫存（stock-locked_stock），customer check 端點用，不鎖定。 */
     int sumAvailableStock(Long skuId);
 
@@ -42,4 +45,7 @@ public interface WareSkuRepository {
      * 該列不存在（還沒 tryCreateInitialStock 過）或會變成負庫存都回傳 false。
      */
     boolean adjustStockDelta(Long wareId, Long skuId, int delta);
+
+    /** 供 Phase 11 dashboard「低庫存 SKU 數」用：可用庫存（跨倉彙總）低於門檻的 SKU 數量。 */
+    int countLowStockSkus(int threshold);
 }

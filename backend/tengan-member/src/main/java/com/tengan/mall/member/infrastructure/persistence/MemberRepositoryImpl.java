@@ -6,8 +6,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tengan.mall.member.domain.model.Member;
 import com.tengan.mall.member.domain.repository.MemberPage;
 import com.tengan.mall.member.domain.repository.MemberRepository;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -51,12 +53,18 @@ public class MemberRepositoryImpl implements MemberRepository {
     }
 
     @Override
-    public MemberPage search(String keyword, int pageNum, int pageSize) {
+    public MemberPage search(String keyword, Instant createdFrom, Instant createdTo, int pageNum, int pageSize) {
         LambdaQueryWrapper<MemberPO> wrapper = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.isBlank()) {
             wrapper.and(w -> w.like(MemberPO::getUsername, keyword)
                     .or().like(MemberPO::getNickname, keyword)
                     .or().like(MemberPO::getPhone, keyword));
+        }
+        if (createdFrom != null) {
+            wrapper.ge(MemberPO::getCreatedAt, LocalDateTime.ofInstant(createdFrom, ZoneId.systemDefault()));
+        }
+        if (createdTo != null) {
+            wrapper.le(MemberPO::getCreatedAt, LocalDateTime.ofInstant(createdTo, ZoneId.systemDefault()));
         }
         wrapper.orderByDesc(MemberPO::getCreatedAt);
 

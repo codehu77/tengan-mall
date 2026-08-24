@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { h, ref, reactive, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -18,6 +19,8 @@ defineOptions({
   name: "InventoryStock"
 });
 
+const route = useRoute();
+
 const loading = ref(true);
 const dataList = ref<Array<SkuStockItem>>([]);
 const warehouses = ref<Array<WarehouseItem>>([]);
@@ -28,9 +31,10 @@ const pagination = reactive({
   background: true
 });
 
-const searchForm = reactive<{ wareId?: number; keyword?: number }>({
+const searchForm = reactive<{ wareId?: number; keyword?: number; onlyLowStock: boolean }>({
   wareId: undefined,
-  keyword: undefined
+  keyword: undefined,
+  onlyLowStock: false
 });
 
 const columns: TableColumns[] = [
@@ -53,6 +57,7 @@ async function onSearch() {
   const { items, total } = await getSkuStockList({
     wareId: searchForm.wareId,
     keyword: searchForm.keyword,
+    onlyLowStock: searchForm.onlyLowStock,
     page: pagination.currentPage,
     pageSize: pagination.pageSize
   });
@@ -64,6 +69,7 @@ async function onSearch() {
 function onReset() {
   searchForm.wareId = undefined;
   searchForm.keyword = undefined;
+  searchForm.onlyLowStock = false;
   pagination.currentPage = 1;
   onSearch();
 }
@@ -162,9 +168,13 @@ function openAdjustDialog(row: SkuStockItem) {
   });
 }
 
+/** 支援從 dashboard「低庫存 SKU」卡片點過來直接帶 ?onlyLowStock=true 篩選條件。 */
 onMounted(async () => {
   const { items } = await getWarehouseList();
   warehouses.value = items;
+  if (route.query.onlyLowStock === "true") {
+    searchForm.onlyLowStock = true;
+  }
   onSearch();
 });
 </script>
@@ -179,6 +189,9 @@ onMounted(async () => {
       </el-form-item>
       <el-form-item label="SKU ID">
         <el-input-number v-model="searchForm.keyword" :min="1" :controls="false" placeholder="不限" clearable />
+      </el-form-item>
+      <el-form-item>
+        <el-checkbox v-model="searchForm.onlyLowStock">只看低庫存</el-checkbox>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="onSearch">查詢</el-button>

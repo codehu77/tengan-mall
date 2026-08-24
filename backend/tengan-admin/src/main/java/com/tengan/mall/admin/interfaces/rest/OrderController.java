@@ -7,6 +7,7 @@ import com.tengan.mall.admin.interfaces.rest.dto.OrderDetailResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.OrderItemResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.OrderSummaryResponse;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,8 +34,9 @@ public class OrderController {
     @GetMapping
     @PreAuthorize("hasAuthority('order:list:read')")
     public ListOrdersResponse list(@RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize) {
-        var result = orderPort.listOrders(status, page, pageSize);
+        var result = orderPort.listOrders(status, from, to, page, pageSize);
         var items = result.items().stream()
                 .map(o -> new OrderSummaryResponse(o.id(), o.orderSn(), o.memberId(), o.status(), o.payAmount(),
                         o.paymentMethod(), o.createdAt()))

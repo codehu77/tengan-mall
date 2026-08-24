@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tengan.mall.inventory.application.stock.WareSkuQueryItem;
 import com.tengan.mall.inventory.application.stock.WareSkuQueryPort;
+import com.tengan.mall.inventory.domain.repository.WareSkuRepository;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,26 +17,33 @@ public class WareSkuQueryAdapter implements WareSkuQueryPort {
     }
 
     @Override
-    public java.util.List<WareSkuQueryItem> search(Long wareId, Long skuIdKeyword, int pageNum, int pageSize) {
+    public java.util.List<WareSkuQueryItem> search(Long wareId, Long skuIdKeyword, boolean onlyLowStock,
+            int pageNum, int pageSize) {
         Page<WareSkuPO> page = wareSkuMapper.selectPage(new Page<>(pageNum, pageSize),
-                buildWrapper(wareId, skuIdKeyword).orderByAsc(WareSkuPO::getWareId).orderByAsc(WareSkuPO::getSkuId));
+                buildWrapper(wareId, skuIdKeyword, onlyLowStock).orderByAsc(WareSkuPO::getWareId)
+                        .orderByAsc(WareSkuPO::getSkuId));
         return page.getRecords().stream()
                 .map(po -> new WareSkuQueryItem(po.getWareId(), po.getSkuId(), po.getStock(), po.getLockedStock()))
                 .toList();
     }
 
     @Override
-    public long countSearch(Long wareId, Long skuIdKeyword) {
-        return wareSkuMapper.selectCount(buildWrapper(wareId, skuIdKeyword));
+    public long countSearch(Long wareId, Long skuIdKeyword, boolean onlyLowStock) {
+        return wareSkuMapper.selectCount(buildWrapper(wareId, skuIdKeyword, onlyLowStock));
     }
 
-    private LambdaQueryWrapper<WareSkuPO> buildWrapper(Long wareId, Long skuIdKeyword) {
+    /** onlyLowStock 用跟 dashboard 低庫存計數同一個門檻定義（跨倉彙總可用庫存），見 WareSkuRepository。 */
+    private LambdaQueryWrapper<WareSkuPO> buildWrapper(Long wareId, Long skuIdKeyword, boolean onlyLowStock) {
         LambdaQueryWrapper<WareSkuPO> wrapper = new LambdaQueryWrapper<>();
         if (wareId != null) {
             wrapper.eq(WareSkuPO::getWareId, wareId);
         }
         if (skuIdKeyword != null) {
             wrapper.likeRight(WareSkuPO::getSkuId, skuIdKeyword);
+        }
+        if (onlyLowStock) {
+            wrapper.inSql(WareSkuPO::getSkuId, "SELECT sku_id FROM ware_sku GROUP BY sku_id "
+                    + "HAVING SUM(stock - locked_stock) < " + WareSkuRepository.LOW_STOCK_THRESHOLD);
         }
         return wrapper;
     }

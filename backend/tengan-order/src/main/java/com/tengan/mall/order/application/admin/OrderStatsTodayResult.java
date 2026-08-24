@@ -1,4 +1,7 @@
 package com.tengan.mall.order.application.admin;
 
-public record OrderStatsTodayResult(long newOrderCount) {
+import java.math.BigDecimal;
+
+public record OrderStatsTodayResult(long newOrderCount, BigDecimal revenueToday, BigDecimal monthRevenue,
+        BigDecimal yearRevenue) {
 }

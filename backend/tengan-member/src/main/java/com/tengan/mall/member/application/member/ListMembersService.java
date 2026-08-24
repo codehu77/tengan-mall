@@ -15,7 +15,8 @@ public class ListMembersService implements ListMembersUseCase {
 
     @Override
     public ListMembersResult search(SearchMembersQuery query) {
-        MemberPage page = memberRepository.search(query.keyword(), query.pageNum(), query.pageSize());
+        MemberPage page = memberRepository.search(query.keyword(), query.createdFrom(), query.createdTo(),
+                query.pageNum(), query.pageSize());
         var items = page.items().stream()
                 .map(m -> new MemberSummary(m.getId(), m.getUsername(), m.getPhone(), m.getNickname(),
                         m.getAvatarUrl()))

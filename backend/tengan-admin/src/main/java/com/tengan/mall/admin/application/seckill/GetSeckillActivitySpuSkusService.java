@@ -83,7 +83,7 @@ public class GetSeckillActivitySpuSkusService implements GetSeckillActivitySpuSk
     }
 
     private int realStock(Long skuId) {
-        return inventoryStockPort.listSkus(null, skuId, 1, 100).items().stream()
+        return inventoryStockPort.listSkus(null, skuId, false, 1, 100).items().stream()
                 .mapToInt(item -> Math.max(0, item.stock() - item.lockedStock()))
                 .sum();
     }

@@ -4,6 +4,7 @@ import com.tengan.mall.admin.application.port.AdjustStockPayload;
 import com.tengan.mall.admin.application.port.CreateStockPayload;
 import com.tengan.mall.admin.application.port.InventoryStockPort;
 import com.tengan.mall.admin.application.port.SkuStockPageResult;
+import com.tengan.mall.admin.infrastructure.inventory.dto.LowStockCountEnvelope;
 import com.tengan.mall.admin.infrastructure.inventory.dto.SkuStockListEnvelope;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -24,10 +25,11 @@ public class InventoryStockAdapter implements InventoryStockPort {
     }
 
     @Override
-    public SkuStockPageResult listSkus(Long wareId, Long skuIdKeyword, int page, int pageSize) {
+    public SkuStockPageResult listSkus(Long wareId, Long skuIdKeyword, boolean onlyLowStock, int page, int pageSize) {
         String uri = UriComponentsBuilder.fromPath(BASE_PATH)
                 .queryParamIfPresent("wareId", java.util.Optional.ofNullable(wareId))
                 .queryParamIfPresent("keyword", java.util.Optional.ofNullable(skuIdKeyword))
+                .queryParam("onlyLowStock", onlyLowStock)
                 .queryParam("page", page)
                 .queryParam("pageSize", pageSize)
                 .build().toUriString();
@@ -60,5 +62,15 @@ public class InventoryStockAdapter implements InventoryStockPort {
                 .body(payload)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    @Override
+    public int countLowStock() {
+        var response = inventoryRestClient.get()
+                .uri(BASE_PATH + "/low-stock-count")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .body(LowStockCountEnvelope.class);
+        return response == null ? 0 : response.count();
     }
 }

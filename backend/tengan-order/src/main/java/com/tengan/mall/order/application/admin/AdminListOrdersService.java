@@ -16,8 +16,9 @@ public class AdminListOrdersService implements AdminListOrdersUseCase {
 
     @Override
     public MyOrderPageResult list(AdminListOrdersQuery query) {
-        var items = orderQueryPort.search(null, query.status(), query.pageNum(), query.pageSize());
-        long total = orderQueryPort.countSearch(null, query.status());
+        var items = orderQueryPort.search(null, query.status(), query.createdFrom(), query.createdTo(),
+                query.pageNum(), query.pageSize());
+        long total = orderQueryPort.countSearch(null, query.status(), query.createdFrom(), query.createdTo());
         return new MyOrderPageResult(items, total);
     }
 }

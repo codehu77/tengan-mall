@@ -15,6 +15,7 @@ public class GetOrderStatsTodayService implements GetOrderStatsTodayUseCase {
 
     @Override
     public OrderStatsTodayResult get() {
-        return new OrderStatsTodayResult(orderQueryPort.countCreatedToday());
+        return new OrderStatsTodayResult(orderQueryPort.countCreatedToday(), orderQueryPort.revenueToday(),
+                orderQueryPort.revenueThisMonth(), orderQueryPort.revenueThisYear());
     }
 }

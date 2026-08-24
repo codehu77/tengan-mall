@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { ElMessageBox } from "element-plus";
 import { message } from "@/utils/message";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -15,6 +16,8 @@ defineOptions({
   name: "MemberList"
 });
 
+const route = useRoute();
+
 const loading = ref(true);
 const dataList = ref<Array<MemberItem>>([]);
 const pagination = reactive({
@@ -26,9 +29,18 @@ const pagination = reactive({
 
 const searchForm = reactive<{
   keyword: string;
+  dateRange: [string, string] | null;
 }>({
-  keyword: ""
+  keyword: "",
+  dateRange: null
 });
+
+/** 比照 system/log/index.vue 的既有模式：picker 顯示用 [Date, Date]，searchForm 維持 ISO 字串給後端用。 */
+const dateRangePicker = ref<[Date, Date] | null>(null);
+
+function onDateRangeChange(value: [Date, Date] | null) {
+  searchForm.dateRange = value ? [value[0].toISOString(), value[1].toISOString()] : null;
+}
 
 const columns: TableColumns[] = [
   { label: "ID", prop: "id", minWidth: 80 },
@@ -43,6 +55,8 @@ async function onSearch() {
   loading.value = true;
   const { items, total } = await searchMembers({
     keyword: searchForm.keyword || undefined,
+    from: searchForm.dateRange?.[0],
+    to: searchForm.dateRange?.[1],
     pageNum: pagination.currentPage,
     pageSize: pagination.pageSize
   });
@@ -53,6 +67,8 @@ async function onSearch() {
 
 function onReset() {
   searchForm.keyword = "";
+  searchForm.dateRange = null;
+  dateRangePicker.value = null;
   pagination.currentPage = 1;
   onSearch();
 }
@@ -82,7 +98,13 @@ function onToggleStatus(row: MemberItem) {
   });
 }
 
+/** 支援從 dashboard「今日新會員」卡片點過來直接帶 ?from=...&to=... 篩選條件。 */
 onMounted(() => {
+  const { from, to } = route.query;
+  if (typeof from === "string" && typeof to === "string") {
+    searchForm.dateRange = [from, to];
+    dateRangePicker.value = [new Date(from), new Date(to)];
+  }
   onSearch();
 });
 </script>
@@ -95,6 +117,15 @@ onMounted(() => {
           v-model="searchForm.keyword"
           placeholder="帳號/暱稱/手機"
           clearable
+        />
+      </el-form-item>
+      <el-form-item label="註冊時間">
+        <el-date-picker
+          v-model="dateRangePicker"
+          type="datetimerange"
+          start-placeholder="開始時間"
+          end-placeholder="結束時間"
+          @change="onDateRangeChange"
         />
       </el-form-item>
       <el-form-item>

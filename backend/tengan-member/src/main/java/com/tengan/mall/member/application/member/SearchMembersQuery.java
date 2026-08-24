@@ -1,4 +1,6 @@
 package com.tengan.mall.member.application.member;
 
-public record SearchMembersQuery(String keyword, int pageNum, int pageSize) {
+import java.time.Instant;
+
+public record SearchMembersQuery(String keyword, Instant createdFrom, Instant createdTo, int pageNum, int pageSize) {
 }

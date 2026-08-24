@@ -6,6 +6,7 @@ import com.tengan.mall.admin.application.port.MemberItem;
 import com.tengan.mall.admin.application.port.MemberPort;
 import com.tengan.mall.admin.interfaces.rest.dto.MemberListResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.MemberSummaryResponse;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -42,8 +43,9 @@ public class MemberController {
     @GetMapping
     @PreAuthorize("hasAuthority('member:read')")
     public MemberListResponse list(@RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
             @RequestParam(defaultValue = "1") int pageNum, @RequestParam(defaultValue = "10") int pageSize) {
-        var result = memberPort.listMembers(keyword, pageNum, pageSize);
+        var result = memberPort.listMembers(keyword, from, to, pageNum, pageSize);
         Map<Long, Integer> statusById = statusById(result.items().stream().map(MemberItem::id).toList());
         var items = result.items().stream().map(m -> toResponse(m, statusById)).toList();
         return new MemberListResponse(items, result.total());

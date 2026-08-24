@@ -12,6 +12,7 @@ import com.tengan.mall.inventory.application.stock.LockInventoryUseCase;
 import com.tengan.mall.inventory.application.stock.ReleaseInventoryUseCase;
 import com.tengan.mall.inventory.application.stock.SeckillDeductCommand;
 import com.tengan.mall.inventory.application.stock.SeckillDeductUseCase;
+import com.tengan.mall.inventory.application.stock.CountLowStockUseCase;
 import com.tengan.mall.inventory.application.task.ListTasksUseCase;
 import com.tengan.mall.inventory.application.warehouse.CreateWarehouseCommand;
 import com.tengan.mall.inventory.application.warehouse.CreateWarehouseUseCase;
@@ -23,6 +24,7 @@ import com.tengan.mall.inventory.interfaces.rest.dto.CreateWarehouseResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.ListSkuStockResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.ListTasksResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.ListWarehousesResponse;
+import com.tengan.mall.inventory.interfaces.rest.dto.LowStockCountResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.LockInventoryRequest;
 import com.tengan.mall.inventory.interfaces.rest.dto.LockInventoryResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.OrderSnRequest;
@@ -61,6 +63,7 @@ public class InternalInventoryController {
     private final ListWarehousesUseCase listWarehousesUseCase;
     private final CreateWarehouseUseCase createWarehouseUseCase;
     private final ListTasksUseCase listTasksUseCase;
+    private final CountLowStockUseCase countLowStockUseCase;
     private final IdentityAssertionVerifier adminIdentityAssertionVerifier;
 
     public InternalInventoryController(LockInventoryUseCase lockInventoryUseCase,
@@ -68,7 +71,7 @@ public class InternalInventoryController {
             SeckillDeductUseCase seckillDeductUseCase, ListSkuStockUseCase listSkuStockUseCase,
             CreateStockUseCase createStockUseCase, AdjustStockUseCase adjustStockUseCase,
             ListWarehousesUseCase listWarehousesUseCase, CreateWarehouseUseCase createWarehouseUseCase,
-            ListTasksUseCase listTasksUseCase,
+            ListTasksUseCase listTasksUseCase, CountLowStockUseCase countLowStockUseCase,
             @Qualifier("adminIdentityAssertionVerifier") IdentityAssertionVerifier adminIdentityAssertionVerifier) {
         this.lockInventoryUseCase = lockInventoryUseCase;
         this.releaseInventoryUseCase = releaseInventoryUseCase;
@@ -80,6 +83,7 @@ public class InternalInventoryController {
         this.listWarehousesUseCase = listWarehousesUseCase;
         this.createWarehouseUseCase = createWarehouseUseCase;
         this.listTasksUseCase = listTasksUseCase;
+        this.countLowStockUseCase = countLowStockUseCase;
         this.adminIdentityAssertionVerifier = adminIdentityAssertionVerifier;
     }
 
@@ -116,9 +120,10 @@ public class InternalInventoryController {
     @GetMapping("/skus")
     @PreAuthorize("hasAuthority('SCOPE_inventory.read')")
     public ListSkuStockResponse listSkus(@RequestParam(required = false) Long wareId,
-            @RequestParam(required = false) Long keyword, @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize) {
-        var result = listSkuStockUseCase.list(wareId, keyword, page, pageSize);
+            @RequestParam(required = false) Long keyword,
+            @RequestParam(defaultValue = "false") boolean onlyLowStock,
+            @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize) {
+        var result = listSkuStockUseCase.list(wareId, keyword, onlyLowStock, page, pageSize);
         var items = result.items().stream()
                 .map(i -> new WareSkuStockResponse(i.wareId(), i.skuId(), i.stock(), i.lockedStock()))
                 .toList();
@@ -174,6 +179,12 @@ public class InternalInventoryController {
                 .map(t -> new WareOrderTaskResponse(t.id(), t.orderSn(), t.status(), t.createdAt().toString()))
                 .toList();
         return new ListTasksResponse(items, result.total());
+    }
+
+    @GetMapping("/skus/low-stock-count")
+    @PreAuthorize("hasAuthority('SCOPE_inventory.read')")
+    public LowStockCountResponse lowStockCount() {
+        return new LowStockCountResponse(countLowStockUseCase.count());
     }
 
     private String operator(String identityAssertion) {

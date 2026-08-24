@@ -1,5 +1,6 @@
 package com.tengan.mall.admin.application.port;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -8,7 +9,7 @@ import java.util.List;
  */
 public interface MemberPort {
 
-    MemberListResult listMembers(String keyword, int pageNum, int pageSize);
+    MemberListResult listMembers(String keyword, Instant from, Instant to, int pageNum, int pageSize);
 
     MemberItem getMember(Long id);
 

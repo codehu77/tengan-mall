@@ -1,4 +1,7 @@
 package com.tengan.mall.order.application.admin;
 
-public record AdminListOrdersQuery(Integer status, int pageNum, int pageSize) {
+import java.time.Instant;
+
+public record AdminListOrdersQuery(Integer status, Instant createdFrom, Instant createdTo, int pageNum,
+        int pageSize) {
 }

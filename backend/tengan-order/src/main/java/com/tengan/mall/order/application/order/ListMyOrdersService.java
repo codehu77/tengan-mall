@@ -13,8 +13,9 @@ public class ListMyOrdersService implements ListMyOrdersUseCase {
 
     @Override
     public MyOrderPageResult list(ListMyOrdersQuery query) {
-        var items = orderQueryPort.search(query.memberId(), query.status(), query.pageNum(), query.pageSize());
-        long total = orderQueryPort.countSearch(query.memberId(), query.status());
+        var items = orderQueryPort.search(query.memberId(), query.status(), null, null, query.pageNum(),
+                query.pageSize());
+        long total = orderQueryPort.countSearch(query.memberId(), query.status(), null, null);
         return new MyOrderPageResult(items, total);
     }
 }

@@ -6,18 +6,22 @@ import com.tengan.mall.order.application.admin.AdminGetOrderDetailUseCase;
 import com.tengan.mall.order.application.admin.AdminListOrdersQuery;
 import com.tengan.mall.order.application.admin.AdminListOrdersUseCase;
 import com.tengan.mall.order.application.admin.GetOrderStatsTodayUseCase;
+import com.tengan.mall.order.application.admin.GetRevenueTrendUseCase;
 import com.tengan.mall.order.application.admin.ShipOrderCommand;
 import com.tengan.mall.order.application.admin.ShipOrderUseCase;
 import com.tengan.mall.order.application.order.CloseOrderIfUnpaidUseCase;
 import com.tengan.mall.order.application.order.MarkOrderPaidUseCase;
 import com.tengan.mall.order.interfaces.rest.dto.AdminCancelOrderRequest;
+import com.tengan.mall.order.interfaces.rest.dto.DailyRevenuePointResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderDetailResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderItemResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderListResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderStatsTodayResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderSummaryResponse;
+import com.tengan.mall.order.interfaces.rest.dto.RevenueTrendResponse;
 import com.tengan.mall.jwt.IdentityAssertionVerifier;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -38,6 +42,7 @@ public class InternalOrderController {
     private final AdminListOrdersUseCase adminListOrdersUseCase;
     private final AdminGetOrderDetailUseCase adminGetOrderDetailUseCase;
     private final GetOrderStatsTodayUseCase getOrderStatsTodayUseCase;
+    private final GetRevenueTrendUseCase getRevenueTrendUseCase;
     private final ShipOrderUseCase shipOrderUseCase;
     private final AdminCancelOrderUseCase adminCancelOrderUseCase;
     private final CloseOrderIfUnpaidUseCase closeOrderIfUnpaidUseCase;
@@ -46,12 +51,14 @@ public class InternalOrderController {
 
     public InternalOrderController(AdminListOrdersUseCase adminListOrdersUseCase,
             AdminGetOrderDetailUseCase adminGetOrderDetailUseCase, GetOrderStatsTodayUseCase getOrderStatsTodayUseCase,
-            ShipOrderUseCase shipOrderUseCase, AdminCancelOrderUseCase adminCancelOrderUseCase,
-            CloseOrderIfUnpaidUseCase closeOrderIfUnpaidUseCase, MarkOrderPaidUseCase markOrderPaidUseCase,
+            GetRevenueTrendUseCase getRevenueTrendUseCase, ShipOrderUseCase shipOrderUseCase,
+            AdminCancelOrderUseCase adminCancelOrderUseCase, CloseOrderIfUnpaidUseCase closeOrderIfUnpaidUseCase,
+            MarkOrderPaidUseCase markOrderPaidUseCase,
             @Qualifier("adminIdentityAssertionVerifier") IdentityAssertionVerifier adminIdentityAssertionVerifier) {
         this.adminListOrdersUseCase = adminListOrdersUseCase;
         this.adminGetOrderDetailUseCase = adminGetOrderDetailUseCase;
         this.getOrderStatsTodayUseCase = getOrderStatsTodayUseCase;
+        this.getRevenueTrendUseCase = getRevenueTrendUseCase;
         this.shipOrderUseCase = shipOrderUseCase;
         this.adminCancelOrderUseCase = adminCancelOrderUseCase;
         this.closeOrderIfUnpaidUseCase = closeOrderIfUnpaidUseCase;
@@ -62,8 +69,9 @@ public class InternalOrderController {
     @GetMapping
     @PreAuthorize("hasAuthority('SCOPE_order.read')")
     public OrderListResponse list(@RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
             @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int pageSize) {
-        var result = adminListOrdersUseCase.list(new AdminListOrdersQuery(status, page, pageSize));
+        var result = adminListOrdersUseCase.list(new AdminListOrdersQuery(status, from, to, page, pageSize));
         var items = result.items().stream()
                 .map(s -> new OrderSummaryResponse(s.id(), s.orderSn(), s.memberId(), s.status(), s.payAmount(),
                         s.paymentMethod(), s.createdAt()))
@@ -89,7 +97,17 @@ public class InternalOrderController {
     @PreAuthorize("hasAuthority('SCOPE_order.read')")
     public OrderStatsTodayResponse statsToday() {
         var result = getOrderStatsTodayUseCase.get();
-        return new OrderStatsTodayResponse(result.newOrderCount());
+        return new OrderStatsTodayResponse(result.newOrderCount(), result.revenueToday(), result.monthRevenue(),
+                result.yearRevenue());
+    }
+
+    @GetMapping("/stats/revenue-trend")
+    @PreAuthorize("hasAuthority('SCOPE_order.read')")
+    public RevenueTrendResponse revenueTrend(@RequestParam(defaultValue = "7") int days) {
+        var points = getRevenueTrendUseCase.get(days).stream()
+                .map(d -> new DailyRevenuePointResponse(d.date(), d.revenue()))
+                .toList();
+        return new RevenueTrendResponse(points);
     }
 
     @PutMapping("/{orderSn}/ship")
