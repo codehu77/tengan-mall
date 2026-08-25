@@ -25,6 +25,20 @@
       </div>
     </section>
 
+    <!-- 猜你喜歡：訪客也看得到（退化成洗牌過的全站熱銷），會員才有個人化排序 -->
+    <section v-if="guessItems.length > 0" class="mt-10">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">猜你喜歡</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <ProductCard
+          v-for="product in guessItems"
+          :key="product.skuId"
+          :product="product"
+        />
+      </div>
+      <div ref="guessSentinel" class="h-4" />
+      <p v-if="guessExhausted" class="text-center text-gray-400 text-sm py-4">已經沒有更多推薦了</p>
+    </section>
+
   </div>
 </template>
 
@@ -57,4 +71,26 @@ const flashSaleSessions = computed(() => seckillData.value?.flashSaleSessions ??
 
 const { data: bannerData } = await useBanners()
 const banners = computed(() => bannerData.value?.banners ?? [])
+
+// 猜你喜歡：無限捲動，走訪順序/游標狀態全部交給 useGuessYouLike 這個 composable 管理。
+// 第一批資料比照熱門商品的模式，在 SSR 階段就 await 抓好（不是進頁面後才由 onMounted 發
+// 請求），使用者一進來就看得到，不用等一段時間才浮現。onMounted 只負責裝 IntersectionObserver
+// （這個一定要 DOM 存在才能做，沒辦法搬到 SSR 階段）。全站第一個無限捲動，只在首頁用，
+// 不刻意抽成通用元件。
+const { items: guessItems, exhausted: guessExhausted, init: initGuessYouLike, loadMore: loadMoreGuessYouLike } = useGuessYouLike()
+await initGuessYouLike()
+
+const guessSentinel = ref<HTMLElement | null>(null)
+let guessObserver: IntersectionObserver | null = null
+
+onMounted(() => {
+  if (!guessSentinel.value) return
+  guessObserver = new IntersectionObserver((entries) => {
+    if (entries[0]?.isIntersecting) loadMoreGuessYouLike()
+  })
+  guessObserver.observe(guessSentinel.value)
+})
+onUnmounted(() => {
+  guessObserver?.disconnect()
+})
 </script>

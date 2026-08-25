@@ -48,8 +48,8 @@ public class PublicProductController {
                 .toList();
         var images = result.images().stream().map(i -> new SpuImageResponse(i.imageUrl(), i.sort())).toList();
         var skus = result.skus().stream().map(this::toResponse).toList();
-        return new SpuDetailResponse(result.id(), result.categoryId(), result.brandId(), result.name(),
-                result.description(), result.mainImage(), result.status(), attrValues, images, skus);
+        return new SpuDetailResponse(result.id(), result.categoryId(), result.catalog1Id(), result.brandId(),
+                result.name(), result.description(), result.mainImage(), result.status(), attrValues, images, skus);
     }
 
     @GetMapping("/skus/{id}")

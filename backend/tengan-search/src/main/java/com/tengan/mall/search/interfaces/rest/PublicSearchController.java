@@ -64,7 +64,7 @@ public class PublicSearchController {
     private SearchResponse toResponse(com.tengan.mall.search.application.SearchSkusResult result) {
         var items = result.items().stream()
                 .map(i -> new SearchItemResponse(i.skuId(), i.spuId(), i.skuName(), i.spuName(), i.price(),
-                        i.mainImage(), i.saleCount(), i.brandId(), i.brandName()))
+                        i.mainImage(), i.saleCount(), i.brandId(), i.brandName(), i.catalog1Id()))
                 .toList();
         var brands = result.aggregations().brands().stream()
                 .map(b -> new BrandAggResponse(b.brandId(), b.brandName(), b.count()))

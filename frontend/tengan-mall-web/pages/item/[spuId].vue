@@ -304,6 +304,16 @@ onUnmounted(() => {
   if (seckillTimer) clearInterval(seckillTimer)
 })
 
+// 「猜你喜歡」的瀏覽興趣訊號——只有登入會員才記錄，訪客不追蹤。非關鍵路徑，失敗不影響頁面
+// 本身，recordInterest 內部已經 .catch(() => {}) 吞掉錯誤。
+const authStore = useAuthStore()
+onMounted(() => {
+  if (authStore.isLoggedIn && spu.value?.catalog1Id) {
+    const { recordInterest } = useCategoryInterest()
+    recordInterest(spu.value.catalog1Id, 'VIEW')
+  }
+})
+
 // spu 共通圖 + 目前這顆 sku 的專屬圖，切換 sku 時 activeImg 歸零，等同大圖/縮圖跳到對應 sku 的圖
 const images = computed(() => {
   const sku = currentSku.value

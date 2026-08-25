@@ -166,6 +166,23 @@ const searchQuery = computed<ProductSearchQuery>(() => {
 
 const { data, pending } = useProductSearch(searchQuery)
 
+// 「猜你喜歡」的搜尋興趣訊號——不解析關鍵字文字本身，直接看「這次搜尋結果實際落在哪個分類」
+// 反推興趣（結果集裡出現次數最多的最上層分類）。不用區分使用者是打關鍵字還是點分類篩選，
+// 兩種情況都是同一套邏輯：看結果落在哪個分類。只有登入會員才記錄，訪客不追蹤。
+const authStore = useAuthStore()
+watch(data, (result) => {
+  if (!authStore.isLoggedIn || !result || result.items.length === 0) return
+  const counts = new Map<number, number>()
+  for (const item of result.items) {
+    if (item.catalog1Id == null) continue
+    counts.set(item.catalog1Id, (counts.get(item.catalog1Id) ?? 0) + 1)
+  }
+  if (counts.size === 0) return
+  const majorityCategoryId = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
+  const { recordInterest } = useCategoryInterest()
+  recordInterest(majorityCategoryId, 'SEARCH')
+})
+
 const total = computed(() => data.value?.total ?? 0)
 const aggregations = computed<SearchAggregations>(() => data.value?.aggregations ?? { brands: [], attrs: [] })
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / itemsPerPage)))

@@ -24,6 +24,8 @@ export interface ApiSkuDetail {
 export interface ApiSpuDetail {
   id: number
   categoryId: number
+  /** 最上層（catalog1）分類 id，供「猜你喜歡」記錄瀏覽興趣用——分類走訪一律用最上層分類當粒度。 */
+  catalog1Id: number | null
   brandId: number
   name: string
   description: string

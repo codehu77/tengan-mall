@@ -8,6 +8,8 @@ export interface SearchItem {
   saleCount: number
   brandId: number
   brandName: string
+  /** 最上層（catalog1）分類 id，供「猜你喜歡」用搜尋結果反推興趣分類。 */
+  catalog1Id: number | null
 }
 
 export interface BrandAgg {

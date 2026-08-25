@@ -10,13 +10,19 @@ import com.tengan.mall.member.application.address.SetDefaultAddressCommand;
 import com.tengan.mall.member.application.address.SetDefaultAddressUseCase;
 import com.tengan.mall.member.application.address.UpdateAddressCommand;
 import com.tengan.mall.member.application.address.UpdateAddressUseCase;
+import com.tengan.mall.member.application.interest.GetCategoryAffinityUseCase;
+import com.tengan.mall.member.application.interest.RecordCategoryInterestCommand;
+import com.tengan.mall.member.application.interest.RecordCategoryInterestUseCase;
 import com.tengan.mall.member.application.member.GetProfileUseCase;
 import com.tengan.mall.member.application.member.UpdateProfileCommand;
 import com.tengan.mall.member.application.member.UpdateProfileUseCase;
+import com.tengan.mall.member.domain.model.CategoryInterestSource;
 import com.tengan.mall.member.interfaces.rest.dto.AddressResponse;
+import com.tengan.mall.member.interfaces.rest.dto.CategoryAffinityResponse;
 import com.tengan.mall.member.interfaces.rest.dto.CreateAddressRequest;
 import com.tengan.mall.member.interfaces.rest.dto.CreateAddressResponse;
 import com.tengan.mall.member.interfaces.rest.dto.ProfileResponse;
+import com.tengan.mall.member.interfaces.rest.dto.RecordCategoryInterestRequest;
 import com.tengan.mall.member.interfaces.rest.dto.UpdateAddressRequest;
 import com.tengan.mall.member.interfaces.rest.dto.UpdateProfileRequest;
 import jakarta.validation.Valid;
@@ -49,11 +55,15 @@ public class CustomerMemberController {
     private final UpdateAddressUseCase updateAddressUseCase;
     private final DeleteAddressUseCase deleteAddressUseCase;
     private final SetDefaultAddressUseCase setDefaultAddressUseCase;
+    private final RecordCategoryInterestUseCase recordCategoryInterestUseCase;
+    private final GetCategoryAffinityUseCase getCategoryAffinityUseCase;
 
     public CustomerMemberController(GetProfileUseCase getProfileUseCase, UpdateProfileUseCase updateProfileUseCase,
             ListAddressesUseCase listAddressesUseCase, CreateAddressUseCase createAddressUseCase,
             UpdateAddressUseCase updateAddressUseCase, DeleteAddressUseCase deleteAddressUseCase,
-            SetDefaultAddressUseCase setDefaultAddressUseCase) {
+            SetDefaultAddressUseCase setDefaultAddressUseCase,
+            RecordCategoryInterestUseCase recordCategoryInterestUseCase,
+            GetCategoryAffinityUseCase getCategoryAffinityUseCase) {
         this.getProfileUseCase = getProfileUseCase;
         this.updateProfileUseCase = updateProfileUseCase;
         this.listAddressesUseCase = listAddressesUseCase;
@@ -61,6 +71,8 @@ public class CustomerMemberController {
         this.updateAddressUseCase = updateAddressUseCase;
         this.deleteAddressUseCase = deleteAddressUseCase;
         this.setDefaultAddressUseCase = setDefaultAddressUseCase;
+        this.recordCategoryInterestUseCase = recordCategoryInterestUseCase;
+        this.getCategoryAffinityUseCase = getCategoryAffinityUseCase;
     }
 
     @GetMapping("/profile")
@@ -106,6 +118,20 @@ public class CustomerMemberController {
     @PutMapping("/addresses/{id}/default")
     public void setDefaultAddress(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
         setDefaultAddressUseCase.setDefault(new SetDefaultAddressCommand(memberId(jwt), id));
+    }
+
+    @PostMapping("/category-interest")
+    public void recordCategoryInterest(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody RecordCategoryInterestRequest request) {
+        recordCategoryInterestUseCase.record(new RecordCategoryInterestCommand(memberId(jwt), request.categoryId(),
+                CategoryInterestSource.valueOf(request.source())));
+    }
+
+    @GetMapping("/category-affinity")
+    public List<CategoryAffinityResponse> categoryAffinity(@AuthenticationPrincipal Jwt jwt) {
+        return getCategoryAffinityUseCase.get(memberId(jwt)).stream()
+                .map(i -> new CategoryAffinityResponse(i.categoryId(), i.score()))
+                .toList();
     }
 
     private Long memberId(Jwt jwt) {

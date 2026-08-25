@@ -208,7 +208,7 @@ public class InternalSpuController {
                                 .map(v -> new SkuSaleAttrValueResponse(v.attrId(), v.attrName(), v.attrValue()))
                                 .toList()))
                 .toList();
-        return new SpuDetailResponse(result.id(), result.categoryId(), result.brandId(), result.name(),
-                result.description(), result.mainImage(), result.status(), attrValues, images, skus);
+        return new SpuDetailResponse(result.id(), result.categoryId(), result.catalog1Id(), result.brandId(),
+                result.name(), result.description(), result.mainImage(), result.status(), attrValues, images, skus);
     }
 }

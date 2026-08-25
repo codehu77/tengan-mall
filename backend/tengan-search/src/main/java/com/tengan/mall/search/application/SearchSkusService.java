@@ -173,7 +173,7 @@ public class SearchSkusService implements SearchSkusUseCase {
         String image = (d.getSpuMainImage() != null && !d.getSpuMainImage().isBlank())
                 ? d.getSpuMainImage() : d.getMainImage();
         return new SkuSearchItem(d.getSkuId(), d.getSpuId(), d.getSkuName(), d.getSpuName(), d.getPrice(), image,
-                d.getSaleCount() == null ? 0 : d.getSaleCount(), d.getBrandId(), d.getBrandName());
+                d.getSaleCount() == null ? 0 : d.getSaleCount(), d.getBrandId(), d.getBrandName(), d.getCatalog1Id());
     }
 
     private Map<String, Aggregate> extractAggregates(SearchHits<SkuSearchDocument> hits) {
