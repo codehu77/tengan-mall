@@ -280,17 +280,43 @@ function openCouponModal() {
   showCouponModal.value = true
 }
 
-function confirmCoupon() {
+async function confirmCoupon() {
   selectedCoupon.value = availableCoupons.value.find(c => c.id === pendingCouponId.value) ?? null
   showCouponModal.value = false
-  // 折抵基準（訂單金額-優惠券折扣）變了，先前套用的點數折抵金額可能不再正確，請使用者重新套用。
-  clearPoints()
+  // 折抵基準（訂單金額-優惠券折扣）變了，先前套用的點數折抵金額可能不再正確——用新基準重新試算，
+  // 不要直接清空：原本清空是靜默的，使用者常常沒注意到欄位被清掉就送出訂單，導致點數沒扣到
+  // （這裡改成能沿用就沿用，不能沿用才清空並明確告知，而不是讓使用者自己發現欄位空了）。
+  if (appliedPoints.value > 0) {
+    await reapplyPointsAfterCouponChange()
+  }
 }
 
 function clearPoints() {
   appliedPoints.value = 0
   pointsDiscountAmount.value = 0
   pointsInput.value = 0
+}
+
+async function reapplyPointsAfterCouponChange() {
+  if (!confirmResult.value) return
+  const points = appliedPoints.value
+  const orderAmountAfterCoupon = confirmResult.value.totalAmount - (selectedCoupon.value?.discountAmount ?? 0)
+  try {
+    const result = await previewRedeemPoints(orderAmountAfterCoupon, points)
+    if (result.valid) {
+      pointsDiscountAmount.value = result.discountAmount
+      return
+    }
+  } catch {
+    // 重新試算本身失敗，比照下面 invalid 的情況清空並提示，不疊加第二個錯誤 toast
+  }
+  clearPoints()
+  toast.add({
+    title: '點數折抵已被清除',
+    description: '因優惠券變更，先前套用的點數折抵不再適用，請重新套用',
+    color: 'orange',
+    timeout: 4000,
+  })
 }
 
 async function applyPoints() {

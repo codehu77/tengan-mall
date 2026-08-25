@@ -92,12 +92,15 @@
                     ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
                     : selectedAttrs[attr.attrName] === opt
                       ? 'border-red-500 bg-red-50 text-red-600'
-                      : 'border-gray-200 text-gray-700 hover:border-red-300'"
+                      : isOptionOutOfStock(attr.attrName, opt)
+                        ? 'border-gray-200 text-gray-400 hover:border-red-300'
+                        : 'border-gray-200 text-gray-700 hover:border-red-300'"
                   :disabled="isOptionSoldOut(attr.attrName, opt)"
                   @click="selectAttr(attr.attrName, opt)"
                 >
                   {{ opt }}
                   <span v-if="isOptionSoldOut(attr.attrName, opt)" class="text-xs">（已售完）</span>
+                  <span v-else-if="isOptionOutOfStock(attr.attrName, opt)" class="text-xs">（缺貨）</span>
                 </button>
               </div>
             </div>
@@ -113,25 +116,36 @@
                 <span class="w-12 text-center text-sm">{{ qty }}</span>
                 <button
                   class="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+                  :disabled="!activeSeckillSku && availableStock !== null && qty >= availableStock"
+                  :class="{ 'opacity-30 cursor-not-allowed': !activeSeckillSku && availableStock !== null && qty >= availableStock }"
                   @click="qty = qty + 1"
                 >＋</button>
               </div>
+              <!-- 秒殺 SKU 的庫存語意是搶購名額（remaining），不是這裡的一般倉庫存，兩者互斥顯示 -->
+              <span v-if="!activeSeckillSku && availableStock !== null && availableStock <= 0" class="text-sm text-gray-400">
+                庫存不足
+              </span>
+              <span v-else-if="!activeSeckillSku && availableStock !== null" class="text-sm text-gray-400">
+                庫存 {{ availableStock }} 件
+              </span>
             </div>
 
             <!-- 按鈕 -->
             <div class="flex gap-3 mt-auto pt-2">
               <button
-                class="flex-1 h-14 rounded border-2 border-red-500 text-red-500 font-medium text-base hover:bg-red-50 transition flex items-center justify-center gap-2"
+                class="flex-1 h-14 rounded border-2 border-red-500 text-red-500 font-medium text-base hover:bg-red-50 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                :disabled="isOutOfStock"
                 @click="handleAddToCart"
               >
                 <UIcon name="i-heroicons-shopping-cart" class="w-5 h-5" />
-                加入購物車
+                {{ isOutOfStock ? '庫存不足' : '加入購物車' }}
               </button>
               <button
-                class="flex-1 h-14 rounded bg-red-500 text-white font-medium text-base hover:bg-red-600 transition"
+                class="flex-1 h-14 rounded bg-red-500 text-white font-medium text-base hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
+                :disabled="isOutOfStock"
                 @click="handleBuyNow"
               >
-                立即購買
+                {{ isOutOfStock ? '庫存不足' : '立即購買' }}
               </button>
             </div>
 
@@ -176,6 +190,7 @@ const route = useRoute()
 const toast = useToast()
 const cartStore = useCartStore()
 const { addToCart } = useCart()
+const { fetchSkuStocks } = useInventory()
 
 const spuId = Number(route.params.spuId)
 const { data: spu } = await useProductDetail(spuId)
@@ -187,6 +202,14 @@ const activeImg = ref(0)
 const qty = ref(1)
 
 const skus = computed(() => spu.value?.skus ?? [])
+
+// 一次查回這個 SPU 底下所有 sku 的一般倉庫存，讓規格選項按鈕能像秒殺售完一樣即時反灰
+// （而不是等使用者選到那顆、按下加入購物車才發現不能買）。秒殺 sku 的庫存語意是搶購名額，
+// 不查這裡，見下面 activeSeckillSkuIds 的排除邏輯。
+const skuStocks = ref<Record<number, number>>({})
+if (skus.value.length > 0) {
+  skuStocks.value = await fetchSkuStocks(skus.value.map(s => s.id))
+}
 
 // 預設變體：sort 值最小的那顆（後台精靈本來就有的排序欄位，跟管理端的預設呈現順序一致）
 const defaultSkuId = skus.value.length > 0
@@ -232,6 +255,33 @@ const soldOutSeckillSkuIds = computed(() => {
     for (const sku of product?.skus ?? []) {
       if (sku.remaining <= 0) ids.add(sku.skuId)
     }
+  }
+  return ids
+})
+
+// 目前活躍秒殺涉及到的所有 sku（不管是否賣完）——這些 sku 的庫存語意是搶購名額，一般倉庫存
+// 判斷要排除它們，不然會跟 soldOutSeckillSkuIds 的邏輯互相矛盾（例如秒殺庫存充足但一般倉是 0）。
+const activeSeckillSkuIds = computed(() => {
+  const ids = new Set<number>()
+  for (const session of seckillData.value?.flashSaleSessions ?? []) {
+    if (session.status !== 'ACTIVE') continue
+    const product = session.products.find(p => p.spuId === spuId)
+    for (const sku of product?.skus ?? []) ids.add(sku.skuId)
+  }
+  for (const launch of seckillData.value?.launches ?? []) {
+    const product = launch.products.find(p => p.spuId === spuId)
+    for (const sku of product?.skus ?? []) ids.add(sku.skuId)
+  }
+  return ids
+})
+
+// 一般倉庫存售完的規格——排除掉正在走秒殺名額語意的 sku，見上面 activeSeckillSkuIds 的說明。
+const soldOutStockSkuIds = computed(() => {
+  const ids = new Set<number>()
+  for (const sku of skus.value) {
+    if (activeSeckillSkuIds.value.has(sku.id)) continue
+    const stock = skuStocks.value[sku.id]
+    if (stock != null && stock <= 0) ids.add(sku.id)
   }
   return ids
 })
@@ -296,10 +346,17 @@ function isOptionSoldOut(attrName: string, value: string) {
   return !!match && soldOutSeckillSkuIds.value.has(match.id)
 }
 
+/** 一般倉庫存為 0——只是視覺提示（灰字+「缺貨」標籤），仍然可以點選切換過去看該規格的圖片，
+ * 只有真的要下單時（加入購物車/立即購買）才擋，跟秒殺售完「連選都不能選」是不同的使用者體驗。 */
+function isOptionOutOfStock(attrName: string, value: string) {
+  const match = resolveSkuForAttrChange(attrName, value)
+  return !!match && soldOutStockSkuIds.value.has(match.id)
+}
+
 // 純前端狀態切換，不 router.replace——MOMO 那種「選規格不換網址」的體驗
 function selectAttr(attrName: string, value: string) {
   const match = resolveSkuForAttrChange(attrName, value)
-  if (!match || soldOutSeckillSkuIds.value.has(match.id)) return
+  if (!match || isOptionSoldOut(attrName, value)) return
   selectedSkuId.value = match.id
   activeImg.value = 0
 }
@@ -307,9 +364,30 @@ function selectAttr(attrName: string, value: string) {
 const specs = computed(() => (spu.value?.attrValues ?? []).map(v => ({ label: v.attrName, value: v.attrValue })))
 const sanitizedDescription = computed(() => DOMPurify.sanitize(spu.value?.description ?? ''))
 
+// 目前選中 sku 的一般倉庫存（來自上面一次查好的 skuStocks）——秒殺 SKU 的庫存語意是搶購名額
+// （activeSeckillSku.remaining），兩者互斥，秒殺進行中不看一般倉庫存（比照下單時 tengan-order
+// 只鎖非秒殺項目的邏輯，見 CreateOrderService「一般商品只鎖『不是秒殺』的那些」）。
+const availableStock = computed(() => {
+  const sku = currentSku.value
+  if (!sku || activeSeckillSku.value) return null
+  return skuStocks.value[sku.id] ?? null
+})
+watch(() => currentSku.value?.id, () => {
+  qty.value = 1
+})
+watch([qty, availableStock], () => {
+  if (!activeSeckillSku.value && availableStock.value !== null && qty.value > availableStock.value) {
+    qty.value = Math.max(1, availableStock.value)
+  }
+})
+
+const isOutOfStock = computed(() =>
+  !activeSeckillSku.value && availableStock.value !== null && availableStock.value <= 0
+)
+
 async function handleAddToCart() {
   const sku = currentSku.value
-  if (!sku) return
+  if (!sku || isOutOfStock.value) return
   const newCount = await addToCart(
     { skuId: sku.id, skuName: sku.name, price: sku.price, image: images.value[0] ?? sku.mainImage },
     qty.value
@@ -325,7 +403,7 @@ async function handleAddToCart() {
 
 async function handleBuyNow() {
   const sku = currentSku.value
-  if (!sku) return
+  if (!sku || isOutOfStock.value) return
   const newCount = await addToCart(
     { skuId: sku.id, skuName: sku.name, price: sku.price, image: images.value[0] ?? sku.mainImage },
     qty.value
