@@ -119,6 +119,8 @@ import type { TierBenefit } from '~/types/points'
 
 definePageMeta({ middleware: 'auth', layout: 'member' })
 
+useHead({ title: '訂閱方案' })
+
 const PLANS: { tier: SubscriptionTargetTier; label: string; price: number; perks: string[] }[] = [
   { tier: 'PRO', label: 'PRO', price: 99, perks: ['消費點數回饋比例提升', '每月回饋上限提高'] },
   { tier: 'PRO_PLUS', label: 'PRO+', price: 199, perks: ['消費點數回饋比例最高', '每月回饋無上限'] },

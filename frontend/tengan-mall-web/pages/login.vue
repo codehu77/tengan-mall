@@ -133,6 +133,8 @@ definePageMeta({
   layout: 'auth',
 })
 
+useHead({ title: '會員登入' })
+
 const toast = useToast()
 const loginId = ref('')
 const password = ref('')

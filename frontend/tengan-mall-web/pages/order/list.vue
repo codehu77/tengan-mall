@@ -93,6 +93,8 @@ import type { OrderStatus, OrderSummary } from '~/types/order'
 
 definePageMeta({ middleware: 'auth', layout: 'member' })
 
+useHead({ title: '我的訂單' })
+
 const toast = useToast()
 const { fetchOrders, cancelOrder, confirmReceipt } = useOrder()
 

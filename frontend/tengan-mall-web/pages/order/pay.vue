@@ -89,6 +89,8 @@ import type { EcpayFormData } from '~/types/payment'
 
 definePageMeta({ middleware: 'auth' })
 
+useHead({ title: '付款' })
+
 const route = useRoute()
 const toast = useToast()
 const { fetchOrderDetail, cancelOrder } = useOrder()

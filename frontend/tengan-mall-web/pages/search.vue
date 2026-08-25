@@ -104,6 +104,8 @@ const keyword = computed(() => route.query.keyword ? String(route.query.keyword)
 const catId = computed(() => route.query.catId ? Number(route.query.catId) : undefined)
 const catName = computed(() => route.query.catName ? String(route.query.catName) : '')
 
+useHead({ title: computed(() => keyword.value || catName.value || '商品搜尋') })
+
 const sortBy = ref<'default' | 'new' | 'sale'>('default')
 const priceSort = ref<'none' | 'asc' | 'desc'>('none')
 const currentPage = ref(1)

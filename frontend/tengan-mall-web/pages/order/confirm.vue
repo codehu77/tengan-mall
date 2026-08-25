@@ -243,6 +243,8 @@ import { PAYMENT_METHOD_META } from '~/types/order'
 
 definePageMeta({ middleware: 'auth' })
 
+useHead({ title: '確認訂單' })
+
 const { confirmOrder, createOrder, fetchAvailableCoupons } = useOrder()
 const { fetchPaymentMethods } = usePayment()
 const { fetchCartCount } = useCart()

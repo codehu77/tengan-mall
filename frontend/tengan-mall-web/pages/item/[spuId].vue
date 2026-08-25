@@ -181,6 +181,8 @@ const spuId = Number(route.params.spuId)
 const { data: spu } = await useProductDetail(spuId)
 const { data: seckillData } = await useSeckill()
 
+useHead({ title: computed(() => spu.value?.name || '商品詳情') })
+
 const activeImg = ref(0)
 const qty = ref(1)
 

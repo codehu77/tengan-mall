@@ -123,6 +123,8 @@ definePageMeta({
   layout: 'auth',
 })
 
+useHead({ title: '註冊會員' })
+
 const username = ref('')
 const phone = ref('')
 const code = ref('')

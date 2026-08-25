@@ -154,6 +154,8 @@ import type { OrderDetail } from '~/types/order'
 
 definePageMeta({ middleware: 'auth' })
 
+useHead({ title: '訂單詳情' })
+
 const route = useRoute()
 const toast = useToast()
 const { fetchOrderDetail, cancelOrder, confirmReceipt } = useOrder()

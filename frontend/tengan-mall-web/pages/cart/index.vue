@@ -133,6 +133,8 @@
 <script setup lang="ts">
 import type { CartItem } from '~/types/cart'
 
+useHead({ title: '購物車' })
+
 // 購物車要同時服務會員/訪客，不強制登入才能看（middleware: 'auth' 移除）
 const cartStore = useCartStore()
 const { fetchCartItems, removeFromCart, updateQty, toggleChecked, toggleAllChecked, removeCheckedItems } = useCart()

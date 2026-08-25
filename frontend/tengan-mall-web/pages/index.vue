@@ -31,6 +31,8 @@
 <script setup lang="ts">
 import { MOCK_PRODUCTS } from '~/mocks/products'
 
+useHead({ title: '首頁' })
+
 // 首頁「熱門商品」區塊維持 mock，不在這次秒殺前台整合範圍內（後端還沒有對應的推薦商品端點）。
 const mockProducts = MOCK_PRODUCTS
 

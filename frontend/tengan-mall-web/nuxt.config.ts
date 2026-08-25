@@ -1,6 +1,12 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
+  app: {
+    head: {
+      titleTemplate: '%s ∣ 天願商城',
+    },
+  },
+
   css: ['~/assets/css/main.css'],
 
   modules: [

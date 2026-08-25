@@ -96,6 +96,8 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth', layout: 'member' })
 
+useHead({ title: '點數紀錄' })
+
 const store = usePointsStore()
 const isDev = import.meta.dev
 

@@ -71,6 +71,8 @@ import type { AddressFormPayload, MemberAddress } from '~/types/member'
 
 definePageMeta({ middleware: 'auth', layout: 'member' })
 
+useHead({ title: '收件地址' })
+
 const store = useAddressStore()
 
 const dialogOpen = ref(false)

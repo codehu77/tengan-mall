@@ -67,6 +67,8 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth', layout: 'member' })
 
+useHead({ title: '會員資料' })
+
 const FALLBACK_AVATAR = 'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-mall'
 const PRESET_AVATARS = [
   'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-1',

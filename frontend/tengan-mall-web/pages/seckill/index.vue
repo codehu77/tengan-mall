@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { SeckillProduct } from '~/composables/useSeckill'
 
+useHead({ title: '限時搶購' })
+
 const { data: seckillData } = await useSeckill()
 const flashSaleSessions = computed(() => seckillData.value?.flashSaleSessions ?? [])
 const launches = computed(() => seckillData.value?.launches ?? [])
