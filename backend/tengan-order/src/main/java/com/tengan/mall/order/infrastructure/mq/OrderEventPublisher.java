@@ -2,6 +2,8 @@ package com.tengan.mall.order.infrastructure.mq;
 
 import com.tengan.mall.order.application.port.OrderEventPort;
 import com.tengan.mall.order.domain.model.Order;
+import com.tengan.mall.order.domain.model.OrderItem;
+import java.util.List;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +27,12 @@ public class OrderEventPublisher implements OrderEventPort {
     public void publishOrderPaid(String orderSn) {
         rabbitTemplate.convertAndSend(RabbitConfig.ORDER_EVENT_EXCHANGE, RabbitConfig.ROUTING_KEY_PAID,
                 new OrderSnEvent(orderSn));
+    }
+
+    @Override
+    public void publishOrderCompleted(String orderSn, List<OrderItem> items) {
+        rabbitTemplate.convertAndSend(RabbitConfig.ORDER_EVENT_EXCHANGE, RabbitConfig.ROUTING_KEY_COMPLETED,
+                new OrderCompletedPayload(orderSn, items));
     }
 
     @Override

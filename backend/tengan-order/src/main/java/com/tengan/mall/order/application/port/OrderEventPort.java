@@ -1,6 +1,8 @@
 package com.tengan.mall.order.application.port;
 
 import com.tengan.mall.order.domain.model.Order;
+import com.tengan.mall.order.domain.model.OrderItem;
+import java.util.List;
 
 public interface OrderEventPort {
 
@@ -9,6 +11,11 @@ public interface OrderEventPort {
 
     /** 發 order.paid 事件——tengan-inventory 訂閱這個事件觸發扣庫存（locked→deducted），見 Phase 7 規劃。 */
     void publishOrderPaid(String orderSn);
+
+    /** 發 order.completed 事件——tengan-product 訂閱這個事件觸發 sku.sale_count 遞增+重發
+     * product.upserted 讓 ES 同步（銷量地基規劃）。items 直接複用 domain 的 OrderItem，
+     * 比照 publishSeckillOrderCreated 不另包 DTO。 */
+    void publishOrderCompleted(String orderSn, List<OrderItem> items);
 
     /**
      * Phase 9：含秒殺項目的訂單保留成功後，不在請求執行緒內同步寫 DB，改發這個事件交給

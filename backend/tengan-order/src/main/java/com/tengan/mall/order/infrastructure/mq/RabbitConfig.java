@@ -40,6 +40,9 @@ public class RabbitConfig {
     /** tengan-order 自己不消費這個 routing key，只是生產者——tengan-inventory 訂閱它觸發扣庫存（見 Phase 7 規劃）。 */
     public static final String ROUTING_KEY_PAID = "order.paid";
 
+    /** tengan-order 自己不消費這個 routing key，只是生產者——tengan-product 訂閱它觸發 sku.sale_count 遞增（銷量地基規劃）。 */
+    public static final String ROUTING_KEY_COMPLETED = "order.completed";
+
     /** Phase 9：秒殺配額保留成功後改走非同步落地，保護資料庫不被搶購瞬間大量成功保留的寫入量沖垮。 */
     public static final String ROUTING_KEY_SECKILL_ORDER = "order.seckill.order";
 

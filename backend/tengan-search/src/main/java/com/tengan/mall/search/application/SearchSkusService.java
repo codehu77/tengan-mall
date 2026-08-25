@@ -7,6 +7,8 @@ import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.FieldValueFactorModifier;
+import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
 import java.util.ArrayList;
@@ -40,9 +42,17 @@ public class SearchSkusService implements SearchSkusUseCase {
         this.elasticsearchOperations = elasticsearchOperations;
     }
 
+    private static final String SORT_DEFAULT = "default";
+
     @Override
     public SearchSkusResult search(SearchSkusQuery query) {
-        Query esQuery = buildQuery(query);
+        Query baseQuery = buildQuery(query);
+        // 「綜合排序」（sort=default/null）以前是 Sort.unsorted()——沒有關鍵字時全部文件 _score
+        // 都是 1.0，等於完全沒有排序。這裡包一層 function_score，用 saleCount 做加權：有關鍵字時
+        // 是「文字相關度 + 銷量」的複合分數，沒有關鍵字時退化成純粹依銷量排序。sale/price 兩種
+        // 明確指定的排序不套用這層加權，維持原本的欄位排序邏輯。
+        String sortKey = query.sort() == null ? SORT_DEFAULT : query.sort();
+        Query esQuery = SORT_DEFAULT.equals(sortKey) ? withSaleCountBoost(baseQuery) : baseQuery;
 
         // field collapse 依 spuId 分組，一顆 SPU 只回傳一筆代表 hit（列表卡片是商品層級，不是每個
         // SKU 變體各自一張卡）——同一 SPU 底下所有 SKU 依照後台建立商品的慣例本來就同價（見
@@ -108,6 +118,22 @@ public class SearchSkusService implements SearchSkusUseCase {
         }
 
         return Query.of(q -> q.bool(bool.build()));
+    }
+
+    /**
+     * v1 範圍：只做「文字相關度 + saleCount」的複合分數，不含新鮮度因子（ES 文件沒有 createdAt
+     * 欄位，之後有需要再加）。field_value_factor 用 log1p 避免銷量差距線性放大成極端分數，
+     * boostMode=Sum 讓有關鍵字時的文字相關度分數不會被銷量加權整個蓋過。
+     */
+    private Query withSaleCountBoost(Query boolQuery) {
+        return Query.of(q -> q.functionScore(fs -> fs
+                .query(boolQuery)
+                .functions(f -> f.fieldValueFactor(fv -> fv
+                        .field("saleCount")
+                        .modifier(FieldValueFactorModifier.Log1p)
+                        .factor(1.0)
+                        .missing(0.0)))
+                .boostMode(FunctionBoostMode.Sum)));
     }
 
     private Sort buildSort(SearchSkusQuery query) {

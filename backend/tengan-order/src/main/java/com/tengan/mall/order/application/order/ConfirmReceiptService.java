@@ -1,5 +1,6 @@
 package com.tengan.mall.order.application.order;
 
+import com.tengan.mall.order.application.port.OrderEventPort;
 import com.tengan.mall.order.application.port.WalletPort;
 import com.tengan.mall.order.domain.exception.OrderAccessDeniedException;
 import com.tengan.mall.order.domain.exception.OrderNotFoundException;
@@ -10,7 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * SHIPPED→COMPLETED。確認收貨成功後非關鍵路徑呼叫 tengan-wallet 的 reserve（Phase 8 新增），
+ * SHIPPED→COMPLETED。確認收貨成功後發 order.completed 事件（銷量地基規劃，tengan-product 訂閱它
+ * 觸發 sku.sale_count 遞增），並非關鍵路徑呼叫 tengan-wallet 的 reserve（Phase 8 新增），
  * 讓「待入帳點數」在 7 天鑑賞期內就看得到；真正入帳是 PointsGrantScheduler 鑑賞期過後才做的事，
  * 這裡失敗不影響確認收貨本身（比照 CreateOrderService 的 safely() 模式）。
  */
@@ -21,10 +23,13 @@ public class ConfirmReceiptService implements ConfirmReceiptUseCase {
 
     private final OrderRepository orderRepository;
     private final WalletPort walletPort;
+    private final OrderEventPort orderEventPort;
 
-    public ConfirmReceiptService(OrderRepository orderRepository, WalletPort walletPort) {
+    public ConfirmReceiptService(OrderRepository orderRepository, WalletPort walletPort,
+            OrderEventPort orderEventPort) {
         this.orderRepository = orderRepository;
         this.walletPort = walletPort;
+        this.orderEventPort = orderEventPort;
     }
 
     @Override
@@ -37,6 +42,7 @@ public class ConfirmReceiptService implements ConfirmReceiptUseCase {
         if (!orderRepository.markCompleted(command.orderSn())) {
             throw new OrderReceiptNotAllowedException(command.orderSn());
         }
+        orderEventPort.publishOrderCompleted(order.getOrderSn(), order.getItems());
         try {
             walletPort.reserve(command.memberId(), command.orderSn(), order.getPayAmount());
         } catch (RuntimeException e) {

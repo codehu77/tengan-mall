@@ -14,11 +14,11 @@
     <SeckillSection v-if="flashSaleSessions.length > 0" :flash-sale-sessions="flashSaleSessions" />
 
     <!-- 熱門商品 -->
-    <section>
+    <section v-if="hotProducts.length > 0">
       <h2 class="text-2xl font-bold text-gray-800 mb-4">熱門商品</h2>
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <ProductCard
-          v-for="product in mockProducts"
+          v-for="product in hotProducts"
           :key="product.skuId"
           :product="product"
         />
@@ -29,12 +29,28 @@
 </template>
 
 <script setup lang="ts">
-import { MOCK_PRODUCTS } from '~/mocks/products'
+import type { Product } from '~/mocks/products'
+import type { ProductSearchQuery, SearchItem } from '~/composables/useProductSearch'
 
 useHead({ title: '首頁' })
 
-// 首頁「熱門商品」區塊維持 mock，不在這次秒殺前台整合範圍內（後端還沒有對應的推薦商品端點）。
-const mockProducts = MOCK_PRODUCTS
+// 直接把泛用搜尋端點當「銷量前 N 名」用（sort=sale，不帶 keyword/catId），不用新增後端端點。
+// 首頁熱門商品區塊不需要 search.vue 那支 toProduct 的秒殺價覆蓋邏輯，用一個簡化版本就好。
+const hotQuery = ref<ProductSearchQuery>({ sort: 'sale', order: 'desc', pageSize: 10 })
+const { data: hotData } = await useProductSearch(hotQuery)
+
+function toHotProduct(item: SearchItem): Product {
+  return {
+    skuId: item.skuId,
+    spuId: item.spuId,
+    skuName: item.spuName || item.skuName,
+    price: item.price,
+    skuDefaultImg: item.mainImage,
+    saleCount: item.saleCount,
+    categoryId: 0,
+  }
+}
+const hotProducts = computed(() => (hotData.value?.items ?? []).map(toHotProduct))
 
 const { data: seckillData } = await useSeckill()
 const flashSaleSessions = computed(() => seckillData.value?.flashSaleSessions ?? [])
