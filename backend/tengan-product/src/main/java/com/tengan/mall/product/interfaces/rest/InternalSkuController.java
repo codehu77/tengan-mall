@@ -30,7 +30,7 @@ public class InternalSkuController {
     public List<SkuDetailResponse> batchGet(@RequestParam List<Long> ids) {
         return batchGetSkuDetailsUseCase.get(ids).stream()
                 .map(s -> new SkuDetailResponse(s.id(), s.spuId(), s.name(), s.price(), s.mainImage(), s.saleCount(),
-                        s.sort(),
+                        s.sort(), s.purchaseLimitPerUser(),
                         s.images().stream().map(i -> new SkuImageResponse(i.imageUrl(), i.sort())).toList(),
                         s.saleAttrValues().stream()
                                 .map(v -> new SkuSaleAttrValueResponse(v.attrId(), v.attrName(), v.attrValue()))

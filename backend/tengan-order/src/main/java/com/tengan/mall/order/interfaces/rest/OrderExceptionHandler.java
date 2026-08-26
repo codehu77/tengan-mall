@@ -11,7 +11,9 @@ import com.tengan.mall.order.domain.exception.OrderProcessingException;
 import com.tengan.mall.order.domain.exception.OrderReceiptNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderShipmentNotAllowedException;
 import com.tengan.mall.order.domain.exception.OrderTokenInvalidException;
+import com.tengan.mall.order.domain.exception.PurchaseLimitExceededException;
 import com.tengan.mall.order.domain.exception.SeckillReservationFailedException;
+import com.tengan.mall.order.domain.exception.SkuNotYetOnSaleException;
 import com.tengan.mall.order.interfaces.rest.dto.InventoryShortageResponse;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -50,7 +52,8 @@ public class OrderExceptionHandler {
     @ExceptionHandler({OrderTokenInvalidException.class, EmptyCartException.class,
             CouponNotApplicableException.class, OrderCancellationNotAllowedException.class,
             OrderShipmentNotAllowedException.class, OrderReceiptNotAllowedException.class,
-            OrderMarkPaidNotAllowedException.class, SeckillReservationFailedException.class})
+            OrderMarkPaidNotAllowedException.class, SeckillReservationFailedException.class,
+            SkuNotYetOnSaleException.class, PurchaseLimitExceededException.class})
     public ResponseEntity<Map<String, String>> handleConflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }

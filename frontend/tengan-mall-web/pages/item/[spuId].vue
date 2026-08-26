@@ -51,8 +51,20 @@
               <span>已售出 <b class="text-gray-600">{{ currentSku.saleCount.toLocaleString() }}</b> 件</span>
             </div>
 
-            <!-- 價格：有活躍秒殺才顯示搶購價+倒數，活動結束後 activeSeckillSku 自然變 null，變回一般價格 -->
-            <div v-if="activeSeckillSku" class="bg-red-50 rounded-lg px-5 py-4 space-y-2">
+            <!-- 價格：即將開賣 > 有活躍秒殺(搶購價+倒數) > 一般優惠價，三者互斥 -->
+            <div v-if="isNotYetOnSale" class="bg-gray-50 rounded-lg px-5 py-4 space-y-2">
+              <div class="flex items-center gap-2">
+                <UBadge color="gray" variant="solid">即將開賣</UBadge>
+                <span class="text-xs text-gray-500 font-mono">{{ saleStartText }}（倒數 {{ saleHh }}:{{ saleMm }}:{{ saleSs }}）</span>
+              </div>
+              <div class="flex items-baseline gap-2">
+                <span class="text-3xl font-bold text-gray-500">
+                  NT$ {{ currentSku.price.toLocaleString() }}
+                </span>
+              </div>
+              <p v-if="purchaseLimitPerUser" class="text-xs text-gray-500">每人限購 {{ purchaseLimitPerUser }} 件</p>
+            </div>
+            <div v-else-if="activeSeckillSku" class="bg-red-50 rounded-lg px-5 py-4 space-y-2">
               <div class="flex items-center gap-2">
                 <UBadge color="red" variant="solid">限時搶購</UBadge>
                 <span class="text-xs text-gray-500 font-mono">距結束 {{ hh }}:{{ mm }}:{{ ss }}</span>
@@ -69,11 +81,14 @@
                 剩餘 {{ activeSeckillSku.remaining }} 件・每人限購 {{ activeSeckillSku.limitPerUser }} 件
               </p>
             </div>
-            <div v-else class="bg-orange-50 rounded-lg px-5 py-4 flex items-baseline gap-2">
-              <span class="text-sm text-gray-400">優惠價</span>
-              <span class="text-3xl font-bold text-red-600">
-                NT$ {{ currentSku.price.toLocaleString() }}
-              </span>
+            <div v-else class="bg-orange-50 rounded-lg px-5 py-4 space-y-1">
+              <div class="flex items-baseline gap-2">
+                <span class="text-sm text-gray-400">優惠價</span>
+                <span class="text-3xl font-bold text-red-600">
+                  NT$ {{ currentSku.price.toLocaleString() }}
+                </span>
+              </div>
+              <p v-if="purchaseLimitPerUser" class="text-xs text-gray-500">每人限購 {{ purchaseLimitPerUser }} 件</p>
             </div>
 
             <!-- 規格選擇：純前端狀態切換，不會導覽到新網址 -->
@@ -116,16 +131,16 @@
                 <span class="w-12 text-center text-sm">{{ qty }}</span>
                 <button
                   class="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
-                  :disabled="!activeSeckillSku && availableStock !== null && qty >= availableStock"
-                  :class="{ 'opacity-30 cursor-not-allowed': !activeSeckillSku && availableStock !== null && qty >= availableStock }"
+                  :disabled="!activeSeckillSku && qtyMax !== null && qty >= qtyMax"
+                  :class="{ 'opacity-30 cursor-not-allowed': !activeSeckillSku && qtyMax !== null && qty >= qtyMax }"
                   @click="qty = qty + 1"
                 >＋</button>
               </div>
               <!-- 秒殺 SKU 的庫存語意是搶購名額（remaining），不是這裡的一般倉庫存，兩者互斥顯示 -->
-              <span v-if="!activeSeckillSku && availableStock !== null && availableStock <= 0" class="text-sm text-gray-400">
+              <span v-if="!activeSeckillSku && !isNotYetOnSale && availableStock !== null && availableStock <= 0" class="text-sm text-gray-400">
                 庫存不足
               </span>
-              <span v-else-if="!activeSeckillSku && availableStock !== null" class="text-sm text-gray-400">
+              <span v-else-if="!activeSeckillSku && !isNotYetOnSale && availableStock !== null" class="text-sm text-gray-400">
                 庫存 {{ availableStock }} 件
               </span>
             </div>
@@ -134,18 +149,18 @@
             <div class="flex gap-3 mt-auto pt-2">
               <button
                 class="flex-1 h-14 rounded border-2 border-red-500 text-red-500 font-medium text-base hover:bg-red-50 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                :disabled="isOutOfStock"
+                :disabled="isPurchaseDisabled"
                 @click="handleAddToCart"
               >
                 <UIcon name="i-heroicons-shopping-cart" class="w-5 h-5" />
-                {{ isOutOfStock ? '庫存不足' : '加入購物車' }}
+                {{ isNotYetOnSale ? '即將開賣' : isOutOfStock ? '庫存不足' : '加入購物車' }}
               </button>
               <button
                 class="flex-1 h-14 rounded bg-red-500 text-white font-medium text-base hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
-                :disabled="isOutOfStock"
+                :disabled="isPurchaseDisabled"
                 @click="handleBuyNow"
               >
-                {{ isOutOfStock ? '庫存不足' : '立即購買' }}
+                {{ isNotYetOnSale ? '即將開賣' : isOutOfStock ? '庫存不足' : '立即購買' }}
               </button>
             </div>
 
@@ -185,6 +200,7 @@
 <script setup lang="ts">
 import DOMPurify from 'isomorphic-dompurify'
 import { useProductDetail } from '~/composables/useProductDetail'
+import type { SkuStockInfo } from '~/composables/useInventory'
 
 const route = useRoute()
 const toast = useToast()
@@ -203,10 +219,10 @@ const qty = ref(1)
 
 const skus = computed(() => spu.value?.skus ?? [])
 
-// 一次查回這個 SPU 底下所有 sku 的一般倉庫存，讓規格選項按鈕能像秒殺售完一樣即時反灰
-// （而不是等使用者選到那顆、按下加入購物車才發現不能買）。秒殺 sku 的庫存語意是搶購名額，
+// 一次查回這個 SPU 底下所有 sku 的一般倉庫存（連同開賣時間/限購資訊），讓規格選項按鈕能像秒殺售完一樣
+// 即時反灰（而不是等使用者選到那顆、按下加入購物車才發現不能買）。秒殺 sku 的庫存語意是搶購名額，
 // 不查這裡，見下面 activeSeckillSkuIds 的排除邏輯。
-const skuStocks = ref<Record<number, number>>({})
+const skuStocks = ref<Record<number, SkuStockInfo>>({})
 if (skus.value.length > 0) {
   skuStocks.value = await fetchSkuStocks(skus.value.map(s => s.id))
 }
@@ -280,29 +296,14 @@ const soldOutStockSkuIds = computed(() => {
   const ids = new Set<number>()
   for (const sku of skus.value) {
     if (activeSeckillSkuIds.value.has(sku.id)) continue
-    const stock = skuStocks.value[sku.id]
+    const stock = skuStocks.value[sku.id]?.availableStock
     if (stock != null && stock <= 0) ids.add(sku.id)
   }
   return ids
 })
 
-const remaining = ref(0)
-function updateRemaining() {
-  if (!activeSeckillSku.value) return
-  remaining.value = Math.max(0, Math.floor((new Date(activeSeckillSku.value.endTime).getTime() - Date.now()) / 1000))
-}
-const hh = computed(() => String(Math.floor(remaining.value / 3600)).padStart(2, '0'))
-const mm = computed(() => String(Math.floor((remaining.value % 3600) / 60)).padStart(2, '0'))
-const ss = computed(() => String(remaining.value % 60).padStart(2, '0'))
-
-let seckillTimer: ReturnType<typeof setInterval> | null = null
-onMounted(() => {
-  updateRemaining()
-  seckillTimer = setInterval(updateRemaining, 1000)
-})
-onUnmounted(() => {
-  if (seckillTimer) clearInterval(seckillTimer)
-})
+const seckillEndTime = computed(() => activeSeckillSku.value?.endTime ?? null)
+const { hh, mm, ss } = useCountdown(seckillEndTime)
 
 // 「猜你喜歡」的瀏覽興趣訊號——只有登入會員才記錄，訪客不追蹤。非關鍵路徑，失敗不影響頁面
 // 本身，recordInterest 內部已經 .catch(() => {}) 吞掉錯誤。
@@ -380,24 +381,56 @@ const sanitizedDescription = computed(() => DOMPurify.sanitize(spu.value?.descri
 const availableStock = computed(() => {
   const sku = currentSku.value
   if (!sku || activeSeckillSku.value) return null
-  return skuStocks.value[sku.id] ?? null
+  return skuStocks.value[sku.id]?.availableStock ?? null
 })
+
+// 目前選中 sku 的開賣時間/限購資訊——秒殺進行中互斥（不會同時是「即將開賣」），見 activeSeckillSku。
+const currentSkuStockInfo = computed(() => {
+  const sku = currentSku.value
+  return sku ? skuStocks.value[sku.id] ?? null : null
+})
+const isNotYetOnSale = computed(() =>
+  !activeSeckillSku.value && currentSkuStockInfo.value?.purchasable === false
+)
+const saleStartTime = computed(() => currentSkuStockInfo.value?.saleStartTime ?? null)
+const purchaseLimitPerUser = computed(() => currentSkuStockInfo.value?.purchaseLimitPerUser ?? null)
+
+const { hh: saleHh, mm: saleMm, ss: saleSs } = useCountdown(saleStartTime)
+const saleStartText = computed(() => {
+  const iso = saleStartTime.value
+  if (!iso) return ''
+  const d = new Date(iso)
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const hhStr = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${mm}/${dd} ${hhStr}:${min} 開賣`
+})
+
+/** 加購數量上限：一般倉庫存跟每人限購取較小值；秒殺 sku 有自己一套名額邏輯，不套用這裡。 */
+const qtyMax = computed(() => {
+  if (activeSeckillSku.value) return null
+  const candidates = [availableStock.value, purchaseLimitPerUser.value].filter((v): v is number => v != null)
+  return candidates.length > 0 ? Math.min(...candidates) : null
+})
+
 watch(() => currentSku.value?.id, () => {
   qty.value = 1
 })
-watch([qty, availableStock], () => {
-  if (!activeSeckillSku.value && availableStock.value !== null && qty.value > availableStock.value) {
-    qty.value = Math.max(1, availableStock.value)
+watch([qty, qtyMax], () => {
+  if (qtyMax.value !== null && qty.value > qtyMax.value) {
+    qty.value = Math.max(1, qtyMax.value)
   }
 })
 
 const isOutOfStock = computed(() =>
   !activeSeckillSku.value && availableStock.value !== null && availableStock.value <= 0
 )
+const isPurchaseDisabled = computed(() => isOutOfStock.value || isNotYetOnSale.value)
 
 async function handleAddToCart() {
   const sku = currentSku.value
-  if (!sku || isOutOfStock.value) return
+  if (!sku || isPurchaseDisabled.value) return
   const newCount = await addToCart(
     { skuId: sku.id, skuName: sku.name, price: sku.price, image: images.value[0] ?? sku.mainImage },
     qty.value
@@ -413,7 +446,7 @@ async function handleAddToCart() {
 
 async function handleBuyNow() {
   const sku = currentSku.value
-  if (!sku || isOutOfStock.value) return
+  if (!sku || isPurchaseDisabled.value) return
   const newCount = await addToCart(
     { skuId: sku.id, skuName: sku.name, price: sku.price, image: images.value[0] ?? sku.mainImage },
     qty.value

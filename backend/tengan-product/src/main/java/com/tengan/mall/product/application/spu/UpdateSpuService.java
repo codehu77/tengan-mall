@@ -25,16 +25,19 @@ public class UpdateSpuService implements UpdateSpuUseCase {
     private final SpuCompositionAssembler assembler;
     private final SpuSearchDocumentAssembler searchDocumentAssembler;
     private final ProductSearchEventPublisherPort searchEventPublisher;
+    private final ProductLaunchConfigEventPublisherPort launchConfigEventPublisher;
 
     public UpdateSpuService(SpuRepository spuRepository, CategoryRepository categoryRepository,
             BrandRepository brandRepository, SpuCompositionAssembler assembler,
-            SpuSearchDocumentAssembler searchDocumentAssembler, ProductSearchEventPublisherPort searchEventPublisher) {
+            SpuSearchDocumentAssembler searchDocumentAssembler, ProductSearchEventPublisherPort searchEventPublisher,
+            ProductLaunchConfigEventPublisherPort launchConfigEventPublisher) {
         this.spuRepository = spuRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
         this.assembler = assembler;
         this.searchDocumentAssembler = searchDocumentAssembler;
         this.searchEventPublisher = searchEventPublisher;
+        this.launchConfigEventPublisher = launchConfigEventPublisher;
     }
 
     @Override
@@ -62,6 +65,8 @@ public class UpdateSpuService implements UpdateSpuUseCase {
 
         spu.updateBasicInfo(command.categoryId(), command.brandId(), command.name(), command.description(),
                 command.mainImage());
+        spu.scheduleLaunch(command.saleStartTime(), command.trafficGateEnabled(), command.gateCloseTime(),
+                command.showOnLaunchTeaser(), command.teaserRemoveAt());
         spu.replaceAttrValues(assembler.resolveSpuBaseAttrValues(command.categoryId(), command.attrValues()));
         spu.replaceImages(command.images().stream().map(i -> new SpuImage(i.imageUrl(), i.sort())).toList());
         spu.replaceSkus(assembler.buildSkus(command.categoryId(), command.skus()));
@@ -75,5 +80,13 @@ public class UpdateSpuService implements UpdateSpuUseCase {
             }
             searchEventPublisher.publishUpserted(searchDocumentAssembler.assemble(spu));
         }
+
+        // 跟 search 同步不同：這是內部設定同步，不管 ON_SHELF 與否都發，讓 tengan-inventory 隨時有
+        // 最新的開賣時間/限購設定可用（sku 每次更新都會換新 id，所以永遠發「目前完整清單」）。
+        var launchConfigPayloads = spu.getSkus().stream()
+                .map(sku -> new SkuLaunchConfigPayload(sku.getId(), spu.getSaleStartTime(),
+                        sku.getPurchaseLimitPerUser()))
+                .toList();
+        launchConfigEventPublisher.publishUpserted(spu.getId(), launchConfigPayloads);
     }
 }

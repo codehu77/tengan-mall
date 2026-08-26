@@ -1,6 +1,8 @@
 package com.tengan.mall.order.infrastructure.inventory;
 
 import com.tengan.mall.order.application.port.InventoryPort;
+import com.tengan.mall.order.application.port.LockFailure;
+import com.tengan.mall.order.application.port.LockFailureReason;
 import com.tengan.mall.order.application.port.LockItem;
 import com.tengan.mall.order.application.port.LockResult;
 import com.tengan.mall.order.infrastructure.inventory.dto.LockInventoryItemDto;
@@ -24,18 +26,21 @@ public class InventoryAdapter implements InventoryPort {
     }
 
     @Override
-    public LockResult lock(String orderSn, List<LockItem> items) {
+    public LockResult lock(String orderSn, Long memberId, List<LockItem> items) {
         var dtoItems = items.stream().map(i -> new LockInventoryItemDto(i.skuId(), i.count())).toList();
         LockInventoryResponseDto response = inventoryRestClient.post()
                 .uri("/internal/inventory/lock")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
-                .body(new LockInventoryRequestDto(orderSn, dtoItems))
+                .body(new LockInventoryRequestDto(orderSn, memberId, dtoItems))
                 .retrieve()
                 .body(LockInventoryResponseDto.class);
         if (response == null) {
             throw new IllegalStateException("鎖庫存呼叫無回應: orderSn=" + orderSn);
         }
-        return new LockResult(response.success(), response.shortageSkuIds());
+        var failures = response.failures().stream()
+                .map(f -> new LockFailure(f.skuId(), LockFailureReason.valueOf(f.reason())))
+                .toList();
+        return new LockResult(response.success(), failures);
     }
 
     @Override

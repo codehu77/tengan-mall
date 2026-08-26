@@ -120,7 +120,9 @@ public class InternalSpuController {
     @PreAuthorize("hasAuthority('SCOPE_product.write')")
     public ResponseEntity<CreateSpuResponse> create(@Valid @RequestBody CreateSpuRequest request) {
         var result = createSpuUseCase.create(new CreateSpuCommand(request.categoryId(), request.brandId(),
-                request.name(), request.description(), request.mainImage(), toAttrValueCommands(request.attrValues()),
+                request.name(), request.description(), request.mainImage(), request.saleStartTime(),
+                request.trafficGateEnabled(), request.gateCloseTime(), request.showOnLaunchTeaser(),
+                request.teaserRemoveAt(), toAttrValueCommands(request.attrValues()),
                 toSpuImageCommands(request.images()), toSkuCommands(request.skus())));
         return ResponseEntity.status(HttpStatus.CREATED).body(new CreateSpuResponse(result.id()));
     }
@@ -129,8 +131,10 @@ public class InternalSpuController {
     @PreAuthorize("hasAuthority('SCOPE_product.write')")
     public ResponseEntity<Void> update(@PathVariable Long id, @Valid @RequestBody UpdateSpuRequest request) {
         updateSpuUseCase.update(new UpdateSpuCommand(id, request.categoryId(), request.brandId(), request.name(),
-                request.description(), request.mainImage(), toAttrValueCommands(request.attrValues()),
-                toSpuImageCommands(request.images()), toSkuCommands(request.skus())));
+                request.description(), request.mainImage(), request.saleStartTime(), request.trafficGateEnabled(),
+                request.gateCloseTime(), request.showOnLaunchTeaser(), request.teaserRemoveAt(),
+                toAttrValueCommands(request.attrValues()), toSpuImageCommands(request.images()),
+                toSkuCommands(request.skus())));
         return ResponseEntity.noContent().build();
     }
 
@@ -178,7 +182,7 @@ public class InternalSpuController {
         }
         return requests.stream()
                 .map(r -> new SkuCommand(r.name(), r.price(), r.mainImage(), r.sort(), toImageCommands(r.images()),
-                        toSaleAttrValueCommands(r.saleAttrValues())))
+                        toSaleAttrValueCommands(r.saleAttrValues()), r.purchaseLimitPerUser()))
                 .toList();
     }
 
@@ -201,7 +205,7 @@ public class InternalSpuController {
                 .toList();
         var skus = result.skus().stream()
                 .map(s -> new SkuDetailResponse(s.id(), s.spuId(), s.name(), s.price(), s.mainImage(),
-                        s.saleCount(), s.sort(),
+                        s.saleCount(), s.sort(), s.purchaseLimitPerUser(),
                         s.images().stream().map(i -> new SkuImageResponse(i.imageUrl(), i.sort()))
                                 .toList(),
                         s.saleAttrValues().stream()
@@ -209,6 +213,8 @@ public class InternalSpuController {
                                 .toList()))
                 .toList();
         return new SpuDetailResponse(result.id(), result.categoryId(), result.catalog1Id(), result.brandId(),
-                result.name(), result.description(), result.mainImage(), result.status(), attrValues, images, skus);
+                result.name(), result.description(), result.mainImage(), result.status(), result.saleStartTime(),
+                result.trafficGateEnabled(), result.gateCloseTime(), result.showOnLaunchTeaser(),
+                result.teaserRemoveAt(), attrValues, images, skus);
     }
 }

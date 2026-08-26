@@ -30,6 +30,10 @@ public class RabbitConfig {
     public static final String ROUTING_KEY_UPSERTED = "product.upserted";
     public static final String ROUTING_KEY_REMOVED = "product.removed";
 
+    /** tengan-inventory 消費，見 ProductLaunchConfigEventPublisherPort 的說明。 */
+    public static final String PRODUCT_LAUNCH_CONFIG_EXCHANGE = "product-launch-config-exchange";
+    public static final String ROUTING_KEY_LAUNCH_CONFIG_UPSERTED = "product.launch-config.upserted";
+
     private static final String ORDER_EVENT_EXCHANGE = "order-event-exchange";
     private static final String ROUTING_KEY_ORDER_COMPLETED = "order.completed";
     public static final String ORDER_COMPLETED_QUEUE = "product.order.completed.queue";
@@ -37,6 +41,12 @@ public class RabbitConfig {
     @Bean
     public TopicExchange productSearchExchange() {
         return new TopicExchange(PRODUCT_SEARCH_EXCHANGE);
+    }
+
+    /** 只宣告 exchange，不管有沒有 queue 綁定——queue/binding 由消費端（tengan-inventory）自己宣告。 */
+    @Bean
+    public TopicExchange productLaunchConfigExchange() {
+        return new TopicExchange(PRODUCT_LAUNCH_CONFIG_EXCHANGE);
     }
 
     @Bean

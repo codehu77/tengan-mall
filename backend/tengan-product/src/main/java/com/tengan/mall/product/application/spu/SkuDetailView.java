@@ -9,5 +9,5 @@ import java.util.List;
  * Port 的註解）。形狀相同所以共用同一個 View 型別，不重複定義。
  */
 public record SkuDetailView(Long id, Long spuId, String name, BigDecimal price, String mainImage, int saleCount,
-        int sort, List<SkuImageView> images, List<SkuSaleAttrValueView> saleAttrValues) {
+        int sort, Integer purchaseLimitPerUser, List<SkuImageView> images, List<SkuSaleAttrValueView> saleAttrValues) {
 }

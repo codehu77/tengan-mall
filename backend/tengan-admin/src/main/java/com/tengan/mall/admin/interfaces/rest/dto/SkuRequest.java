@@ -8,5 +8,6 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record SkuRequest(@NotBlank String name, @NotNull @Positive BigDecimal price, String mainImage, int sort,
-        @Valid List<SkuImageRequest> images, @Valid List<SkuSaleAttrValueRequest> saleAttrValues) {
+        @Valid List<SkuImageRequest> images, @Valid List<SkuSaleAttrValueRequest> saleAttrValues,
+        @Positive Integer purchaseLimitPerUser) {
 }

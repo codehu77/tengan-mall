@@ -17,6 +17,7 @@ public class SkuPO {
     private String mainImage;
     private Integer saleCount;
     private Integer sort;
+    private Integer purchaseLimitPerUser;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -74,6 +75,14 @@ public class SkuPO {
 
     public void setSort(Integer sort) {
         this.sort = sort;
+    }
+
+    public Integer getPurchaseLimitPerUser() {
+        return purchaseLimitPerUser;
+    }
+
+    public void setPurchaseLimitPerUser(Integer purchaseLimitPerUser) {
+        this.purchaseLimitPerUser = purchaseLimitPerUser;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -62,6 +62,6 @@ class SpuCompositionAssembler {
             return new SkuSaleAttrValue(attr.getId(), attr.getName(), c.attrValue());
         }).toList();
         return Sku.create(command.name(), command.price(), command.mainImage(), command.sort(), images,
-                saleAttrValues);
+                saleAttrValues, command.purchaseLimitPerUser());
     }
 }

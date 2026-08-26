@@ -1,4 +1,7 @@
 package com.tengan.mall.inventory.interfaces.rest.dto;
 
-public record SkuStockResponse(Long skuId, int availableStock) {
+import java.time.LocalDateTime;
+
+public record SkuStockResponse(Long skuId, int availableStock, LocalDateTime saleStartTime, boolean purchasable,
+        Integer purchaseLimitPerUser) {
 }

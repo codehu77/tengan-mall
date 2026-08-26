@@ -13,6 +13,9 @@
     <!-- 限時搶購 -->
     <SeckillSection v-if="flashSaleSessions.length > 0" :flash-sale-sessions="flashSaleSessions" />
 
+    <!-- 即將開賣 -->
+    <LaunchTeaserSection v-if="teaserProducts.length > 0" :products="teaserProducts" />
+
     <!-- 熱門商品 -->
     <section v-if="hotProducts.length > 0">
       <h2 class="text-2xl font-bold text-gray-800 mb-4">熱門商品</h2>
@@ -71,6 +74,9 @@ const flashSaleSessions = computed(() => seckillData.value?.flashSaleSessions ??
 
 const { data: bannerData } = await useBanners()
 const banners = computed(() => bannerData.value?.banners ?? [])
+
+const { data: launchTeaserData } = await useLaunchTeaser()
+const teaserProducts = computed(() => launchTeaserData.value?.items ?? [])
 
 // 猜你喜歡：無限捲動，走訪順序/游標狀態全部交給 useGuessYouLike 這個 composable 管理。
 // 第一批資料比照熱門商品的模式，在 SSR 階段就 await 抓好（不是進頁面後才由 onMounted 發

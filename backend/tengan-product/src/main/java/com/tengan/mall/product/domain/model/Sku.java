@@ -18,29 +18,32 @@ public class Sku {
     private String mainImage;
     private final int saleCount;
     private int sort;
+    private Integer purchaseLimitPerUser;
     private final List<SkuImage> images = new ArrayList<>();
     private final List<SkuSaleAttrValue> saleAttrValues = new ArrayList<>();
 
-    private Sku(Long id, String name, BigDecimal price, String mainImage, int saleCount, int sort) {
+    private Sku(Long id, String name, BigDecimal price, String mainImage, int saleCount, int sort,
+            Integer purchaseLimitPerUser) {
         this.id = id;
         this.name = name;
         this.price = price;
         this.mainImage = mainImage;
         this.saleCount = saleCount;
         this.sort = sort;
+        this.purchaseLimitPerUser = purchaseLimitPerUser;
     }
 
     public static Sku create(String name, BigDecimal price, String mainImage, int sort, List<SkuImage> images,
-            List<SkuSaleAttrValue> saleAttrValues) {
-        Sku sku = new Sku(null, name, price, mainImage, 0, sort);
+            List<SkuSaleAttrValue> saleAttrValues, Integer purchaseLimitPerUser) {
+        Sku sku = new Sku(null, name, price, mainImage, 0, sort, purchaseLimitPerUser);
         sku.images.addAll(images);
         sku.saleAttrValues.addAll(saleAttrValues);
         return sku;
     }
 
     public static Sku reconstitute(Long id, String name, BigDecimal price, String mainImage, int saleCount, int sort,
-            List<SkuImage> images, List<SkuSaleAttrValue> saleAttrValues) {
-        Sku sku = new Sku(id, name, price, mainImage, saleCount, sort);
+            Integer purchaseLimitPerUser, List<SkuImage> images, List<SkuSaleAttrValue> saleAttrValues) {
+        Sku sku = new Sku(id, name, price, mainImage, saleCount, sort, purchaseLimitPerUser);
         sku.images.addAll(images);
         sku.saleAttrValues.addAll(saleAttrValues);
         return sku;
@@ -75,6 +78,10 @@ public class Sku {
 
     public int getSort() {
         return sort;
+    }
+
+    public Integer getPurchaseLimitPerUser() {
+        return purchaseLimitPerUser;
     }
 
     public List<SkuImage> getImages() {

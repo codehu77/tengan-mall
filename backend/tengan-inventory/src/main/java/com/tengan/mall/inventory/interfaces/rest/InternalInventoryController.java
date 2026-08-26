@@ -25,6 +25,7 @@ import com.tengan.mall.inventory.interfaces.rest.dto.ListSkuStockResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.ListTasksResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.ListWarehousesResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.LowStockCountResponse;
+import com.tengan.mall.inventory.interfaces.rest.dto.LockFailureResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.LockInventoryRequest;
 import com.tengan.mall.inventory.interfaces.rest.dto.LockInventoryResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.OrderSnRequest;
@@ -91,8 +92,11 @@ public class InternalInventoryController {
     @PreAuthorize("hasAuthority('SCOPE_inventory.write')")
     public LockInventoryResponse lock(@Valid @RequestBody LockInventoryRequest request) {
         var items = request.items().stream().map(i -> new LockInventoryItem(i.skuId(), i.count())).toList();
-        var result = lockInventoryUseCase.lock(new LockInventoryCommand(request.orderSn(), items));
-        return new LockInventoryResponse(result.success(), result.shortageSkuIds());
+        var result = lockInventoryUseCase.lock(new LockInventoryCommand(request.orderSn(), request.memberId(), items));
+        var failures = result.failures().stream()
+                .map(f -> new LockFailureResponse(f.skuId(), f.reason().name()))
+                .toList();
+        return new LockInventoryResponse(result.success(), failures);
     }
 
     @PostMapping("/release")

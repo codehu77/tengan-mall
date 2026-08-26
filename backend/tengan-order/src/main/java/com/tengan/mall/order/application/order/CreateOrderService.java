@@ -5,6 +5,7 @@ import com.tengan.mall.order.application.port.CartPort;
 import com.tengan.mall.order.application.port.CheckedCartItem;
 import com.tengan.mall.order.application.port.CouponPort;
 import com.tengan.mall.order.application.port.InventoryPort;
+import com.tengan.mall.order.application.port.LockFailureReason;
 import com.tengan.mall.order.application.port.LockItem;
 import com.tengan.mall.order.application.port.OrderEventPort;
 import com.tengan.mall.order.application.port.OrderTokenPort;
@@ -17,6 +18,8 @@ import com.tengan.mall.order.domain.exception.CouponNotApplicableException;
 import com.tengan.mall.order.domain.exception.EmptyCartException;
 import com.tengan.mall.order.domain.exception.InventoryShortageException;
 import com.tengan.mall.order.domain.exception.OrderTokenInvalidException;
+import com.tengan.mall.order.domain.exception.PurchaseLimitExceededException;
+import com.tengan.mall.order.domain.exception.SkuNotYetOnSaleException;
 import com.tengan.mall.order.domain.model.Order;
 import com.tengan.mall.order.domain.model.OrderItem;
 import com.tengan.mall.order.domain.repository.OrderRepository;
@@ -143,9 +146,21 @@ public class CreateOrderService implements CreateOrderUseCase {
             var lockItems = cartItems.stream().filter(item -> !activeSeckillBySkuId.containsKey(item.skuId()))
                     .map(item -> new LockItem(item.skuId(), item.count())).toList();
             if (!lockItems.isEmpty()) {
-                var lockResult = inventoryPort.lock(orderSn, lockItems);
+                var lockResult = inventoryPort.lock(orderSn, command.memberId(), lockItems);
                 if (!lockResult.success()) {
-                    throw new InventoryShortageException(lockResult.shortageSkuIds());
+                    // 依失敗原因分流，讓使用者看到「尚未開賣」/「超過限購」而不是一律顯示庫存不足
+                    // （inventory.lock 內部已自行補償這次呼叫中已鎖成功的其他 sku，這裡不需要額外補償）。
+                    var failuresByReason = lockResult.failures().stream()
+                            .collect(Collectors.groupingBy(f -> f.reason(),
+                                    Collectors.mapping(f -> f.skuId(), Collectors.toList())));
+                    if (failuresByReason.containsKey(LockFailureReason.NOT_YET_ON_SALE)) {
+                        throw new SkuNotYetOnSaleException(failuresByReason.get(LockFailureReason.NOT_YET_ON_SALE));
+                    }
+                    if (failuresByReason.containsKey(LockFailureReason.PURCHASE_LIMIT_EXCEEDED)) {
+                        throw new PurchaseLimitExceededException(
+                                failuresByReason.get(LockFailureReason.PURCHASE_LIMIT_EXCEEDED));
+                    }
+                    throw new InventoryShortageException(failuresByReason.get(LockFailureReason.OUT_OF_STOCK));
                 }
                 compensations.push(() -> inventoryPort.release(orderSn));
             }

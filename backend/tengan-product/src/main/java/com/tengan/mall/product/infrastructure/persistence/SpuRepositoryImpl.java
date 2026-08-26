@@ -244,7 +244,7 @@ public class SpuRepositoryImpl implements SpuRepository {
                 .map(v -> new SkuSaleAttrValue(v.getAttrId(), v.getAttrName(), v.getAttrValue()))
                 .toList();
         return Sku.reconstitute(po.getId(), po.getName(), po.getPrice(), po.getMainImage(), po.getSaleCount(),
-                po.getSort(), images, saleAttrValues);
+                po.getSort(), po.getPurchaseLimitPerUser(), images, saleAttrValues);
     }
 
     private SpuPO toSpuPO(Spu spu) {
@@ -256,6 +256,11 @@ public class SpuRepositoryImpl implements SpuRepository {
         po.setDescription(spu.getDescription());
         po.setMainImage(spu.getMainImage());
         po.setStatus(spu.getStatus());
+        po.setSaleStartTime(spu.getSaleStartTime());
+        po.setTrafficGateEnabled(spu.isTrafficGateEnabled());
+        po.setGateCloseTime(spu.getGateCloseTime());
+        po.setShowOnLaunchTeaser(spu.isShowOnLaunchTeaser());
+        po.setTeaserRemoveAt(spu.getTeaserRemoveAt());
         return po;
     }
 
@@ -268,11 +273,14 @@ public class SpuRepositoryImpl implements SpuRepository {
         po.setMainImage(sku.getMainImage());
         po.setSaleCount(sku.getSaleCount());
         po.setSort(sku.getSort());
+        po.setPurchaseLimitPerUser(sku.getPurchaseLimitPerUser());
         return po;
     }
 
     private Spu toDomain(SpuPO po, List<Sku> skus, List<SpuBaseAttrValue> attrValues, List<SpuImage> images) {
         return Spu.reconstitute(po.getId(), po.getCategoryId(), po.getBrandId(), po.getName(), po.getDescription(),
-                po.getMainImage(), po.getStatus(), skus, attrValues, images);
+                po.getMainImage(), po.getStatus(), po.getSaleStartTime(),
+                Boolean.TRUE.equals(po.getTrafficGateEnabled()), po.getGateCloseTime(),
+                Boolean.TRUE.equals(po.getShowOnLaunchTeaser()), po.getTeaserRemoveAt(), skus, attrValues, images);
     }
 }

@@ -26,7 +26,6 @@ const visibleProducts = computed(() =>
 
 function selectSession(activityId: number) {
   selectedActivityId.value = activityId
-  updateRemaining()
 }
 
 function sessionTabLabel(session: FlashSaleSession) {
@@ -35,20 +34,14 @@ function sessionTabLabel(session: FlashSaleSession) {
 }
 
 /** ACTIVE 倒數到結束時間；PUBLISHED（還沒開賣）倒數到開賣時間。 */
-const remaining = ref(0)
-
-function updateRemaining() {
+const countdownTarget = computed(() => {
   const session = currentSession.value
-  if (!session) return
-  const target = session.status === 'ACTIVE' ? session.endTime : session.startTime
-  remaining.value = Math.max(0, Math.floor((new Date(target).getTime() - Date.now()) / 1000))
-}
+  if (!session) return null
+  return session.status === 'ACTIVE' ? session.endTime : session.startTime
+})
+const { hh, mm, ss } = useCountdown(countdownTarget)
 
 const countdownLabel = computed(() => currentSession.value?.status === 'ACTIVE' ? '距結束' : '距開賣')
-
-const hh = computed(() => String(Math.floor(remaining.value / 3600)).padStart(2, '0'))
-const mm = computed(() => String(Math.floor((remaining.value % 3600) / 60)).padStart(2, '0'))
-const ss = computed(() => String(remaining.value % 60).padStart(2, '0'))
 
 /** 卡片代表價：同一活動同一商品理論上共用同一個秒殺價，取第一個還有貨的規格。 */
 function representativeSku(product: SeckillProduct) {
@@ -64,17 +57,6 @@ function discountLabel(sku: { seckillPrice: number; originalPrice: number }) {
 function totalRemaining(product: SeckillProduct) {
   return product.skus.reduce((sum, s) => sum + s.remaining, 0)
 }
-
-let timer: ReturnType<typeof setInterval> | null = null
-
-onMounted(() => {
-  updateRemaining()
-  timer = setInterval(updateRemaining, 1000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
 </script>
 
 <template>

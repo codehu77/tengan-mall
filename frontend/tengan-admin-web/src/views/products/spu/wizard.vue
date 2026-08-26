@@ -50,12 +50,22 @@ const form = reactive<{
   name: string;
   description: string;
   mainImage: string;
+  saleStartTime: string | null;
+  trafficGateEnabled: boolean;
+  gateCloseTime: string | null;
+  showOnLaunchTeaser: boolean;
+  teaserRemoveAt: string | null;
 }>({
   categoryId: null,
   brandId: null,
   name: "",
   description: "",
-  mainImage: ""
+  mainImage: "",
+  saleStartTime: null,
+  trafficGateEnabled: false,
+  gateCloseTime: null,
+  showOnLaunchTeaser: false,
+  teaserRemoveAt: null
 });
 
 type SkuDraft = {
@@ -64,6 +74,7 @@ type SkuDraft = {
   price: number | null;
   mainImage: string;
   sort: number;
+  purchaseLimitPerUser?: number | null;
   images: Array<{ imageUrl: string; sort: number }>;
   saleAttrValues: Array<{ attrId: number | null; attrValue: string }>;
 };
@@ -320,6 +331,31 @@ async function saveSpu(): Promise<boolean> {
     return false;
   }
 
+  if (form.trafficGateEnabled) {
+    if (!form.saleStartTime) {
+      message("開啟流量閘門前，請先設定開賣時間", { type: "error" });
+      currentStep.value = 0;
+      return false;
+    }
+    if (!form.gateCloseTime || form.gateCloseTime <= form.saleStartTime) {
+      message("閘門關閉時間必須晚於開賣時間", { type: "error" });
+      currentStep.value = 0;
+      return false;
+    }
+  }
+  if (form.showOnLaunchTeaser) {
+    if (!form.saleStartTime) {
+      message("顯示於首頁即將開賣區塊前，請先設定開賣時間", { type: "error" });
+      currentStep.value = 0;
+      return false;
+    }
+    if (!form.teaserRemoveAt || form.teaserRemoveAt <= form.saleStartTime) {
+      message("區塊下架時間必須晚於開賣時間", { type: "error" });
+      currentStep.value = 0;
+      return false;
+    }
+  }
+
   const attrValues = [
     ...Object.entries(baseAttrValueMap)
       .filter(([, v]) => !!v && v.trim() !== "")
@@ -332,6 +368,7 @@ async function saveSpu(): Promise<boolean> {
     price: s.price ?? 0,
     mainImage: s.mainImage || undefined,
     sort: s.sort,
+    purchaseLimitPerUser: s.purchaseLimitPerUser ?? undefined,
     images: s.images,
     saleAttrValues: s.saleAttrValues
       .filter(v => v.attrId != null)
@@ -344,6 +381,11 @@ async function saveSpu(): Promise<boolean> {
     name: form.name,
     description: form.description || undefined,
     mainImage: form.mainImage || undefined,
+    saleStartTime: form.saleStartTime || undefined,
+    trafficGateEnabled: form.trafficGateEnabled,
+    gateCloseTime: form.trafficGateEnabled ? (form.gateCloseTime || undefined) : undefined,
+    showOnLaunchTeaser: form.showOnLaunchTeaser,
+    teaserRemoveAt: form.showOnLaunchTeaser ? (form.teaserRemoveAt || undefined) : undefined,
     attrValues,
     images: spuImages.value,
     skus: skuPayloads
@@ -400,6 +442,11 @@ onMounted(async () => {
     form.name = detail.name;
     form.description = detail.description ?? "";
     form.mainImage = detail.mainImage ?? "";
+    form.saleStartTime = detail.saleStartTime ?? null;
+    form.trafficGateEnabled = detail.trafficGateEnabled ?? false;
+    form.gateCloseTime = detail.gateCloseTime ?? null;
+    form.showOnLaunchTeaser = detail.showOnLaunchTeaser ?? false;
+    form.teaserRemoveAt = detail.teaserRemoveAt ?? null;
     spuImages.value = detail.images.map(i => ({ ...i }));
     previousCategoryId = detail.categoryId;
     await loadCategoryTemplates(detail.categoryId);
@@ -418,6 +465,7 @@ onMounted(async () => {
       price: s.price,
       mainImage: s.mainImage ?? "",
       sort: s.sort,
+      purchaseLimitPerUser: s.purchaseLimitPerUser ?? null,
       images: s.images.map(i => ({ ...i })),
       saleAttrValues: s.saleAttrValues.map(v => ({ attrId: v.attrId, attrValue: v.attrValue }))
     }));
@@ -533,6 +581,49 @@ onMounted(async () => {
           </div>
         </div>
       </el-form-item>
+      <el-form-item label="開賣時間">
+        <el-date-picker
+          v-model="form.saleStartTime"
+          type="datetime"
+          placeholder="留空代表已可直接購買"
+          value-format="YYYY-MM-DDTHH:mm:ss"
+          style="width: 260px"
+        />
+      </el-form-item>
+      <el-form-item label="流量閘門">
+        <div class="w-full">
+          <el-switch v-model="form.trafficGateEnabled" />
+          <span class="ml-2 text-gray-400" style="font-size: 12px">
+            開賣瞬間高流量商品可開啟，開賣後經過「閘門關閉時間」才轉一般結帳流程
+          </span>
+          <div v-if="form.trafficGateEnabled" class="mt-2">
+            <el-date-picker
+              v-model="form.gateCloseTime"
+              type="datetime"
+              placeholder="閘門關閉時間（須晚於開賣時間）"
+              value-format="YYYY-MM-DDTHH:mm:ss"
+              style="width: 260px"
+            />
+          </div>
+        </div>
+      </el-form-item>
+      <el-form-item label="首頁預告">
+        <div class="w-full">
+          <el-switch v-model="form.showOnLaunchTeaser" />
+          <span class="ml-2 text-gray-400" style="font-size: 12px">
+            開啟後顯示於首頁「即將開賣」區塊
+          </span>
+          <div v-if="form.showOnLaunchTeaser" class="mt-2">
+            <el-date-picker
+              v-model="form.teaserRemoveAt"
+              type="datetime"
+              placeholder="區塊下架時間（須晚於開賣時間）"
+              value-format="YYYY-MM-DDTHH:mm:ss"
+              style="width: 260px"
+            />
+          </div>
+        </div>
+      </el-form-item>
       <el-form-item label="描述">
         <div style="width: 100%; border: 1px solid #dcdfe6">
           <Toolbar
@@ -623,6 +714,14 @@ onMounted(async () => {
           </el-form-item>
           <el-form-item label="排序">
             <el-input-number v-model="sku.sort" :min="0" style="width: 140px" />
+          </el-form-item>
+          <el-form-item label="限購數量">
+            <el-input-number
+              v-model="sku.purchaseLimitPerUser"
+              :min="1"
+              placeholder="不限購"
+              style="width: 140px"
+            />
           </el-form-item>
 
           <el-form-item label="圖片列表">

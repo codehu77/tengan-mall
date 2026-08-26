@@ -28,7 +28,7 @@
             <input
               type="checkbox"
               :checked="item.checked"
-              :disabled="stockShortage(item) === 'out'"
+              :disabled="isPurchaseBlocked(item)"
               @change="toggleItem(item)"
               class="w-4 h-4 accent-red-500 shrink-0 disabled:accent-gray-500 disabled:cursor-not-allowed"
             />
@@ -40,7 +40,13 @@
               {{ item.skuName }}
               <span v-if="!item.available" class="text-xs text-gray-400">（已下架）</span>
               <span v-else-if="item.seckillPrice == null && stockShortage(item)" class="text-xs text-red-500">
-                （{{ stockShortage(item) === 'out' ? '已無庫存' : `庫存不足，僅剩 ${skuStocks[item.skuId]} 件` }}）
+                （{{
+                  stockShortage(item) === 'out'
+                    ? '已無庫存'
+                    : stockShortage(item) === 'not-yet-on-sale'
+                      ? '尚未開賣'
+                      : `庫存不足，僅剩 ${skuStocks[item.skuId]?.availableStock} 件`
+                }}）
               </span>
             </NuxtLink>
             <div class="w-24 text-center text-sm">
@@ -56,13 +62,13 @@
               <div class="flex items-center border border-gray-200 rounded overflow-hidden">
                 <button
                   class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition text-sm disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-                  :disabled="stockShortage(item) === 'out'"
+                  :disabled="isPurchaseBlocked(item)"
                   @click="changeQty(item.itemId, -1)"
                 >－</button>
                 <span class="w-10 text-center text-sm">{{ item.count }}</span>
                 <button
                   class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition text-sm disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed"
-                  :disabled="stockShortage(item) === 'out'"
+                  :disabled="isPurchaseBlocked(item)"
                   @click="changeQty(item.itemId, 1)"
                 >＋</button>
               </div>
@@ -141,6 +147,7 @@
 
 <script setup lang="ts">
 import type { CartItem } from '~/types/cart'
+import type { SkuStockInfo } from '~/composables/useInventory'
 
 useHead({ title: '購物車' })
 
@@ -153,35 +160,43 @@ const items = ref<CartItem[]>(await fetchCartItems())
 
 // 一般倉庫存（秒殺商品的名額語意是 item.seckillRemaining，不查這裡，見 stockShortage）——
 // 購物車頁本來完全沒接庫存校驗，「已無庫存的商品」是使用者實測抓到的真實缺口，這裡補上。
-const skuStocks = ref<Record<number, number>>({})
+const skuStocks = ref<Record<number, SkuStockInfo>>({})
 async function refreshStocks() {
   const skuIds = items.value.filter(i => i.available && i.seckillPrice == null).map(i => i.skuId)
   skuStocks.value = skuIds.length > 0 ? await fetchSkuStocks(skuIds) : {}
 }
 await refreshStocks()
 
-/** null=正常、'low'=數量超過庫存、'out'=完全無庫存。已下架項目不在這裡判斷（另有自己的「已下架」標示）。 */
-function stockShortage(item: CartItem): 'low' | 'out' | null {
+/** null=正常、'low'=數量超過庫存、'out'=完全無庫存、'not-yet-on-sale'=還沒到開賣時間。
+ * 已下架項目不在這裡判斷（另有自己的「已下架」標示）。 */
+function stockShortage(item: CartItem): 'low' | 'out' | 'not-yet-on-sale' | null {
   if (!item.available) return null
   if (item.seckillPrice != null) {
     if (item.seckillRemaining == null) return null
     if (item.seckillRemaining <= 0) return 'out'
     return item.count > item.seckillRemaining ? 'low' : null
   }
-  const stock = skuStocks.value[item.skuId]
-  if (stock == null) return null
-  if (stock <= 0) return 'out'
-  return item.count > stock ? 'low' : null
+  const info = skuStocks.value[item.skuId]
+  if (info == null) return null
+  if (!info.purchasable) return 'not-yet-on-sale'
+  if (info.availableStock <= 0) return 'out'
+  return item.count > info.availableStock ? 'low' : null
+}
+
+/** 完全無庫存或還沒到開賣時間，兩者都是「不能勾選/不能調整數量/不能結算」的狀態。 */
+function isPurchaseBlocked(item: CartItem): boolean {
+  const shortage = stockShortage(item)
+  return shortage === 'out' || shortage === 'not-yet-on-sale'
 }
 
 /** 完全無庫存的商品不給勾選（只能看，不能買）——'low'（庫存不足但還有貨）維持可勾選，
  * 靠 hasCheckedStockIssue 擋去結算，讓使用者自己調整數量，兩種狀態的處理方式不一樣。 */
-const checkableItems = computed(() => items.value.filter(i => stockShortage(i) !== 'out'))
+const checkableItems = computed(() => items.value.filter(i => !isPurchaseBlocked(i)))
 
 /** 庫存查詢是進頁面後才做的，如果使用者之前就勾選了某項目、庫存卻在這之間變成 0，
  * 這裡要把它強制取消勾選，不然會出現「無庫存但已勾選」這種矛盾狀態。 */
 async function enforceStockCheckability(list: CartItem[]): Promise<CartItem[]> {
-  const toUncheck = list.filter(i => i.checked && stockShortage(i) === 'out')
+  const toUncheck = list.filter(i => i.checked && isPurchaseBlocked(i))
   if (toUncheck.length === 0) return list
   await Promise.all(toUncheck.map(i => toggleChecked(i.itemId, false)))
   return fetchCartItems()
@@ -208,14 +223,14 @@ async function toggleAll() {
 }
 
 async function toggleItem(item: CartItem) {
-  if (stockShortage(item) === 'out') return
+  if (isPurchaseBlocked(item)) return
   await toggleChecked(item.itemId, !item.checked)
   items.value = await fetchCartItems()
 }
 
 async function changeQty(id: number, delta: number) {
   const item = items.value.find(i => i.itemId === id)
-  if (!item || item.count + delta < 1 || stockShortage(item) === 'out') return
+  if (!item || item.count + delta < 1 || isPurchaseBlocked(item)) return
   await updateQty(id, item.count + delta)
   items.value = await fetchCartItems()
 }

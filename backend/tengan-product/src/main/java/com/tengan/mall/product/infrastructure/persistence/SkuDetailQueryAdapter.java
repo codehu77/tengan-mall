@@ -47,7 +47,8 @@ public class SkuDetailQueryAdapter implements SkuDetailPort {
                 .toList();
 
         return Optional.of(new SkuDetailView(po.getId(), po.getSpuId(), po.getName(), po.getPrice(),
-                po.getMainImage(), po.getSaleCount(), po.getSort(), images, saleAttrValues));
+                po.getMainImage(), po.getSaleCount(), po.getSort(), po.getPurchaseLimitPerUser(), images,
+                saleAttrValues));
     }
 
     @Override
@@ -75,7 +76,7 @@ public class SkuDetailQueryAdapter implements SkuDetailPort {
 
         return skuPOs.stream()
                 .map(po -> new SkuDetailView(po.getId(), po.getSpuId(), po.getName(), po.getPrice(),
-                        po.getMainImage(), po.getSaleCount(), po.getSort(),
+                        po.getMainImage(), po.getSaleCount(), po.getSort(), po.getPurchaseLimitPerUser(),
                         imagesBySkuId.getOrDefault(po.getId(), List.of()),
                         saleAttrValuesBySkuId.getOrDefault(po.getId(), List.of())))
                 .toList();

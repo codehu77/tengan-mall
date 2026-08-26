@@ -42,6 +42,7 @@ export type SkuDetailItem = {
   mainImage?: string;
   saleCount: number;
   sort: number;
+  purchaseLimitPerUser?: number;
   images: Array<SkuImageItem>;
   saleAttrValues: Array<SkuSaleAttrValueItem>;
 };
@@ -54,6 +55,11 @@ export type SpuDetailItem = {
   description?: string;
   mainImage?: string;
   status: number;
+  saleStartTime?: string;
+  trafficGateEnabled?: boolean;
+  gateCloseTime?: string;
+  showOnLaunchTeaser?: boolean;
+  teaserRemoveAt?: string;
   attrValues: Array<SpuBaseAttrValueItem>;
   images: Array<SpuImageItem>;
   skus: Array<SkuDetailItem>;
@@ -105,6 +111,7 @@ export type SkuFormData = {
   price: number;
   mainImage?: string;
   sort: number;
+  purchaseLimitPerUser?: number;
   images: Array<SkuImageFormData>;
   saleAttrValues: Array<SkuSaleAttrValueFormData>;
 };
@@ -115,6 +122,11 @@ export type SpuFormData = {
   name: string;
   description?: string;
   mainImage?: string;
+  saleStartTime?: string;
+  trafficGateEnabled?: boolean;
+  gateCloseTime?: string;
+  showOnLaunchTeaser?: boolean;
+  teaserRemoveAt?: string;
   attrValues: Array<SpuBaseAttrValueFormData>;
   images: Array<SpuImageFormData>;
   skus: Array<SkuFormData>;
