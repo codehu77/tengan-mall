@@ -70,6 +70,8 @@ const form = reactive<{
 
 type SkuDraft = {
   _key: string;
+  /** 編輯既有規格時的原始 skuId；新增的規格是 undefined，後端據此判斷更新既有 vs 新增。 */
+  id?: number;
   name: string;
   price: number | null;
   mainImage: string;
@@ -364,6 +366,7 @@ async function saveSpu(): Promise<boolean> {
   ];
 
   const skuPayloads: Array<SkuFormData> = skus.value.map(s => ({
+    id: s.id,
     name: s.name,
     price: s.price ?? 0,
     mainImage: s.mainImage || undefined,
@@ -461,6 +464,7 @@ onMounted(async () => {
 
     skus.value = detail.skus.map(s => ({
       _key: newKey(),
+      id: s.id,
       name: s.name,
       price: s.price,
       mainImage: s.mainImage ?? "",

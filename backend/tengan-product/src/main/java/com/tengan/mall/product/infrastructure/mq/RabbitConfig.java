@@ -33,6 +33,7 @@ public class RabbitConfig {
     /** tengan-inventory 消費，見 ProductLaunchConfigEventPublisherPort 的說明。 */
     public static final String PRODUCT_LAUNCH_CONFIG_EXCHANGE = "product-launch-config-exchange";
     public static final String ROUTING_KEY_LAUNCH_CONFIG_UPSERTED = "product.launch-config.upserted";
+    public static final String ROUTING_KEY_LAUNCH_CONFIG_REMOVED = "product.launch-config.removed";
 
     private static final String ORDER_EVENT_EXCHANGE = "order-event-exchange";
     private static final String ROUTING_KEY_ORDER_COMPLETED = "order.completed";

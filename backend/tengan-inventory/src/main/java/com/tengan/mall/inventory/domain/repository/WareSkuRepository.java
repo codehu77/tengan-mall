@@ -15,6 +15,9 @@ public interface WareSkuRepository {
     /** 彙總所有倉庫的可用庫存（stock-locked_stock），customer check 端點用，不鎖定。 */
     int sumAvailableStock(Long skuId);
 
+    /** 單一倉庫的可用庫存，流量閘門結算跨倉扣庫存時用來決定每個倉要扣多少。 */
+    int availableStock(Long wareId, Long skuId);
+
     /** 依 ware_id 排序的候選倉庫清單，lock/seckill-deduct 依序嘗試用（first-fit 簡化策略）。 */
     List<Long> findCandidateWareIds(Long skuId);
 

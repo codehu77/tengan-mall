@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record SkuRequest(@NotBlank String name, @NotNull @Positive BigDecimal price, String mainImage, int sort,
-        @Valid List<SkuImageRequest> images, @Valid List<SkuSaleAttrValueRequest> saleAttrValues,
+public record SkuRequest(Long id, @NotBlank String name, @NotNull @Positive BigDecimal price, String mainImage,
+        int sort, @Valid List<SkuImageRequest> images, @Valid List<SkuSaleAttrValueRequest> saleAttrValues,
         @Positive Integer purchaseLimitPerUser) {
 }

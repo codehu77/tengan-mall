@@ -32,4 +32,16 @@ public class MemberSkuPurchaseCountRepositoryImpl implements MemberSkuPurchaseCo
     public void decrement(Long memberId, Long skuId, int count) {
         mapper.decrement(memberId, skuId, count);
     }
+
+    @Override
+    public void addWithoutLimitCheck(Long memberId, Long skuId, int count) {
+        if (mapper.add(memberId, skuId, count) > 0) {
+            return;
+        }
+        // 沒有列可以加：INSERT IGNORE 補上，併發撞到既有列的話再用 add 補一次。
+        if (mapper.insertIgnore(memberId, skuId, count) > 0) {
+            return;
+        }
+        mapper.add(memberId, skuId, count);
+    }
 }

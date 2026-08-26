@@ -30,14 +30,15 @@ public class WareOrderTaskRepositoryImpl implements WareOrderTaskRepository {
         List<WareOrderTaskDetail> details = wareOrderTaskDetailMapper.findByTaskId(taskPO.getId()).stream()
                 .map(d -> new WareOrderTaskDetail(d.getId(), d.getWareId(), d.getSkuId(), d.getSkuCount()))
                 .toList();
-        return Optional.of(WareOrderTask.reconstitute(taskPO.getId(), taskPO.getOrderSn(), taskPO.getStatus(),
-                details));
+        return Optional.of(WareOrderTask.reconstitute(taskPO.getId(), taskPO.getOrderSn(), taskPO.getMemberId(),
+                taskPO.getStatus(), details));
     }
 
     @Override
     public WareOrderTask save(WareOrderTask task) {
         WareOrderTaskPO taskPO = new WareOrderTaskPO();
         taskPO.setOrderSn(task.getOrderSn());
+        taskPO.setMemberId(task.getMemberId());
         taskPO.setStatus(task.getStatus());
         wareOrderTaskMapper.insert(taskPO);
         task.assignId(taskPO.getId());

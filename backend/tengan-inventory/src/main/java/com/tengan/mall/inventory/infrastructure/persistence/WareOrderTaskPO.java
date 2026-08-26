@@ -12,6 +12,7 @@ public class WareOrderTaskPO {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String orderSn;
+    private Long memberId;
     private WareTaskStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -30,6 +31,14 @@ public class WareOrderTaskPO {
 
     public void setOrderSn(String orderSn) {
         this.orderSn = orderSn;
+    }
+
+    public Long getMemberId() {
+        return memberId;
+    }
+
+    public void setMemberId(Long memberId) {
+        this.memberId = memberId;
     }
 
     public WareTaskStatus getStatus() {

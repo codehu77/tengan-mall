@@ -22,4 +22,11 @@ public interface SeckillSkuRepository {
 
     /** 條件式 UPDATE（WHERE id=? AND settled_at IS NULL），回傳是否真的寫入，做結算冪等判斷。 */
     boolean settle(Long id, int soldCount, Instant settledAt);
+
+    /** 訂閱 tengan-product 的 product.removed 事件用：找出這些 skuId（不限活動）目前掛在哪些活動底下，
+     * 供呼叫端判斷是否要清 Redis 配額。 */
+    List<SeckillSku> findBySkuIds(List<Long> skuIds);
+
+    /** 商品規格真的被刪除時，跨活動刪掉這些 skuId 對應的列。 */
+    void deleteBySkuIds(List<Long> skuIds);
 }

@@ -18,6 +18,9 @@ public interface WareSkuMapper extends BaseMapper<WareSkuPO> {
     @Select("SELECT COALESCE(SUM(stock - locked_stock), 0) FROM ware_sku WHERE sku_id = #{skuId}")
     int sumAvailableStock(@Param("skuId") Long skuId);
 
+    @Select("SELECT COALESCE(stock - locked_stock, 0) FROM ware_sku WHERE ware_id = #{wareId} AND sku_id = #{skuId}")
+    int availableStock(@Param("wareId") Long wareId, @Param("skuId") Long skuId);
+
     @Select("SELECT ware_id FROM ware_sku WHERE sku_id = #{skuId} ORDER BY ware_id")
     List<Long> findCandidateWareIds(@Param("skuId") Long skuId);
 

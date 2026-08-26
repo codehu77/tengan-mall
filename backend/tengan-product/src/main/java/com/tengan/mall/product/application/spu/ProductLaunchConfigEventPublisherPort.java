@@ -11,4 +11,12 @@ import java.util.List;
 public interface ProductLaunchConfigEventPublisherPort {
 
     void publishUpserted(Long spuId, List<SkuLaunchConfigPayload> skus);
+
+    /**
+     * UpdateSpuService 整批替換 SKU 語意下，舊 skuId 會被刪除換上全新 id 的新列（見該類別說明）——
+     * 舊 skuId 對應的 sku_launch_config 副本列也要跟著清掉，不然 tengan-inventory 那邊會一直
+     * 累積永遠查不到對應商品的孤兒列，每次編輯商品都多留一批（跟 ProductSearchEventPublisherPort
+     * 同樣的坑，這裡要比照處理）。
+     */
+    void publishRemoved(Long spuId, List<Long> skuIds);
 }

@@ -2,14 +2,16 @@ package com.tengan.mall.inventory.interfaces.mq;
 
 import com.tengan.mall.inventory.domain.repository.SkuLaunchConfigRepository;
 import com.tengan.mall.inventory.infrastructure.mq.ProductLaunchConfigChangedEvent;
+import com.tengan.mall.inventory.infrastructure.mq.ProductLaunchConfigRemovedEvent;
 import com.tengan.mall.inventory.infrastructure.mq.RabbitConfig;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 /**
- * 訂閱 tengan-product 發布的 product.launch-config.upserted 事件，把整批 sku 設定 upsert 進本地的
- * sku_launch_config 副本。skuId 是全域唯一 PK，天生冪等，不用處理「sku 被移除」的情況——舊設定留著
- * 也無妨，反正對應的商品詳情頁已經 404，不會被查到。
+ * 訂閱 tengan-product 發布的 product.launch-config.upserted/removed 事件，維護本地的
+ * sku_launch_config 副本。UpdateSpuService 整批替換 SKU 語意下，舊 skuId 會被刪除換上全新 id
+ * 的新列，所以「upserted 帶目前完整清單」跟「removed 帶被替換掉的舊 skuId」這兩個事件都要處理，
+ * 不然舊 skuId 的副本列會一直留著查不到對應商品，永久累積孤兒列（每編輯一次商品就多留一批）。
  */
 @Component
 public class ProductLaunchConfigChangedListener {
@@ -23,7 +25,15 @@ public class ProductLaunchConfigChangedListener {
     @RabbitListener(queues = RabbitConfig.PRODUCT_LAUNCH_CONFIG_QUEUE)
     public void onLaunchConfigChanged(ProductLaunchConfigChangedEvent event) {
         for (var sku : event.skus()) {
-            skuLaunchConfigRepository.upsert(sku.skuId(), sku.saleStartTime(), sku.purchaseLimitPerUser());
+            skuLaunchConfigRepository.upsert(sku.skuId(), sku.saleStartTime(), sku.trafficGateEnabled(),
+                    sku.gateCloseTime(), sku.purchaseLimitPerUser());
+        }
+    }
+
+    @RabbitListener(queues = RabbitConfig.PRODUCT_LAUNCH_CONFIG_REMOVED_QUEUE)
+    public void onLaunchConfigRemoved(ProductLaunchConfigRemovedEvent event) {
+        if (!event.skuIds().isEmpty()) {
+            skuLaunchConfigRepository.deleteBySkuIds(event.skuIds());
         }
     }
 }

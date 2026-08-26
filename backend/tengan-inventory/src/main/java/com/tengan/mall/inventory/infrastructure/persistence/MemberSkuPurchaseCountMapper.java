@@ -25,4 +25,9 @@ public interface MemberSkuPurchaseCountMapper extends BaseMapper<MemberSkuPurcha
     @Update("UPDATE member_sku_purchase_count SET purchased_count = purchased_count - #{count} "
             + "WHERE member_id = #{memberId} AND sku_id = #{skuId} AND purchased_count >= #{count}")
     int decrement(@Param("memberId") Long memberId, @Param("skuId") Long skuId, @Param("count") int count);
+
+    /** 結算排程用：Redis 閘門期間已核准的購買數無條件併回 MySQL，不重新檢查上限。 */
+    @Update("UPDATE member_sku_purchase_count SET purchased_count = purchased_count + #{count} "
+            + "WHERE member_id = #{memberId} AND sku_id = #{skuId}")
+    int add(@Param("memberId") Long memberId, @Param("skuId") Long skuId, @Param("count") int count);
 }

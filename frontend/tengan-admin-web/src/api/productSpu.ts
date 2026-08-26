@@ -107,6 +107,8 @@ export type SkuSaleAttrValueFormData = {
 };
 
 export type SkuFormData = {
+  /** 編輯既有規格時要帶入原本的 id，後端才能保留 id/銷量做真正的更新，而不是刪除重建成新規格。 */
+  id?: number;
   name: string;
   price: number;
   mainImage?: string;

@@ -145,8 +145,9 @@ public class ProductSpuController {
             return List.of();
         }
         return requests.stream()
-                .map(r -> new SkuPayload(r.name(), r.price(), r.mainImage(), r.sort(), toImagePayloads(r.images()),
-                        toSaleAttrValuePayloads(r.saleAttrValues()), r.purchaseLimitPerUser()))
+                .map(r -> new SkuPayload(r.id(), r.name(), r.price(), r.mainImage(), r.sort(),
+                        toImagePayloads(r.images()), toSaleAttrValuePayloads(r.saleAttrValues()),
+                        r.purchaseLimitPerUser()))
                 .toList();
     }
 

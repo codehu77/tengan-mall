@@ -8,6 +8,7 @@ import com.tengan.mall.product.domain.model.SpuImage;
 import com.tengan.mall.product.domain.repository.BrandRepository;
 import com.tengan.mall.product.domain.repository.CategoryRepository;
 import com.tengan.mall.product.domain.repository.SpuRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,7 +49,7 @@ public class CreateSpuService implements CreateSpuUseCase {
                 command.showOnLaunchTeaser(), command.teaserRemoveAt());
         spu.replaceAttrValues(assembler.resolveSpuBaseAttrValues(command.categoryId(), command.attrValues()));
         spu.replaceImages(command.images().stream().map(i -> new SpuImage(i.imageUrl(), i.sort())).toList());
-        spu.replaceSkus(assembler.buildSkus(command.categoryId(), command.skus()));
+        spu.replaceSkus(assembler.buildSkus(command.categoryId(), command.skus(), List.of(), null));
 
         Spu saved = spuRepository.save(spu);
         publishLaunchConfig(saved);
@@ -58,7 +59,7 @@ public class CreateSpuService implements CreateSpuUseCase {
     private void publishLaunchConfig(Spu spu) {
         var payloads = spu.getSkus().stream()
                 .map(sku -> new SkuLaunchConfigPayload(sku.getId(), spu.getSaleStartTime(),
-                        sku.getPurchaseLimitPerUser()))
+                        spu.isTrafficGateEnabled(), spu.getGateCloseTime(), sku.getPurchaseLimitPerUser()))
                 .toList();
         launchConfigEventPublisher.publishUpserted(spu.getId(), payloads);
     }

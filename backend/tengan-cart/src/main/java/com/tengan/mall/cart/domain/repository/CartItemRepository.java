@@ -27,4 +27,8 @@ public interface CartItemRepository {
 
     /** 給 tengan-order 下單成功後用（internal 端點），依 skuId 清單移除已下單項目。 */
     void deleteByUserIdAndSkuIdIn(Long userId, List<Long> skuIds);
+
+    /** 訂閱 product.removed 事件用：skuId 真的被商品刪除時，跨「所有會員」清掉對應的購物車列——
+     * 跟上面 deleteByUserIdAndSkuIdIn 不同，這裡不限定單一會員。 */
+    void deleteBySkuIds(List<Long> skuIds);
 }

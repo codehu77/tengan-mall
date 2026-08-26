@@ -97,6 +97,16 @@ public class CartItemRepositoryImpl implements CartItemRepository {
         cartItemMapper.delete(wrapper);
     }
 
+    @Override
+    public void deleteBySkuIds(List<Long> skuIds) {
+        if (skuIds.isEmpty()) {
+            return;
+        }
+        LambdaQueryWrapper<CartItemPO> wrapper = new LambdaQueryWrapper<CartItemPO>()
+                .in(CartItemPO::getSkuId, skuIds);
+        cartItemMapper.delete(wrapper);
+    }
+
     private CartItemPO toPO(CartItem item) {
         CartItemPO po = new CartItemPO();
         po.setId(item.getId());

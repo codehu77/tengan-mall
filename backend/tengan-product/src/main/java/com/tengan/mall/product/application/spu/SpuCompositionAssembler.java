@@ -4,6 +4,7 @@ import com.tengan.mall.product.domain.exception.BaseAttrCategoryMismatchExceptio
 import com.tengan.mall.product.domain.exception.BaseAttrNotFoundException;
 import com.tengan.mall.product.domain.exception.SaleAttrCategoryMismatchException;
 import com.tengan.mall.product.domain.exception.SaleAttrNotFoundException;
+import com.tengan.mall.product.domain.exception.SkuIdMismatchException;
 import com.tengan.mall.product.domain.model.Sku;
 import com.tengan.mall.product.domain.model.SkuImage;
 import com.tengan.mall.product.domain.model.SkuSaleAttrValue;
@@ -11,6 +12,9 @@ import com.tengan.mall.product.domain.model.SpuBaseAttrValue;
 import com.tengan.mall.product.domain.repository.BaseAttrRepository;
 import com.tengan.mall.product.domain.repository.SaleAttrRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
@@ -45,11 +49,18 @@ class SpuCompositionAssembler {
         }).toList();
     }
 
-    List<Sku> buildSkus(Long categoryId, List<SkuCommand> commands) {
-        return commands.stream().map(c -> buildSku(categoryId, c)).toList();
+    /**
+     * existingSkus 是這個 Spu「這次更新前」的既有 SKU 清單（Create 情境傳空清單即可，新商品沒有既有
+     * SKU）。command.id() 非 null 代表編輯既有規格：從 existingSkus 找回原本的 id/saleCount，不能
+     * 只信任 client 傳來的 id——找不到就代表這個 id 不屬於這個 Spu（可能是別的 SPU 底下的 skuId
+     * 誤填/竄改進來），直接拒絕，不能讓 updateById 誤改到別的商品的 SKU 列。
+     */
+    List<Sku> buildSkus(Long categoryId, List<SkuCommand> commands, List<Sku> existingSkus, Long spuId) {
+        Map<Long, Sku> existingById = existingSkus.stream().collect(Collectors.toMap(Sku::getId, Function.identity()));
+        return commands.stream().map(c -> buildSku(categoryId, c, existingById, spuId)).toList();
     }
 
-    private Sku buildSku(Long categoryId, SkuCommand command) {
+    private Sku buildSku(Long categoryId, SkuCommand command, Map<Long, Sku> existingById, Long spuId) {
         List<SkuImage> images = command.images().stream()
                 .map(i -> new SkuImage(i.imageUrl(), i.sort()))
                 .toList();
@@ -61,7 +72,16 @@ class SpuCompositionAssembler {
             }
             return new SkuSaleAttrValue(attr.getId(), attr.getName(), c.attrValue());
         }).toList();
-        return Sku.create(command.name(), command.price(), command.mainImage(), command.sort(), images,
-                saleAttrValues, command.purchaseLimitPerUser());
+
+        if (command.id() == null) {
+            return Sku.create(command.name(), command.price(), command.mainImage(), command.sort(), images,
+                    saleAttrValues, command.purchaseLimitPerUser());
+        }
+        Sku existing = existingById.get(command.id());
+        if (existing == null) {
+            throw new SkuIdMismatchException(command.id(), spuId);
+        }
+        return Sku.reconstitute(existing.getId(), command.name(), command.price(), command.mainImage(),
+                existing.getSaleCount(), command.sort(), command.purchaseLimitPerUser(), images, saleAttrValues);
     }
 }

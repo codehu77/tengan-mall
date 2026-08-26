@@ -10,7 +10,12 @@ public class SkuLaunchConfigPO {
     @TableId
     private Long skuId;
     private LocalDateTime saleStartTime;
+    private boolean trafficGateEnabled;
+    private LocalDateTime gateCloseTime;
     private Integer purchaseLimitPerUser;
+    private Integer gateProtectedStock;
+    private LocalDateTime gateWarmedAt;
+    private LocalDateTime gateSettledAt;
     private LocalDateTime updatedAt;
 
     public Long getSkuId() {
@@ -29,12 +34,52 @@ public class SkuLaunchConfigPO {
         this.saleStartTime = saleStartTime;
     }
 
+    public boolean isTrafficGateEnabled() {
+        return trafficGateEnabled;
+    }
+
+    public void setTrafficGateEnabled(boolean trafficGateEnabled) {
+        this.trafficGateEnabled = trafficGateEnabled;
+    }
+
+    public LocalDateTime getGateCloseTime() {
+        return gateCloseTime;
+    }
+
+    public void setGateCloseTime(LocalDateTime gateCloseTime) {
+        this.gateCloseTime = gateCloseTime;
+    }
+
     public Integer getPurchaseLimitPerUser() {
         return purchaseLimitPerUser;
     }
 
     public void setPurchaseLimitPerUser(Integer purchaseLimitPerUser) {
         this.purchaseLimitPerUser = purchaseLimitPerUser;
+    }
+
+    public Integer getGateProtectedStock() {
+        return gateProtectedStock;
+    }
+
+    public void setGateProtectedStock(Integer gateProtectedStock) {
+        this.gateProtectedStock = gateProtectedStock;
+    }
+
+    public LocalDateTime getGateWarmedAt() {
+        return gateWarmedAt;
+    }
+
+    public void setGateWarmedAt(LocalDateTime gateWarmedAt) {
+        this.gateWarmedAt = gateWarmedAt;
+    }
+
+    public LocalDateTime getGateSettledAt() {
+        return gateSettledAt;
+    }
+
+    public void setGateSettledAt(LocalDateTime gateSettledAt) {
+        this.gateSettledAt = gateSettledAt;
     }
 
     public LocalDateTime getUpdatedAt() {

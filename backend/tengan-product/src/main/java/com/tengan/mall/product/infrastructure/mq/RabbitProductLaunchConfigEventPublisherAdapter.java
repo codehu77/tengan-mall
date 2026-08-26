@@ -23,4 +23,13 @@ public class RabbitProductLaunchConfigEventPublisherAdapter implements ProductLa
         rabbitTemplate.convertAndSend(RabbitConfig.PRODUCT_LAUNCH_CONFIG_EXCHANGE,
                 RabbitConfig.ROUTING_KEY_LAUNCH_CONFIG_UPSERTED, new ProductLaunchConfigUpsertedEvent(spuId, skus));
     }
+
+    @Override
+    public void publishRemoved(Long spuId, List<Long> skuIds) {
+        if (skuIds.isEmpty()) {
+            return;
+        }
+        rabbitTemplate.convertAndSend(RabbitConfig.PRODUCT_LAUNCH_CONFIG_EXCHANGE,
+                RabbitConfig.ROUTING_KEY_LAUNCH_CONFIG_REMOVED, new ProductLaunchConfigRemovedEvent(spuId, skuIds));
+    }
 }

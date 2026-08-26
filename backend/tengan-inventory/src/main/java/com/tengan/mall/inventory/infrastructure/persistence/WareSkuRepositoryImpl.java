@@ -19,6 +19,11 @@ public class WareSkuRepositoryImpl implements WareSkuRepository {
     }
 
     @Override
+    public int availableStock(Long wareId, Long skuId) {
+        return wareSkuMapper.availableStock(wareId, skuId);
+    }
+
+    @Override
     public List<Long> findCandidateWareIds(Long skuId) {
         return wareSkuMapper.findCandidateWareIds(skuId);
     }

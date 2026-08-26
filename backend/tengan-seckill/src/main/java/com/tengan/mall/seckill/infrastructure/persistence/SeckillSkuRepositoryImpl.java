@@ -85,6 +85,23 @@ public class SeckillSkuRepositoryImpl implements SeckillSkuRepository {
         return mapper.settle(id, soldCount, toLocalDateTime(settledAt)) > 0;
     }
 
+    @Override
+    public List<SeckillSku> findBySkuIds(List<Long> skuIds) {
+        if (skuIds.isEmpty()) {
+            return List.of();
+        }
+        return mapper.selectList(new LambdaQueryWrapper<SeckillSkuPO>().in(SeckillSkuPO::getSkuId, skuIds))
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public void deleteBySkuIds(List<Long> skuIds) {
+        if (skuIds.isEmpty()) {
+            return;
+        }
+        mapper.delete(new LambdaQueryWrapper<SeckillSkuPO>().in(SeckillSkuPO::getSkuId, skuIds));
+    }
+
     private SeckillSku toDomain(SeckillSkuPO po) {
         return SeckillSku.reconstitute(po.getId(), po.getActivityId(), po.getSkuId(), po.getSeckillPrice(),
                 po.getSeckillCount(), po.getLimitPerUser(), po.getSoldCount(), toInstant(po.getSettledAt()),

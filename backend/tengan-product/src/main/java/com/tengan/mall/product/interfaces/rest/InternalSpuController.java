@@ -181,8 +181,9 @@ public class InternalSpuController {
             return List.of();
         }
         return requests.stream()
-                .map(r -> new SkuCommand(r.name(), r.price(), r.mainImage(), r.sort(), toImageCommands(r.images()),
-                        toSaleAttrValueCommands(r.saleAttrValues()), r.purchaseLimitPerUser()))
+                .map(r -> new SkuCommand(r.id(), r.name(), r.price(), r.mainImage(), r.sort(),
+                        toImageCommands(r.images()), toSaleAttrValueCommands(r.saleAttrValues()),
+                        r.purchaseLimitPerUser()))
                 .toList();
     }
 

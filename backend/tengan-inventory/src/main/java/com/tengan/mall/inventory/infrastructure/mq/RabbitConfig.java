@@ -26,8 +26,10 @@ public class RabbitConfig {
 
     private static final String PRODUCT_LAUNCH_CONFIG_EXCHANGE = "product-launch-config-exchange";
     private static final String ROUTING_KEY_LAUNCH_CONFIG_UPSERTED = "product.launch-config.upserted";
+    private static final String ROUTING_KEY_LAUNCH_CONFIG_REMOVED = "product.launch-config.removed";
 
     public static final String PRODUCT_LAUNCH_CONFIG_QUEUE = "inventory.product.launch-config.upserted.queue";
+    public static final String PRODUCT_LAUNCH_CONFIG_REMOVED_QUEUE = "inventory.product.launch-config.removed.queue";
 
     @Bean
     public TopicExchange orderEventExchange() {
@@ -59,6 +61,18 @@ public class RabbitConfig {
             TopicExchange productLaunchConfigExchange) {
         return BindingBuilder.bind(productLaunchConfigQueue).to(productLaunchConfigExchange)
                 .with(ROUTING_KEY_LAUNCH_CONFIG_UPSERTED);
+    }
+
+    @Bean
+    public Queue productLaunchConfigRemovedQueue() {
+        return new Queue(PRODUCT_LAUNCH_CONFIG_REMOVED_QUEUE, true);
+    }
+
+    @Bean
+    public Binding productLaunchConfigRemovedBinding(Queue productLaunchConfigRemovedQueue,
+            TopicExchange productLaunchConfigExchange) {
+        return BindingBuilder.bind(productLaunchConfigRemovedQueue).to(productLaunchConfigExchange)
+                .with(ROUTING_KEY_LAUNCH_CONFIG_REMOVED);
     }
 
     @Bean

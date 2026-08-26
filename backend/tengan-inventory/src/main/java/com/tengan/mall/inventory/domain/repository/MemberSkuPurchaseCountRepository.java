@@ -11,4 +11,7 @@ public interface MemberSkuPurchaseCountRepository {
 
     /** lock() 同一次呼叫中其他 item 失敗時的補償：把剛才遞增的量扣回去。 */
     void decrement(Long memberId, Long skuId, int count);
+
+    /** 流量閘門結算用：Redis 期間已核准的購買數無條件併回，不重新檢查上限(限購已經在 Redis 端即時檢查過了)。 */
+    void addWithoutLimitCheck(Long memberId, Long skuId, int count);
 }

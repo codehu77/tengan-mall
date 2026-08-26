@@ -24,6 +24,7 @@ import EpClock from "~icons/ep/clock?raw";
 import EpCreditCard from "~icons/ep/credit-card?raw";
 import EpRefresh from "~icons/ep/refresh?raw";
 import EpPicture from "~icons/ep/picture?raw";
+import EpLightning from "~icons/ep/lightning?raw";
 
 // https://icon-sets.iconify.design/ri/?keyword=ri
 import RiSearchLine from "~icons/ri/search-line?raw";
@@ -55,6 +56,7 @@ const icons = [
   ["CreditCard", EpCreditCard],
   ["Refresh", EpRefresh],
   ["Picture", EpPicture],
+  ["Lightning", EpLightning],
   // Remix Icon: https://github.com/Remix-Design/RemixIcon
   ["ri/search-line", RiSearchLine],
   ["ri/information-line", RiInformationLine]
