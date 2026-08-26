@@ -56,8 +56,6 @@ export type SpuDetailItem = {
   mainImage?: string;
   status: number;
   saleStartTime?: string;
-  trafficGateEnabled?: boolean;
-  gateCloseTime?: string;
   showOnLaunchTeaser?: boolean;
   teaserRemoveAt?: string;
   attrValues: Array<SpuBaseAttrValueItem>;
@@ -125,8 +123,6 @@ export type SpuFormData = {
   description?: string;
   mainImage?: string;
   saleStartTime?: string;
-  trafficGateEnabled?: boolean;
-  gateCloseTime?: string;
   showOnLaunchTeaser?: boolean;
   teaserRemoveAt?: string;
   attrValues: Array<SpuBaseAttrValueFormData>;

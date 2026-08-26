@@ -69,8 +69,7 @@ public class UpdateSpuService implements UpdateSpuUseCase {
 
         spu.updateBasicInfo(command.categoryId(), command.brandId(), command.name(), command.description(),
                 command.mainImage());
-        spu.scheduleLaunch(command.saleStartTime(), command.trafficGateEnabled(), command.gateCloseTime(),
-                command.showOnLaunchTeaser(), command.teaserRemoveAt());
+        spu.scheduleLaunch(command.saleStartTime(), command.showOnLaunchTeaser(), command.teaserRemoveAt());
         spu.replaceAttrValues(assembler.resolveSpuBaseAttrValues(command.categoryId(), command.attrValues()));
         spu.replaceImages(command.images().stream().map(i -> new SpuImage(i.imageUrl(), i.sort())).toList());
         spu.replaceSkus(assembler.buildSkus(command.categoryId(), command.skus(), existingSkus, spu.getId()));
@@ -97,7 +96,7 @@ public class UpdateSpuService implements UpdateSpuUseCase {
         }
         var launchConfigPayloads = spu.getSkus().stream()
                 .map(sku -> new SkuLaunchConfigPayload(sku.getId(), spu.getSaleStartTime(),
-                        spu.isTrafficGateEnabled(), spu.getGateCloseTime(), sku.getPurchaseLimitPerUser()))
+                        sku.getPurchaseLimitPerUser()))
                 .toList();
         launchConfigEventPublisher.publishUpserted(spu.getId(), launchConfigPayloads);
     }

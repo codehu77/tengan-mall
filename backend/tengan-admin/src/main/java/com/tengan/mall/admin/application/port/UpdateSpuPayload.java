@@ -5,7 +5,6 @@ import java.util.List;
 
 /** 整批替換語意：skus/attrValues 帶的是更新後的完整集合，不是差異片段。 */
 public record UpdateSpuPayload(Long categoryId, Long brandId, String name, String description, String mainImage,
-        LocalDateTime saleStartTime, boolean trafficGateEnabled, LocalDateTime gateCloseTime,
-        boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt, List<SpuBaseAttrValuePayload> attrValues,
-        List<SpuImagePayload> images, List<SkuPayload> skus) {
+        LocalDateTime saleStartTime, boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt,
+        List<SpuBaseAttrValuePayload> attrValues, List<SpuImagePayload> images, List<SkuPayload> skus) {
 }

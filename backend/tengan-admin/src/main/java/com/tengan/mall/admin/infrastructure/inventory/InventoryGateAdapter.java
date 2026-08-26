@@ -1,7 +1,10 @@
 package com.tengan.mall.admin.infrastructure.inventory;
 
+import com.tengan.mall.admin.application.port.ConfigureGatePayload;
+import com.tengan.mall.admin.application.port.GateConfigItem;
 import com.tengan.mall.admin.application.port.GateStatusItem;
 import com.tengan.mall.admin.application.port.InventoryGatePort;
+import com.tengan.mall.admin.infrastructure.inventory.dto.GateConfigEnvelope;
 import com.tengan.mall.admin.infrastructure.inventory.dto.GateStatusListEnvelope;
 import com.tengan.mall.admin.infrastructure.inventory.dto.WarmUpGatesNowEnvelope;
 import java.util.List;
@@ -47,5 +50,31 @@ public class InventoryGateAdapter implements InventoryGatePort {
                 .retrieve()
                 .body(WarmUpGatesNowEnvelope.class);
         return envelope == null ? 0 : envelope.count();
+    }
+
+    @Override
+    public GateConfigItem getGate(Long skuId) {
+        GateConfigEnvelope envelope = inventoryRestClient.get()
+                .uri(BASE_PATH + "/{skuId}", skuId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .body(GateConfigEnvelope.class);
+        if (envelope == null) {
+            return new GateConfigItem(skuId, false, false, null, null, null, null);
+        }
+        return new GateConfigItem(envelope.skuId(), envelope.synced(), envelope.trafficGateEnabled(),
+                envelope.saleStartTime(), envelope.gateCloseTime(), envelope.gateWarmedAt(),
+                envelope.gateSettledAt());
+    }
+
+    @Override
+    public void configureGate(Long skuId, ConfigureGatePayload payload, String operatorToken) {
+        inventoryRestClient.put()
+                .uri(BASE_PATH + "/{skuId}", skuId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .header("X-Identity-Assertion", "Bearer " + operatorToken)
+                .body(payload)
+                .retrieve()
+                .toBodilessEntity();
     }
 }

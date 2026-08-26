@@ -11,11 +11,13 @@ public interface SkuLaunchConfigRepository {
 
     /**
      * 訂閱 tengan-product 的 product.launch-config.upserted 事件用，skuId 是全域唯一 PK，直接覆蓋
-     * 既有值——只覆蓋這幾個從 product 同步的欄位，絕對不動 gate_protected_stock/gate_warmed_at/
-     * gate_settled_at 這三欄 inventory 自己的閘門生命週期狀態。
+     * 既有值——只覆蓋這幾個從 product 同步的欄位，絕對不動 traffic_gate_enabled/gate_close_time 跟
+     * gate_protected_stock/gate_warmed_at/gate_settled_at，這些改由 {@link #configureGate} 管理。
      */
-    void upsert(Long skuId, LocalDateTime saleStartTime, boolean trafficGateEnabled, LocalDateTime gateCloseTime,
-            Integer purchaseLimitPerUser);
+    void upsert(Long skuId, LocalDateTime saleStartTime, Integer purchaseLimitPerUser);
+
+    /** 管理員在庫存頁面直接設定庫存流量閘門用，見 SkuLaunchConfigMapper#configureGate 的重置邏輯說明。 */
+    void configureGate(Long skuId, boolean trafficGateEnabled, LocalDateTime gateCloseTime);
 
     /** warm-up 排程用：找開了閘門、還沒預熱、開賣時間落在 [now, horizon] 內的候選。 */
     List<SkuLaunchConfig> findReadyToWarmUp(LocalDateTime now, LocalDateTime horizon);

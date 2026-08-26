@@ -1,6 +1,5 @@
 package com.tengan.mall.product.domain.model;
 
-import com.tengan.mall.product.domain.exception.InvalidGateCloseTimeException;
 import com.tengan.mall.product.domain.exception.InvalidTeaserRemoveTimeException;
 import com.tengan.mall.product.domain.exception.SpuHasNoSkuException;
 import com.tengan.mall.product.domain.exception.SpuIsDuplicateException;
@@ -15,6 +14,12 @@ import java.util.List;
  * Sku」這個不變條件，需要交易一致性保護（同一個 transaction 存檔，不會出現檢查完、存檔前 Sku 被刪光
  * 的時間窗口），這是判斷該合併成一個聚合根的訊號。前台高頻讀取（GET /skus/{skuId}）不經過這個聚合根，
  * 走獨立的 SkuDetailPort 直接查，所以合併付出的代價只在低頻的後台寫入路徑。
+ *
+ * <p>庫存流量閘門（traffic_gate_enabled/gate_close_time）不在這裡——那是 tengan-inventory 自己
+ * 直接管理的設定，不是 SPU 的一部分。原因：SPU/SKU 永遠先建立、真實庫存永遠是之後才在庫存頁面另外
+ * 補的，如果閘門開關綁在 SPU 表單，管理員在建商品當下就能把閘門開起來，warm-up 排程會把「當下的
+ * 真實庫存（大概率是 0）」快照下去，之後才補的庫存永遠救不回來。搬去 tengan-inventory 之後，設定
+ * 閘門的地方看得到真實庫存數字，可以直接擋「沒有庫存不能開閘門」。</p>
  */
 public class Spu {
 
@@ -26,8 +31,6 @@ public class Spu {
     private String mainImage;
     private SpuStatus status;
     private LocalDateTime saleStartTime;
-    private boolean trafficGateEnabled;
-    private LocalDateTime gateCloseTime;
     private boolean showOnLaunchTeaser;
     private LocalDateTime teaserRemoveAt;
     private final List<Sku> skus = new ArrayList<>();
@@ -35,8 +38,7 @@ public class Spu {
     private final List<SpuImage> images = new ArrayList<>();
 
     private Spu(Long id, Long categoryId, Long brandId, String name, String description, String mainImage,
-            SpuStatus status, LocalDateTime saleStartTime, boolean trafficGateEnabled, LocalDateTime gateCloseTime,
-            boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt) {
+            SpuStatus status, LocalDateTime saleStartTime, boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt) {
         this.id = id;
         this.categoryId = categoryId;
         this.brandId = brandId;
@@ -45,16 +47,13 @@ public class Spu {
         this.mainImage = mainImage;
         this.status = status;
         this.saleStartTime = saleStartTime;
-        this.trafficGateEnabled = trafficGateEnabled;
-        this.gateCloseTime = gateCloseTime;
         this.showOnLaunchTeaser = showOnLaunchTeaser;
         this.teaserRemoveAt = teaserRemoveAt;
     }
 
     /** 一般商品建立時不用管「即將開賣」排程，全部留關閉/null，之後可用 scheduleLaunch() 補設。 */
     public static Spu create(Long categoryId, Long brandId, String name, String description, String mainImage) {
-        return new Spu(null, categoryId, brandId, name, description, mainImage, SpuStatus.NEW, null, false, null,
-                false, null);
+        return new Spu(null, categoryId, brandId, name, description, mainImage, SpuStatus.NEW, null, false, null);
     }
 
     /**
@@ -63,12 +62,12 @@ public class Spu {
      * DUPLICATE，不是 NEW：必須先被人工編輯過一次（見 updateBasicInfo）才能上架，方便稽核複製出來的
      * 草稿是否真的被檢查過，不是複製完忘記調價/改名就直接發布。
      *
-     * <p>開賣時間/流量閘門/首頁預告這組「上市排程」欄位刻意不複製——複製出來的草稿不該直接繼承別的商品
+     * <p>開賣時間/首頁預告這組「上市排程」欄位刻意不複製——複製出來的草稿不該直接繼承別的商品
      * 的上市排程，一律回到關閉/null，管理員要另外設定。</p>
      */
     public static Spu duplicateOf(Spu source, String newName) {
         Spu spu = new Spu(null, source.categoryId, source.brandId, newName, source.description, source.mainImage,
-                SpuStatus.DUPLICATE, null, false, null, false, null);
+                SpuStatus.DUPLICATE, null, false, null);
         spu.attrValues.addAll(source.attrValues);
         spu.images.addAll(source.images);
         spu.skus.addAll(source.skus.stream()
@@ -79,11 +78,10 @@ public class Spu {
     }
 
     public static Spu reconstitute(Long id, Long categoryId, Long brandId, String name, String description,
-            String mainImage, SpuStatus status, LocalDateTime saleStartTime, boolean trafficGateEnabled,
-            LocalDateTime gateCloseTime, boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt, List<Sku> skus,
-            List<SpuBaseAttrValue> attrValues, List<SpuImage> images) {
+            String mainImage, SpuStatus status, LocalDateTime saleStartTime, boolean showOnLaunchTeaser,
+            LocalDateTime teaserRemoveAt, List<Sku> skus, List<SpuBaseAttrValue> attrValues, List<SpuImage> images) {
         Spu spu = new Spu(id, categoryId, brandId, name, description, mainImage, status, saleStartTime,
-                trafficGateEnabled, gateCloseTime, showOnLaunchTeaser, teaserRemoveAt);
+                showOnLaunchTeaser, teaserRemoveAt);
         spu.skus.addAll(skus);
         spu.attrValues.addAll(attrValues);
         spu.images.addAll(images);
@@ -110,25 +108,17 @@ public class Spu {
     }
 
     /**
-     * 設定「即將開賣」排程：開賣時間、流量閘門（開賣瞬間的保護機制，Phase A 只存欄位不做 Redis 保護）、
-     * 首頁預告顯示。trafficGateEnabled=true 時 gateCloseTime 必須晚於 saleStartTime——閘門關閉時間
-     * 是「保護期結束、轉一般路徑」的時間點，不能早於或等於開賣本身。showOnLaunchTeaser=true 時
-     * teaserRemoveAt 必須晚於 saleStartTime——預告下架時間的用意是讓已經開賣一陣子的商品仍留在首頁
-     * 顯示「熱門搶購中」，如果比開賣時間還早就沒有意義。
+     * 設定「即將開賣」排程：開賣時間、首頁預告顯示。showOnLaunchTeaser=true 時 teaserRemoveAt
+     * 必須晚於 saleStartTime——預告下架時間的用意是讓已經開賣一陣子的商品仍留在首頁顯示「熱門搶購中」，
+     * 如果比開賣時間還早就沒有意義。庫存流量閘門不在這裡，見類別說明。
      */
-    public void scheduleLaunch(LocalDateTime saleStartTime, boolean trafficGateEnabled, LocalDateTime gateCloseTime,
-            boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt) {
-        if (trafficGateEnabled && (gateCloseTime == null || saleStartTime == null
-                || !gateCloseTime.isAfter(saleStartTime))) {
-            throw new InvalidGateCloseTimeException(id);
-        }
+    public void scheduleLaunch(LocalDateTime saleStartTime, boolean showOnLaunchTeaser,
+            LocalDateTime teaserRemoveAt) {
         if (showOnLaunchTeaser && (teaserRemoveAt == null || saleStartTime == null
                 || !teaserRemoveAt.isAfter(saleStartTime))) {
             throw new InvalidTeaserRemoveTimeException(id);
         }
         this.saleStartTime = saleStartTime;
-        this.trafficGateEnabled = trafficGateEnabled;
-        this.gateCloseTime = gateCloseTime;
         this.showOnLaunchTeaser = showOnLaunchTeaser;
         this.teaserRemoveAt = teaserRemoveAt;
     }
@@ -196,14 +186,6 @@ public class Spu {
 
     public LocalDateTime getSaleStartTime() {
         return saleStartTime;
-    }
-
-    public boolean isTrafficGateEnabled() {
-        return trafficGateEnabled;
-    }
-
-    public LocalDateTime getGateCloseTime() {
-        return gateCloseTime;
     }
 
     public boolean isShowOnLaunchTeaser() {

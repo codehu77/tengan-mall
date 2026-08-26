@@ -18,8 +18,6 @@ public class SpuPO {
     private String mainImage;
     private SpuStatus status;
     private LocalDateTime saleStartTime;
-    private Boolean trafficGateEnabled;
-    private LocalDateTime gateCloseTime;
     private Boolean showOnLaunchTeaser;
     private LocalDateTime teaserRemoveAt;
     private LocalDateTime createdAt;
@@ -89,21 +87,6 @@ public class SpuPO {
         this.saleStartTime = saleStartTime;
     }
 
-    public Boolean getTrafficGateEnabled() {
-        return trafficGateEnabled;
-    }
-
-    public void setTrafficGateEnabled(Boolean trafficGateEnabled) {
-        this.trafficGateEnabled = trafficGateEnabled;
-    }
-
-    public LocalDateTime getGateCloseTime() {
-        return gateCloseTime;
-    }
-
-    public void setGateCloseTime(LocalDateTime gateCloseTime) {
-        this.gateCloseTime = gateCloseTime;
-    }
 
     public Boolean getShowOnLaunchTeaser() {
         return showOnLaunchTeaser;

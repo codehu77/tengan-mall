@@ -23,9 +23,13 @@ public class SkuLaunchConfigRepositoryImpl implements SkuLaunchConfigRepository 
     }
 
     @Override
-    public void upsert(Long skuId, LocalDateTime saleStartTime, boolean trafficGateEnabled,
-            LocalDateTime gateCloseTime, Integer purchaseLimitPerUser) {
-        mapper.upsert(skuId, saleStartTime, trafficGateEnabled, gateCloseTime, purchaseLimitPerUser);
+    public void upsert(Long skuId, LocalDateTime saleStartTime, Integer purchaseLimitPerUser) {
+        mapper.upsert(skuId, saleStartTime, purchaseLimitPerUser);
+    }
+
+    @Override
+    public void configureGate(Long skuId, boolean trafficGateEnabled, LocalDateTime gateCloseTime) {
+        mapper.configureGate(skuId, trafficGateEnabled, gateCloseTime);
     }
 
     @Override

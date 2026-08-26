@@ -27,8 +27,7 @@ class SpuDetailAssembler {
         Long catalog1Id = resolveTopLevelCategoryId(spu.getCategoryId());
         return new GetSpuDetailResult(spu.getId(), spu.getCategoryId(), catalog1Id, spu.getBrandId(), spu.getName(),
                 spu.getDescription(), spu.getMainImage(), spu.getStatus().getValue(), spu.getSaleStartTime(),
-                spu.isTrafficGateEnabled(), spu.getGateCloseTime(), spu.isShowOnLaunchTeaser(),
-                spu.getTeaserRemoveAt(), attrValues, images, skus);
+                spu.isShowOnLaunchTeaser(), spu.getTeaserRemoveAt(), attrValues, images, skus);
     }
 
     /** 從 spu 被指派的葉分類往上走 parentId 鏈，直到 level=1（最上層）為止，回傳該層 id。

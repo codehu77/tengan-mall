@@ -89,7 +89,7 @@ onMounted(() => {
 
 <template>
   <div class="main">
-    <PureTableBar title="流量閘門" :columns="columns" @refresh="onSearch">
+    <PureTableBar title="庫存流量閘門" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button type="warning" :loading="warmUpLoading" @click="onWarmUpNow">
           立即預熱

@@ -121,8 +121,7 @@ public class InternalSpuController {
     public ResponseEntity<CreateSpuResponse> create(@Valid @RequestBody CreateSpuRequest request) {
         var result = createSpuUseCase.create(new CreateSpuCommand(request.categoryId(), request.brandId(),
                 request.name(), request.description(), request.mainImage(), request.saleStartTime(),
-                request.trafficGateEnabled(), request.gateCloseTime(), request.showOnLaunchTeaser(),
-                request.teaserRemoveAt(), toAttrValueCommands(request.attrValues()),
+                request.showOnLaunchTeaser(), request.teaserRemoveAt(), toAttrValueCommands(request.attrValues()),
                 toSpuImageCommands(request.images()), toSkuCommands(request.skus())));
         return ResponseEntity.status(HttpStatus.CREATED).body(new CreateSpuResponse(result.id()));
     }
@@ -131,10 +130,9 @@ public class InternalSpuController {
     @PreAuthorize("hasAuthority('SCOPE_product.write')")
     public ResponseEntity<Void> update(@PathVariable Long id, @Valid @RequestBody UpdateSpuRequest request) {
         updateSpuUseCase.update(new UpdateSpuCommand(id, request.categoryId(), request.brandId(), request.name(),
-                request.description(), request.mainImage(), request.saleStartTime(), request.trafficGateEnabled(),
-                request.gateCloseTime(), request.showOnLaunchTeaser(), request.teaserRemoveAt(),
-                toAttrValueCommands(request.attrValues()), toSpuImageCommands(request.images()),
-                toSkuCommands(request.skus())));
+                request.description(), request.mainImage(), request.saleStartTime(), request.showOnLaunchTeaser(),
+                request.teaserRemoveAt(), toAttrValueCommands(request.attrValues()),
+                toSpuImageCommands(request.images()), toSkuCommands(request.skus())));
         return ResponseEntity.noContent().build();
     }
 
@@ -215,7 +213,6 @@ public class InternalSpuController {
                 .toList();
         return new SpuDetailResponse(result.id(), result.categoryId(), result.catalog1Id(), result.brandId(),
                 result.name(), result.description(), result.mainImage(), result.status(), result.saleStartTime(),
-                result.trafficGateEnabled(), result.gateCloseTime(), result.showOnLaunchTeaser(),
-                result.teaserRemoveAt(), attrValues, images, skus);
+                result.showOnLaunchTeaser(), result.teaserRemoveAt(), attrValues, images, skus);
     }
 }

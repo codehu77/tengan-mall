@@ -84,10 +84,9 @@ public class ProductSpuController {
             @Valid @RequestBody CreateSpuRequest request) {
         Long id = productSpuPort.createSpu(
                 new CreateSpuPayload(request.categoryId(), request.brandId(), request.name(), request.description(),
-                        request.mainImage(), request.saleStartTime(), request.trafficGateEnabled(),
-                        request.gateCloseTime(), request.showOnLaunchTeaser(), request.teaserRemoveAt(),
-                        toAttrValuePayloads(request.attrValues()), toSpuImagePayloads(request.images()),
-                        toSkuPayloads(request.skus())),
+                        request.mainImage(), request.saleStartTime(), request.showOnLaunchTeaser(),
+                        request.teaserRemoveAt(), toAttrValuePayloads(request.attrValues()),
+                        toSpuImagePayloads(request.images()), toSkuPayloads(request.skus())),
                 operatorJwt.getTokenValue());
         return new CreateSpuResponse(id);
     }
@@ -98,10 +97,9 @@ public class ProductSpuController {
             @Valid @RequestBody UpdateSpuRequest request) {
         productSpuPort.updateSpu(id,
                 new UpdateSpuPayload(request.categoryId(), request.brandId(), request.name(), request.description(),
-                        request.mainImage(), request.saleStartTime(), request.trafficGateEnabled(),
-                        request.gateCloseTime(), request.showOnLaunchTeaser(), request.teaserRemoveAt(),
-                        toAttrValuePayloads(request.attrValues()), toSpuImagePayloads(request.images()),
-                        toSkuPayloads(request.skus())),
+                        request.mainImage(), request.saleStartTime(), request.showOnLaunchTeaser(),
+                        request.teaserRemoveAt(), toAttrValuePayloads(request.attrValues()),
+                        toSpuImagePayloads(request.images()), toSkuPayloads(request.skus())),
                 operatorJwt.getTokenValue());
     }
 
@@ -168,8 +166,8 @@ public class ProductSpuController {
         var images = item.images().stream().map(i -> new SpuImageResponse(i.imageUrl(), i.sort())).toList();
         var skus = item.skus().stream().map(this::toSkuResponse).toList();
         return new SpuDetailResponse(item.id(), item.categoryId(), item.brandId(), item.name(), item.description(),
-                item.mainImage(), item.status(), item.saleStartTime(), item.trafficGateEnabled(),
-                item.gateCloseTime(), item.showOnLaunchTeaser(), item.teaserRemoveAt(), attrValues, images, skus);
+                item.mainImage(), item.status(), item.saleStartTime(), item.showOnLaunchTeaser(),
+                item.teaserRemoveAt(), attrValues, images, skus);
     }
 
     private SkuDetailResponse toSkuResponse(SkuItem sku) {

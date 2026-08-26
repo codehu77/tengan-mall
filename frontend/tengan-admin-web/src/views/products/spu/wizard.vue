@@ -51,8 +51,6 @@ const form = reactive<{
   description: string;
   mainImage: string;
   saleStartTime: string | null;
-  trafficGateEnabled: boolean;
-  gateCloseTime: string | null;
   showOnLaunchTeaser: boolean;
   teaserRemoveAt: string | null;
 }>({
@@ -62,8 +60,6 @@ const form = reactive<{
   description: "",
   mainImage: "",
   saleStartTime: null,
-  trafficGateEnabled: false,
-  gateCloseTime: null,
   showOnLaunchTeaser: false,
   teaserRemoveAt: null
 });
@@ -333,18 +329,6 @@ async function saveSpu(): Promise<boolean> {
     return false;
   }
 
-  if (form.trafficGateEnabled) {
-    if (!form.saleStartTime) {
-      message("開啟流量閘門前，請先設定開賣時間", { type: "error" });
-      currentStep.value = 0;
-      return false;
-    }
-    if (!form.gateCloseTime || form.gateCloseTime <= form.saleStartTime) {
-      message("閘門關閉時間必須晚於開賣時間", { type: "error" });
-      currentStep.value = 0;
-      return false;
-    }
-  }
   if (form.showOnLaunchTeaser) {
     if (!form.saleStartTime) {
       message("顯示於首頁即將開賣區塊前，請先設定開賣時間", { type: "error" });
@@ -385,8 +369,6 @@ async function saveSpu(): Promise<boolean> {
     description: form.description || undefined,
     mainImage: form.mainImage || undefined,
     saleStartTime: form.saleStartTime || undefined,
-    trafficGateEnabled: form.trafficGateEnabled,
-    gateCloseTime: form.trafficGateEnabled ? (form.gateCloseTime || undefined) : undefined,
     showOnLaunchTeaser: form.showOnLaunchTeaser,
     teaserRemoveAt: form.showOnLaunchTeaser ? (form.teaserRemoveAt || undefined) : undefined,
     attrValues,
@@ -446,8 +428,6 @@ onMounted(async () => {
     form.description = detail.description ?? "";
     form.mainImage = detail.mainImage ?? "";
     form.saleStartTime = detail.saleStartTime ?? null;
-    form.trafficGateEnabled = detail.trafficGateEnabled ?? false;
-    form.gateCloseTime = detail.gateCloseTime ?? null;
     form.showOnLaunchTeaser = detail.showOnLaunchTeaser ?? false;
     form.teaserRemoveAt = detail.teaserRemoveAt ?? null;
     spuImages.value = detail.images.map(i => ({ ...i }));
@@ -593,23 +573,6 @@ onMounted(async () => {
           value-format="YYYY-MM-DDTHH:mm:ss"
           style="width: 260px"
         />
-      </el-form-item>
-      <el-form-item label="流量閘門">
-        <div class="w-full">
-          <el-switch v-model="form.trafficGateEnabled" />
-          <span class="ml-2 text-gray-400" style="font-size: 12px">
-            開賣瞬間高流量商品可開啟，開賣後經過「閘門關閉時間」才轉一般結帳流程
-          </span>
-          <div v-if="form.trafficGateEnabled" class="mt-2">
-            <el-date-picker
-              v-model="form.gateCloseTime"
-              type="datetime"
-              placeholder="閘門關閉時間（須晚於開賣時間）"
-              value-format="YYYY-MM-DDTHH:mm:ss"
-              style="width: 260px"
-            />
-          </div>
-        </div>
       </el-form-item>
       <el-form-item label="首頁預告">
         <div class="w-full">

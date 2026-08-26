@@ -257,8 +257,6 @@ public class SpuRepositoryImpl implements SpuRepository {
         po.setMainImage(spu.getMainImage());
         po.setStatus(spu.getStatus());
         po.setSaleStartTime(spu.getSaleStartTime());
-        po.setTrafficGateEnabled(spu.isTrafficGateEnabled());
-        po.setGateCloseTime(spu.getGateCloseTime());
         po.setShowOnLaunchTeaser(spu.isShowOnLaunchTeaser());
         po.setTeaserRemoveAt(spu.getTeaserRemoveAt());
         return po;
@@ -280,7 +278,6 @@ public class SpuRepositoryImpl implements SpuRepository {
     private Spu toDomain(SpuPO po, List<Sku> skus, List<SpuBaseAttrValue> attrValues, List<SpuImage> images) {
         return Spu.reconstitute(po.getId(), po.getCategoryId(), po.getBrandId(), po.getName(), po.getDescription(),
                 po.getMainImage(), po.getStatus(), po.getSaleStartTime(),
-                Boolean.TRUE.equals(po.getTrafficGateEnabled()), po.getGateCloseTime(),
                 Boolean.TRUE.equals(po.getShowOnLaunchTeaser()), po.getTeaserRemoveAt(), skus, attrValues, images);
     }
 }

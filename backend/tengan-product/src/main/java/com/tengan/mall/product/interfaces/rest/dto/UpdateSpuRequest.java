@@ -8,8 +8,7 @@ import java.util.List;
 
 /** 整批替換語意：skus/attrValues 帶的是「更新後的完整集合」，不是差異片段。 */
 public record UpdateSpuRequest(@NotNull Long categoryId, @NotNull Long brandId, @NotBlank String name,
-        String description, String mainImage, LocalDateTime saleStartTime, boolean trafficGateEnabled,
-        LocalDateTime gateCloseTime, boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt,
-        @Valid List<SpuBaseAttrValueRequest> attrValues, @Valid List<SpuImageRequest> images,
-        @Valid List<SkuRequest> skus) {
+        String description, String mainImage, LocalDateTime saleStartTime, boolean showOnLaunchTeaser,
+        LocalDateTime teaserRemoveAt, @Valid List<SpuBaseAttrValueRequest> attrValues,
+        @Valid List<SpuImageRequest> images, @Valid List<SkuRequest> skus) {
 }

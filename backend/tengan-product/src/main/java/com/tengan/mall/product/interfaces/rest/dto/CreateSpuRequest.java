@@ -11,8 +11,7 @@ import java.util.List;
  * saleStartTime 以下 5 個欄位是「即將開賣」排程，全部可留 null/false（一般商品建立即可購買，不用管）。
  */
 public record CreateSpuRequest(@NotNull Long categoryId, @NotNull Long brandId, @NotBlank String name,
-        String description, String mainImage, LocalDateTime saleStartTime, boolean trafficGateEnabled,
-        LocalDateTime gateCloseTime, boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt,
-        @Valid List<SpuBaseAttrValueRequest> attrValues, @Valid List<SpuImageRequest> images,
-        @Valid List<SkuRequest> skus) {
+        String description, String mainImage, LocalDateTime saleStartTime, boolean showOnLaunchTeaser,
+        LocalDateTime teaserRemoveAt, @Valid List<SpuBaseAttrValueRequest> attrValues,
+        @Valid List<SpuImageRequest> images, @Valid List<SkuRequest> skus) {
 }

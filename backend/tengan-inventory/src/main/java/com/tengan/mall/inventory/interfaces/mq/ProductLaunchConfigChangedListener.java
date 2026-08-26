@@ -25,8 +25,7 @@ public class ProductLaunchConfigChangedListener {
     @RabbitListener(queues = RabbitConfig.PRODUCT_LAUNCH_CONFIG_QUEUE)
     public void onLaunchConfigChanged(ProductLaunchConfigChangedEvent event) {
         for (var sku : event.skus()) {
-            skuLaunchConfigRepository.upsert(sku.skuId(), sku.saleStartTime(), sku.trafficGateEnabled(),
-                    sku.gateCloseTime(), sku.purchaseLimitPerUser());
+            skuLaunchConfigRepository.upsert(sku.skuId(), sku.saleStartTime(), sku.purchaseLimitPerUser());
         }
     }
 

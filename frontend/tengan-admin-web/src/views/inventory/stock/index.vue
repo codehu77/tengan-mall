@@ -12,8 +12,10 @@ import {
   adjustStock
 } from "@/api/inventoryStock";
 import { type WarehouseItem, getWarehouseList } from "@/api/inventoryWarehouse";
+import { configureGate } from "@/api/inventoryGate";
 import adjustForm from "./adjustForm.vue";
 import createForm from "./createForm.vue";
+import gateConfigForm from "./gateConfigForm.vue";
 
 defineOptions({
   name: "InventoryStock"
@@ -45,7 +47,7 @@ const columns: TableColumns[] = [
   { label: "庫存", prop: "stock", minWidth: 100 },
   { label: "已鎖定", prop: "lockedStock", minWidth: 100 },
   { label: "可用", minWidth: 100, formatter: row => `${row.stock - row.lockedStock}` },
-  { label: "操作", fixed: "right", width: 100, slot: "operation" }
+  { label: "操作", fixed: "right", width: 200, slot: "operation" }
 ];
 
 function warehouseName(wareId: number) {
@@ -168,6 +170,45 @@ function openAdjustDialog(row: SkuStockItem) {
   });
 }
 
+const gateConfigFormRef = ref();
+
+function openGateConfigDialog(row: SkuStockItem) {
+  const formInline: { trafficGateEnabled: boolean; gateCloseTime?: string } = {
+    trafficGateEnabled: false,
+    gateCloseTime: undefined
+  };
+
+  addDialog({
+    title: `庫存流量閘門設定（SKU ${row.skuId}）`,
+    width: "32%",
+    draggable: true,
+    closeOnClickModal: false,
+    contentRenderer: () =>
+      h(gateConfigForm, { ref: gateConfigFormRef, skuId: row.skuId, formInline }),
+    beforeSure: (done, { closeLoading }) => {
+      const FormRef = gateConfigFormRef.value.getRef();
+      FormRef.validate((valid: boolean) => {
+        if (!valid) {
+          closeLoading();
+          return;
+        }
+        configureGate(row.skuId, {
+          trafficGateEnabled: formInline.trafficGateEnabled,
+          gateCloseTime: formInline.trafficGateEnabled ? formInline.gateCloseTime : undefined
+        })
+          .then(() => {
+            message("設定成功", { type: "success" });
+            done();
+          })
+          .catch(error => {
+            showError(error, "設定失敗");
+            closeLoading();
+          });
+      });
+    }
+  });
+}
+
 /** 支援從 dashboard「低庫存 SKU」卡片點過來直接帶 ?onlyLowStock=true 篩選條件。 */
 onMounted(async () => {
   const { items } = await getWarehouseList();
@@ -230,6 +271,9 @@ onMounted(async () => {
           <template #operation="{ row }">
             <el-button link type="primary" @click="openAdjustDialog(row)">
               調整
+            </el-button>
+            <el-button link type="primary" @click="openGateConfigDialog(row)">
+              設定庫存流量閘門
             </el-button>
           </template>
         </pure-table>

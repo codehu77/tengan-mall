@@ -59,8 +59,7 @@ public class PublicProductController {
         var skus = result.skus().stream().map(this::toResponse).toList();
         return new SpuDetailResponse(result.id(), result.categoryId(), result.catalog1Id(), result.brandId(),
                 result.name(), result.description(), result.mainImage(), result.status(), result.saleStartTime(),
-                result.trafficGateEnabled(), result.gateCloseTime(), result.showOnLaunchTeaser(),
-                result.teaserRemoveAt(), attrValues, images, skus);
+                result.showOnLaunchTeaser(), result.teaserRemoveAt(), attrValues, images, skus);
     }
 
     @GetMapping("/skus/{id}")

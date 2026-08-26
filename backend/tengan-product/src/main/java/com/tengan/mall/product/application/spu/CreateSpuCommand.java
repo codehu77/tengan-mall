@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record CreateSpuCommand(Long categoryId, Long brandId, String name, String description, String mainImage,
-        LocalDateTime saleStartTime, boolean trafficGateEnabled, LocalDateTime gateCloseTime,
-        boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt, List<SpuBaseAttrValueCommand> attrValues,
-        List<SpuImageCommand> images, List<SkuCommand> skus) {
+        LocalDateTime saleStartTime, boolean showOnLaunchTeaser, LocalDateTime teaserRemoveAt,
+        List<SpuBaseAttrValueCommand> attrValues, List<SpuImageCommand> images, List<SkuCommand> skus) {
 }
