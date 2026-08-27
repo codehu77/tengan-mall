@@ -51,4 +51,7 @@ public interface WareSkuRepository {
 
     /** 供 Phase 11 dashboard「低庫存 SKU 數」用：可用庫存（跨倉彙總）低於門檻的 SKU 數量。 */
     int countLowStockSkus(int threshold);
+
+    /** 商品規格真的被刪除時清掉所有倉庫底下這顆 sku 的庫存列，見 RemoveSkuTracesService。 */
+    void deleteBySkuIds(List<Long> skuIds);
 }

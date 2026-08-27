@@ -1,5 +1,7 @@
 package com.tengan.mall.inventory.domain.repository;
 
+import java.util.List;
+
 /**
  * 比照 WareSkuRepository 的精神：不用 select-then-update，靠條件式 UPDATE + 受影響列數判斷原子性，
  * 避免併發下多個請求同時通過限購檢查。
@@ -14,4 +16,7 @@ public interface MemberSkuPurchaseCountRepository {
 
     /** 流量閘門結算用：Redis 期間已核准的購買數無條件併回，不重新檢查上限(限購已經在 Redis 端即時檢查過了)。 */
     void addWithoutLimitCheck(Long memberId, Long skuId, int count);
+
+    /** 商品規格真的被刪除時清掉這顆 sku 的限購計數，見 RemoveSkuTracesService——SKU 都不存在了，這個限購沒有意義。 */
+    void deleteBySkuIds(List<Long> skuIds);
 }

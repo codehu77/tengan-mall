@@ -2,6 +2,7 @@ package com.tengan.mall.inventory.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import java.util.List;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -54,4 +55,10 @@ public interface WareSkuMapper extends BaseMapper<WareSkuPO> {
     @Update("UPDATE ware_sku SET stock = stock + #{delta} "
             + "WHERE ware_id = #{wareId} AND sku_id = #{skuId} AND stock + #{delta} >= 0")
     int adjustStockDelta(@Param("wareId") Long wareId, @Param("skuId") Long skuId, @Param("delta") int delta);
+
+    /** 商品規格真的被刪除時清掉所有倉庫底下這顆 sku 的庫存列，見 RemoveSkuTracesService。 */
+    @Delete("<script>DELETE FROM ware_sku WHERE sku_id IN "
+            + "<foreach collection='skuIds' item='skuId' open='(' separator=',' close=')'>#{skuId}</foreach>"
+            + "</script>")
+    int deleteBySkuIds(@Param("skuIds") List<Long> skuIds);
 }

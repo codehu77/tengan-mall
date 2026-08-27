@@ -1,6 +1,7 @@
 package com.tengan.mall.inventory.infrastructure.persistence;
 
 import com.tengan.mall.inventory.domain.repository.MemberSkuPurchaseCountRepository;
+import java.util.List;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -43,5 +44,10 @@ public class MemberSkuPurchaseCountRepositoryImpl implements MemberSkuPurchaseCo
             return;
         }
         mapper.add(memberId, skuId, count);
+    }
+
+    @Override
+    public void deleteBySkuIds(List<Long> skuIds) {
+        mapper.deleteBySkuIds(skuIds);
     }
 }

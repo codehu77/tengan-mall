@@ -81,11 +81,17 @@ public class UpdateSpuService implements UpdateSpuUseCase {
         Set<Long> keptIds = spu.getSkus().stream().map(Sku::getId).collect(Collectors.toSet());
         List<Long> actuallyRemovedSkuIds = previousSkuIds.stream().filter(id -> !keptIds.contains(id)).toList();
 
-        // 只有上架中的商品才在索引裡，NEW/OFF_SHELF 狀態下改資料不需要通知 tengan-search。
+        // 無條件發送，不看 wasOnShelf：tengan-cart/tengan-seckill 都是訂閱這個「skuId 移除」事件
+        // 做清理（購物車項目/秒殺場次商品），跟這顆 SPU 現在是不是上架中無關——之前這裡跟著索引
+        // upsert 一起被 wasOnShelf 卡住，造成 SPU 是草稿/已下架時編輯移除 SKU，購物車/秒殺裡殘留
+        // 的舊資料永遠不會被清掉。tengan-search 收到刪一個沒索引過的文件本來就是冪等操作，不會
+        // 出錯（跟 DeleteSpuService 同樣的防禦性發送理由）。
+        if (!actuallyRemovedSkuIds.isEmpty()) {
+            searchEventPublisher.publishRemoved(spu.getId(), actuallyRemovedSkuIds);
+        }
+        // 索引本身的新增/更新才需要看 wasOnShelf：只有上架中的商品才該在索引裡，NEW/OFF_SHELF
+        // 狀態下改資料不需要通知 tengan-search 更新索引內容。
         if (wasOnShelf) {
-            if (!actuallyRemovedSkuIds.isEmpty()) {
-                searchEventPublisher.publishRemoved(spu.getId(), actuallyRemovedSkuIds);
-            }
             searchEventPublisher.publishUpserted(searchDocumentAssembler.assemble(spu));
         }
 

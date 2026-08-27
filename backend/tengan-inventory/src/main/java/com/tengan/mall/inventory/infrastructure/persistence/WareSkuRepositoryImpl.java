@@ -75,4 +75,9 @@ public class WareSkuRepositoryImpl implements WareSkuRepository {
     public int countLowStockSkus(int threshold) {
         return wareSkuMapper.countLowStockSkus(threshold);
     }
+
+    @Override
+    public void deleteBySkuIds(List<Long> skuIds) {
+        wareSkuMapper.deleteBySkuIds(skuIds);
+    }
 }

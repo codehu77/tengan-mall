@@ -1,6 +1,8 @@
 package com.tengan.mall.inventory.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.util.List;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -30,4 +32,10 @@ public interface MemberSkuPurchaseCountMapper extends BaseMapper<MemberSkuPurcha
     @Update("UPDATE member_sku_purchase_count SET purchased_count = purchased_count + #{count} "
             + "WHERE member_id = #{memberId} AND sku_id = #{skuId}")
     int add(@Param("memberId") Long memberId, @Param("skuId") Long skuId, @Param("count") int count);
+
+    /** 商品規格真的被刪除時清掉這顆 sku 的限購計數，見 RemoveSkuTracesService。 */
+    @Delete("<script>DELETE FROM member_sku_purchase_count WHERE sku_id IN "
+            + "<foreach collection='skuIds' item='skuId' open='(' separator=',' close=')'>#{skuId}</foreach>"
+            + "</script>")
+    int deleteBySkuIds(@Param("skuIds") List<Long> skuIds);
 }
