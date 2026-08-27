@@ -61,7 +61,16 @@
             <h2 class="text-xl font-bold text-gray-800 mb-4">商品明細</h2>
             <div class="border-t border-gray-100 pt-4 space-y-4">
               <div v-for="item in order.items" :key="item.skuId" class="flex items-center gap-4">
-                <img v-if="item.skuImage" :src="item.skuImage" :alt="item.skuName" class="w-20 h-20 rounded border border-gray-100 object-cover shrink-0" />
+                <div class="w-20 h-20 rounded border border-gray-100 shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden">
+                  <img
+                    v-if="item.skuImage && !isImageBroken(item.skuId)"
+                    :src="item.skuImage"
+                    :alt="item.skuName"
+                    class="w-full h-full object-cover"
+                    @error="markImageBroken(item.skuId)"
+                  />
+                  <UIcon v-else name="i-heroicons-photo" class="w-8 h-8 text-gray-300" />
+                </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-base text-gray-700 line-clamp-2">{{ item.skuName }}</p>
                   <p class="text-sm text-gray-400 mt-1">× {{ item.count }}</p>
@@ -162,6 +171,15 @@ const { fetchOrderDetail, cancelOrder, confirmReceipt } = useOrder()
 
 const loading = ref(true)
 const order = ref<OrderDetail | null>(null)
+
+// 純視覺 fallback：商品圖網址失效時不要讓破圖示 + alt 文字直接裸露在畫面上（比照訂單列表頁的修法）。
+const brokenImages = ref(new Set<number>())
+function isImageBroken(skuId: number) {
+  return brokenImages.value.has(skuId)
+}
+function markImageBroken(skuId: number) {
+  brokenImages.value.add(skuId)
+}
 
 async function load() {
   loading.value = true

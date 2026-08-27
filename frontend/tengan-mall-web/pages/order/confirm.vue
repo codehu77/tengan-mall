@@ -16,7 +16,16 @@
             <h2 class="text-xl font-bold text-gray-800 mb-4">商品明細</h2>
             <div class="border-t border-gray-100 pt-4 space-y-4">
               <div v-for="item in confirmResult?.items" :key="item.skuId" class="flex items-center gap-4">
-                <img :src="item.mainImage" :alt="item.name" class="w-20 h-20 rounded border border-gray-100 object-cover shrink-0" />
+                <div class="w-20 h-20 rounded border border-gray-100 shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden">
+                  <img
+                    v-if="item.mainImage && !isImageBroken(item.skuId)"
+                    :src="item.mainImage"
+                    :alt="item.name"
+                    class="w-full h-full object-cover"
+                    @error="markImageBroken(item.skuId)"
+                  />
+                  <UIcon v-else name="i-heroicons-photo" class="w-8 h-8 text-gray-300" />
+                </div>
                 <div class="flex-1 text-base min-w-0">
                   <p class="text-gray-700 line-clamp-2">{{ item.name }}</p>
                   <p class="text-gray-400 mt-1">× {{ item.count }}</p>
@@ -259,6 +268,15 @@ const confirmResult = ref<Awaited<ReturnType<typeof confirmOrder>> | null>(null)
 
 const selectedAddressId = ref<number | null>(null)
 const remark = ref('')
+
+// 純視覺 fallback：商品圖網址失效時不要讓破圖示 + alt 文字直接裸露在畫面上（比照訂單列表頁的修法）。
+const brokenImages = ref(new Set<number>())
+function isImageBroken(skuId: number) {
+  return brokenImages.value.has(skuId)
+}
+function markImageBroken(skuId: number) {
+  brokenImages.value.add(skuId)
+}
 
 // 後台「支付管理」的啟用/停用開關要真的有效果，付款方式選項不再寫死——見 GET /api/customer/payments/methods。
 const paymentMethods = ref<Array<{ value: PaymentMethod; label: string; icon: string }>>([])

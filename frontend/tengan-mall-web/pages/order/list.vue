@@ -1,95 +1,110 @@
 <template>
-  <div class="space-y-4">
+  <div>
 
-      <h1 class="text-2xl font-semibold text-gray-800">我的訂單</h1>
+      <h1 class="text-2xl font-semibold text-gray-900 mb-5">我的訂單</h1>
 
       <!-- 狀態過濾 -->
-      <div class="bg-white rounded-lg px-2">
-        <div class="flex border-b border-gray-100">
-          <button
-            v-for="tab in tabs"
-            :key="tab.value ?? 'all'"
-            class="px-5 py-3 text-base font-medium transition border-b-2 -mb-px"
-            :class="activeTab === tab.value
-              ? 'border-red-500 text-red-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'"
-            @click="switchTab(tab.value)"
-          >
-            {{ tab.label }}
-          </button>
-        </div>
+      <div class="flex items-center gap-1 border-b border-gray-100 mb-6">
+        <button
+          v-for="tab in tabs"
+          :key="tab.value ?? 'all'"
+          class="px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px"
+          :class="activeTab === tab.value
+            ? 'border-red-500 text-red-500'
+            : 'border-transparent text-gray-500 hover:text-gray-800'"
+          @click="switchTab(tab.value)"
+        >
+          {{ tab.label }}
+        </button>
       </div>
 
-      <div v-if="loading" class="bg-white rounded-lg py-20 text-center text-gray-400">載入中...</div>
+      <div v-if="loading" class="py-20 text-center text-gray-400">載入中...</div>
 
       <!-- 訂單列表 -->
       <div v-else-if="orders.length > 0" class="space-y-4">
         <div
           v-for="order in orders"
           :key="order.id"
-          class="bg-white rounded-lg overflow-hidden"
+          class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden cursor-pointer hover:shadow-md hover:border-gray-200 transition"
+          @click="navigateTo(`/order/${order.orderSn}`)"
         >
-          <div class="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-100">
-            <div class="flex items-center gap-4 text-gray-500">
-              <span class="text-base font-mono">{{ order.orderSn }}</span>
-              <span class="text-sm text-gray-400">{{ formatTime(order.createdAt) }}</span>
+          <!-- 訂單編號 / 時間 / 狀態 -->
+          <div class="flex items-center justify-between px-5 py-3.5">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-sm text-gray-400 font-mono truncate">訂單編號 {{ order.orderSn }}</span>
+              <span class="text-xs text-gray-300 shrink-0">{{ formatTime(order.createdAt) }}</span>
             </div>
-            <UBadge :color="ORDER_STATUS_META[order.status].color as any" variant="solid" size="md">
-              {{ ORDER_STATUS_META[order.status].label }}
-            </UBadge>
+            <UBadge
+              :color="ORDER_STATUS_META[order.status].color as any"
+              variant="subtle"
+              size="sm"
+              :icon="ORDER_STATUS_META[order.status].icon"
+              :label="ORDER_STATUS_META[order.status].label"
+              class="shrink-0"
+            />
           </div>
 
           <!-- 商品快照 -->
-          <div class="px-6 py-4 divide-y divide-gray-50">
+          <div class="px-5 divide-y divide-gray-50 border-t border-gray-50">
             <div
               v-for="item in order.items"
               :key="item.skuId"
-              class="py-3 first:pt-0 last:pb-0 flex items-center gap-4"
+              class="py-4 flex items-center gap-4"
             >
-              <img
-                :src="item.skuImage ?? ''"
-                :alt="item.skuName"
-                class="w-16 h-16 rounded border border-gray-100 object-cover shrink-0"
-              />
-              <div class="flex-1 text-base min-w-0">
-                <p class="text-gray-700 line-clamp-2">{{ item.skuName }}</p>
-                <p class="text-gray-400 mt-1">x{{ item.count }}</p>
+              <div class="w-16 h-16 rounded-lg border border-gray-100 shrink-0 overflow-hidden bg-gray-50 flex items-center justify-center">
+                <img
+                  v-if="item.skuImage && !isImageBroken(order.id, item.skuId)"
+                  :src="item.skuImage"
+                  :alt="item.skuName"
+                  class="w-full h-full object-cover"
+                  @error="markImageBroken(order.id, item.skuId)"
+                />
+                <UIcon v-else name="i-heroicons-photo" class="w-6 h-6 text-gray-300" />
               </div>
-              <p class="text-base font-medium text-gray-800 shrink-0">NT$ {{ item.subtotal.toLocaleString() }}</p>
+              <div class="flex-1 min-w-0">
+                <p class="text-base font-medium text-gray-900 line-clamp-2">{{ item.skuName }}</p>
+                <p class="text-sm text-gray-400 mt-1">x{{ item.count }}</p>
+              </div>
+              <p class="text-base font-semibold text-gray-800 shrink-0">NT$ {{ item.subtotal.toLocaleString() }}</p>
             </div>
           </div>
 
-          <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-            <div class="text-base text-gray-500">
-              付款方式：{{ PAYMENT_METHOD_META[order.paymentMethod].label }}
-            </div>
-            <div class="flex items-center gap-4">
-              <span class="text-base text-gray-500">
-                訂單金額：<span class="font-semibold text-red-500">NT$ {{ order.payAmount.toLocaleString() }}</span>
+          <!-- 付款方式 / 訂單金額 / 查看詳情 -->
+          <div class="px-5 py-3.5 border-t border-gray-50 flex items-center justify-between gap-4">
+            <span class="text-sm text-gray-400 shrink-0">付款方式：{{ PAYMENT_METHOD_META[order.paymentMethod].label }}</span>
+            <div class="flex items-center gap-5 shrink-0">
+              <span class="text-sm text-gray-500">
+                訂單金額：<span class="text-base font-semibold text-red-500">NT$ {{ order.payAmount.toLocaleString() }}</span>
               </span>
               <template v-if="order.status === 1">
                 <button
-                  class="px-4 py-2 text-base bg-red-500 text-white rounded hover:bg-red-600 transition"
-                  @click="navigateTo(`/order/pay?orderSn=${order.orderSn}`)"
+                  class="px-4 py-1.5 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                  @click.stop="navigateTo(`/order/pay?orderSn=${order.orderSn}`)"
                 >
                   立即付款
                 </button>
                 <button
-                  class="px-4 py-2 text-base border border-gray-200 text-gray-600 rounded hover:bg-gray-50 transition"
-                  @click="handleCancel(order.orderSn)"
+                  class="px-4 py-1.5 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition"
+                  @click.stop="handleCancel(order.orderSn)"
                 >
                   取消訂單
                 </button>
               </template>
               <template v-else-if="order.status === 3">
                 <button
-                  class="px-4 py-2 text-base bg-red-500 text-white rounded hover:bg-red-600 transition"
-                  @click="handleConfirmReceipt(order.orderSn)"
+                  class="px-4 py-1.5 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                  @click.stop="handleConfirmReceipt(order.orderSn)"
                 >
                   確認收貨
                 </button>
               </template>
-              <button class="text-base text-gray-400 hover:text-gray-600 transition" @click="navigateTo(`/order/${order.orderSn}`)">查看詳情</button>
+              <button
+                class="flex items-center gap-0.5 text-sm text-gray-400 hover:text-gray-700 transition"
+                @click.stop="navigateTo(`/order/${order.orderSn}`)"
+              >
+                查看詳情
+                <UIcon name="i-heroicons-chevron-right" class="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -102,7 +117,7 @@
       </div>
 
       <!-- 空狀態 -->
-      <div v-else class="bg-white rounded-lg py-20 text-center">
+      <div v-else class="py-20 text-center">
         <UIcon name="i-heroicons-clipboard-document-list" class="w-14 h-14 text-gray-200 mx-auto mb-3" />
         <p class="text-gray-400 text-base">暫無相關訂單</p>
         <NuxtLink to="/" class="mt-4 inline-block">
@@ -181,6 +196,19 @@ function switchTab(value: OrderStatus | undefined) {
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString('zh-TW', { hour12: false })
+}
+
+// 純視覺 fallback：商品快照圖網址失效時（沒有既有的圖片 fallback 機制可重用），不要讓瀏覽器
+// 原生的破圖示 + alt 文字直接裸露在畫面上，改顯示一個素色 placeholder 圖示。
+const brokenImages = ref(new Set<string>())
+function imageKey(orderId: number, skuId: number) {
+  return `${orderId}-${skuId}`
+}
+function isImageBroken(orderId: number, skuId: number) {
+  return brokenImages.value.has(imageKey(orderId, skuId))
+}
+function markImageBroken(orderId: number, skuId: number) {
+  brokenImages.value.add(imageKey(orderId, skuId))
 }
 
 async function handleCancel(orderSn: string) {

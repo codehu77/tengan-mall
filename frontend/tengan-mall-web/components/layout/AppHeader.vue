@@ -61,7 +61,16 @@
                     :to="item.spuId ? `/item/${item.spuId}` : '#'"
                     class="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition"
                   >
-                    <img :src="item.image" :alt="item.skuName" class="w-14 h-14 rounded border border-gray-100 object-cover shrink-0" />
+                    <div class="w-14 h-14 rounded border border-gray-100 shrink-0 bg-gray-50 flex items-center justify-center overflow-hidden">
+                      <img
+                        v-if="item.image && !isImageBroken(item.itemId)"
+                        :src="item.image"
+                        :alt="item.skuName"
+                        class="w-full h-full object-cover"
+                        @error="markImageBroken(item.itemId)"
+                      />
+                      <UIcon v-else name="i-heroicons-photo" class="w-6 h-6 text-gray-300" />
+                    </div>
                     <span class="flex-1 text-base text-gray-700 truncate">{{ item.skuName }}</span>
                     <span class="text-base text-red-500 font-medium shrink-0">${{ item.price.toLocaleString() }}</span>
                   </NuxtLink>
@@ -164,6 +173,15 @@ async function openMiniCart() {
   miniCartItems.value = items
   miniCartTotal.value = total
   miniCartLoading.value = false
+}
+
+// 純視覺 fallback：商品圖網址失效時不要讓破圖示 + alt 文字直接裸露在畫面上（比照訂單列表頁的修法）。
+const brokenImages = ref(new Set<number>())
+function isImageBroken(itemId: number) {
+  return brokenImages.value.has(itemId)
+}
+function markImageBroken(itemId: number) {
+  brokenImages.value.add(itemId)
 }
 
 function closeMiniCart() {

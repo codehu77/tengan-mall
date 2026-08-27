@@ -99,12 +99,12 @@ export interface OrderProcessing {
   orderSn: string
 }
 
-export const ORDER_STATUS_META: Record<OrderStatus, { label: string; color: string }> = {
-  1: { label: '待付款', color: 'orange' },
-  2: { label: '已付款', color: 'blue' },
-  3: { label: '已出貨', color: 'purple' },
-  4: { label: '已完成', color: 'green' },
-  5: { label: '已取消', color: 'gray' },
+export const ORDER_STATUS_META: Record<OrderStatus, { label: string; color: string; icon: string }> = {
+  1: { label: '待付款', color: 'orange', icon: 'i-heroicons-clock' },
+  2: { label: '已付款', color: 'blue', icon: 'i-heroicons-check-circle' },
+  3: { label: '已出貨', color: 'purple', icon: 'i-heroicons-truck' },
+  4: { label: '已完成', color: 'green', icon: 'i-heroicons-check-circle' },
+  5: { label: '已取消', color: 'gray', icon: 'i-heroicons-x-circle' },
 }
 
 export const PAYMENT_METHOD_META: Record<PaymentMethod, { label: string; icon: string }> = {

@@ -32,8 +32,18 @@
               @change="toggleItem(item)"
               class="w-4 h-4 accent-red-500 shrink-0 disabled:accent-gray-500 disabled:cursor-not-allowed"
             />
-            <NuxtLink :to="item.spuId ? `/item/${item.spuId}` : '#'" class="w-20 h-20 rounded border border-gray-100 overflow-hidden shrink-0">
-              <img :src="item.image" :alt="item.skuName" class="w-full h-full object-cover" />
+            <NuxtLink
+              :to="item.spuId ? `/item/${item.spuId}` : '#'"
+              class="w-20 h-20 rounded border border-gray-100 overflow-hidden shrink-0 bg-gray-50 flex items-center justify-center"
+            >
+              <img
+                v-if="item.image && !isImageBroken(item.itemId)"
+                :src="item.image"
+                :alt="item.skuName"
+                class="w-full h-full object-cover"
+                @error="markImageBroken(item.itemId)"
+              />
+              <UIcon v-else name="i-heroicons-photo" class="w-7 h-7 text-gray-300" />
             </NuxtLink>
             <NuxtLink :to="item.spuId ? `/item/${item.spuId}` : '#'" class="flex-1 text-sm text-gray-700 hover:text-red-500 transition line-clamp-2">
               <UBadge v-if="item.seckillPrice != null" color="red" variant="solid" size="xs" class="mr-1">限時搶購</UBadge>
@@ -166,6 +176,15 @@ async function refreshStocks() {
   skuStocks.value = skuIds.length > 0 ? await fetchSkuStocks(skuIds) : {}
 }
 await refreshStocks()
+
+// 純視覺 fallback：商品圖網址失效時不要讓破圖示 + alt 文字直接裸露在畫面上（比照訂單列表頁的修法）。
+const brokenImages = ref(new Set<number>())
+function isImageBroken(itemId: number) {
+  return brokenImages.value.has(itemId)
+}
+function markImageBroken(itemId: number) {
+  brokenImages.value.add(itemId)
+}
 
 /** null=正常、'low'=數量超過庫存、'out'=完全無庫存、'not-yet-on-sale'=還沒到開賣時間。
  * 已下架項目不在這裡判斷（另有自己的「已下架」標示）。 */
