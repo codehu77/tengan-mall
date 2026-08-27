@@ -1,5 +1,6 @@
 package com.tengan.mall.inventory.interfaces.rest;
 
+import com.tengan.mall.inventory.application.gate.SettleGatesUseCase;
 import com.tengan.mall.inventory.application.stock.CheckStockCommand;
 import com.tengan.mall.inventory.application.stock.CheckStockItem;
 import com.tengan.mall.inventory.application.stock.CheckStockUseCase;
@@ -20,12 +21,15 @@ public class PublicInventoryController {
     private final CheckStockUseCase checkStockUseCase;
     private final SkuLaunchConfigRepository skuLaunchConfigRepository;
     private final GateQuotaAdapter gateQuotaAdapter;
+    private final SettleGatesUseCase settleGatesUseCase;
 
     public PublicInventoryController(CheckStockUseCase checkStockUseCase,
-            SkuLaunchConfigRepository skuLaunchConfigRepository, GateQuotaAdapter gateQuotaAdapter) {
+            SkuLaunchConfigRepository skuLaunchConfigRepository, GateQuotaAdapter gateQuotaAdapter,
+            SettleGatesUseCase settleGatesUseCase) {
         this.checkStockUseCase = checkStockUseCase;
         this.skuLaunchConfigRepository = skuLaunchConfigRepository;
         this.gateQuotaAdapter = gateQuotaAdapter;
+        this.settleGatesUseCase = settleGatesUseCase;
     }
 
     @GetMapping("/skus/{skuId}")
@@ -39,6 +43,13 @@ public class PublicInventoryController {
         if (launchConfig.isPresent() && launchConfig.get().isGateActive(now)) {
             availableStock = gateQuotaAdapter.availablePermits(skuId);
         } else {
+            // 保護窗口剛關閉、還沒結算的話，ware_sku.stock 還是保護期間開始前的舊數字（跟
+            // LockInventoryService 同一個懶結算邏輯）——查詢當下順手補結算一次，不然使用者/後台
+            // 會看到庫存「變回」保護前的數字，誤以為賣出去的量憑空消失了。
+            if (launchConfig.isPresent() && launchConfig.get().gateWarmedAt() != null
+                    && launchConfig.get().gateSettledAt() == null) {
+                settleGatesUseCase.settleOne(skuId);
+            }
             var result = checkStockUseCase.check(new CheckStockCommand(List.of(new CheckStockItem(skuId, 1))));
             availableStock = result.items().get(0).availableStock();
         }

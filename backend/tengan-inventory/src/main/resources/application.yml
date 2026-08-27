@@ -47,6 +47,9 @@ tengan:
     # 即將開賣 Phase B 流量閘門：預熱排程往未來看多久（小時）、Redis key TTL 要比閘門關閉時間多留
     # 多久緩衝讓結算排程來得及讀到最後的 availablePermits()、結算排程掃描間隔——三個數值分別比照
     # tengan-seckill 的 warmup-horizon-hours/settlement-grace-minutes/settlement-scan-interval-ms。
+    # scan-interval 這支排程現在只是懶結算(LockInventoryService/PublicInventoryController 摸到就
+    # 結算)沒覆蓋到的路徑（例如後台庫存列表，純內部維運工具，本來就是典型「最終一致性可接受」
+    # 的場景）的保底，不需要縮短——顧客會看到的路徑已經是即時的，跟這支排程的間隔無關。
     gate-warmup-horizon-hours: 6
     gate-settlement-grace-minutes: 60
     gate-settlement-scan-interval-ms: 300000
