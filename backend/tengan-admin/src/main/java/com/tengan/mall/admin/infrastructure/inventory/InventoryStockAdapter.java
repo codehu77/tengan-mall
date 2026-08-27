@@ -4,8 +4,11 @@ import com.tengan.mall.admin.application.port.AdjustStockPayload;
 import com.tengan.mall.admin.application.port.CreateStockPayload;
 import com.tengan.mall.admin.application.port.InventoryStockPort;
 import com.tengan.mall.admin.application.port.SkuStockPageResult;
+import com.tengan.mall.admin.application.port.SkuStockSummary;
 import com.tengan.mall.admin.infrastructure.inventory.dto.LowStockCountEnvelope;
 import com.tengan.mall.admin.infrastructure.inventory.dto.SkuStockListEnvelope;
+import com.tengan.mall.admin.infrastructure.inventory.dto.StockSummaryListEnvelope;
+import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -72,5 +75,23 @@ public class InventoryStockAdapter implements InventoryStockPort {
                 .retrieve()
                 .body(LowStockCountEnvelope.class);
         return response == null ? 0 : response.count();
+    }
+
+    @Override
+    public List<SkuStockSummary> sumAvailableStock(List<Long> skuIds) {
+        if (skuIds.isEmpty()) {
+            return List.of();
+        }
+        String uri = UriComponentsBuilder.fromPath(BASE_PATH + "/stock-summary").queryParam("skuIds", skuIds)
+                .build().toUriString();
+        StockSummaryListEnvelope envelope = inventoryRestClient.get()
+                .uri(uri)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .body(StockSummaryListEnvelope.class);
+        if (envelope == null) {
+            return List.of();
+        }
+        return envelope.items().stream().map(i -> new SkuStockSummary(i.skuId(), i.availableStock())).toList();
     }
 }

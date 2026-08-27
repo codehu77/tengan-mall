@@ -1,16 +1,18 @@
 package com.tengan.mall.admin.infrastructure.inventory;
 
-import com.tengan.mall.admin.application.port.ConfigureGatePayload;
 import com.tengan.mall.admin.application.port.GateConfigItem;
 import com.tengan.mall.admin.application.port.GateStatusItem;
 import com.tengan.mall.admin.application.port.InventoryGatePort;
-import com.tengan.mall.admin.infrastructure.inventory.dto.GateConfigEnvelope;
+import com.tengan.mall.admin.infrastructure.inventory.dto.ConfigureGateRequestBody;
+import com.tengan.mall.admin.infrastructure.inventory.dto.GateConfigListEnvelope;
 import com.tengan.mall.admin.infrastructure.inventory.dto.GateStatusListEnvelope;
 import com.tengan.mall.admin.infrastructure.inventory.dto.WarmUpGatesNowEnvelope;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 public class InventoryGateAdapter implements InventoryGatePort {
@@ -53,27 +55,32 @@ public class InventoryGateAdapter implements InventoryGatePort {
     }
 
     @Override
-    public GateConfigItem getGate(Long skuId) {
-        GateConfigEnvelope envelope = inventoryRestClient.get()
-                .uri(BASE_PATH + "/{skuId}", skuId)
+    public List<GateConfigItem> getGatesBySpuIds(List<Long> spuIds) {
+        if (spuIds.isEmpty()) {
+            return List.of();
+        }
+        String uri = UriComponentsBuilder.fromPath(BASE_PATH + "/by-spu").queryParam("spuIds", spuIds).build()
+                .toUriString();
+        GateConfigListEnvelope envelope = inventoryRestClient.get()
+                .uri(uri)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
                 .retrieve()
-                .body(GateConfigEnvelope.class);
+                .body(GateConfigListEnvelope.class);
         if (envelope == null) {
-            return new GateConfigItem(skuId, false, false, null, null, null, null);
+            return List.of();
         }
-        return new GateConfigItem(envelope.skuId(), envelope.synced(), envelope.trafficGateEnabled(),
-                envelope.saleStartTime(), envelope.gateCloseTime(), envelope.gateWarmedAt(),
-                envelope.gateSettledAt());
+        return envelope.items().stream()
+                .map(i -> new GateConfigItem(i.spuId(), i.gateWarmedAt(), i.gateCloseTime()))
+                .toList();
     }
 
     @Override
-    public void configureGate(Long skuId, ConfigureGatePayload payload, String operatorToken) {
+    public void configureGate(Long skuId, LocalDateTime gateCloseTime, String operatorToken) {
         inventoryRestClient.put()
                 .uri(BASE_PATH + "/{skuId}", skuId)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
                 .header("X-Identity-Assertion", "Bearer " + operatorToken)
-                .body(payload)
+                .body(new ConfigureGateRequestBody(gateCloseTime))
                 .retrieve()
                 .toBodilessEntity();
     }

@@ -2,6 +2,9 @@ package com.tengan.mall.inventory.interfaces.rest;
 
 import com.tengan.mall.inventory.application.stock.AdjustStockCommand;
 import com.tengan.mall.inventory.application.stock.AdjustStockUseCase;
+import com.tengan.mall.inventory.application.stock.CheckStockCommand;
+import com.tengan.mall.inventory.application.stock.CheckStockItem;
+import com.tengan.mall.inventory.application.stock.CheckStockUseCase;
 import com.tengan.mall.inventory.application.stock.CreateStockCommand;
 import com.tengan.mall.inventory.application.stock.CreateStockUseCase;
 import com.tengan.mall.inventory.application.stock.DeductInventoryUseCase;
@@ -25,6 +28,8 @@ import com.tengan.mall.inventory.interfaces.rest.dto.ListSkuStockResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.ListTasksResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.ListWarehousesResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.LowStockCountResponse;
+import com.tengan.mall.inventory.interfaces.rest.dto.SkuStockSummaryResponse;
+import com.tengan.mall.inventory.interfaces.rest.dto.StockSummaryResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.LockFailureResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.LockInventoryRequest;
 import com.tengan.mall.inventory.interfaces.rest.dto.LockInventoryResponse;
@@ -36,6 +41,7 @@ import com.tengan.mall.inventory.interfaces.rest.dto.WarehouseResponse;
 import com.tengan.mall.jwt.IdentityAssertionVerifier;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -65,6 +71,7 @@ public class InternalInventoryController {
     private final CreateWarehouseUseCase createWarehouseUseCase;
     private final ListTasksUseCase listTasksUseCase;
     private final CountLowStockUseCase countLowStockUseCase;
+    private final CheckStockUseCase checkStockUseCase;
     private final IdentityAssertionVerifier adminIdentityAssertionVerifier;
 
     public InternalInventoryController(LockInventoryUseCase lockInventoryUseCase,
@@ -73,6 +80,7 @@ public class InternalInventoryController {
             CreateStockUseCase createStockUseCase, AdjustStockUseCase adjustStockUseCase,
             ListWarehousesUseCase listWarehousesUseCase, CreateWarehouseUseCase createWarehouseUseCase,
             ListTasksUseCase listTasksUseCase, CountLowStockUseCase countLowStockUseCase,
+            CheckStockUseCase checkStockUseCase,
             @Qualifier("adminIdentityAssertionVerifier") IdentityAssertionVerifier adminIdentityAssertionVerifier) {
         this.lockInventoryUseCase = lockInventoryUseCase;
         this.releaseInventoryUseCase = releaseInventoryUseCase;
@@ -85,6 +93,7 @@ public class InternalInventoryController {
         this.createWarehouseUseCase = createWarehouseUseCase;
         this.listTasksUseCase = listTasksUseCase;
         this.countLowStockUseCase = countLowStockUseCase;
+        this.checkStockUseCase = checkStockUseCase;
         this.adminIdentityAssertionVerifier = adminIdentityAssertionVerifier;
     }
 
@@ -189,6 +198,17 @@ public class InternalInventoryController {
     @PreAuthorize("hasAuthority('SCOPE_inventory.read')")
     public LowStockCountResponse lowStockCount() {
         return new LowStockCountResponse(countLowStockUseCase.count());
+    }
+
+    /** SPU 列表頁「啟用/重設防超賣保護」點擊當下用，回報哪些 skuId 目前庫存 <=0，前端組軟性提醒文字。 */
+    @GetMapping("/skus/stock-summary")
+    @PreAuthorize("hasAuthority('SCOPE_inventory.read')")
+    public StockSummaryResponse stockSummary(@RequestParam List<Long> skuIds) {
+        var command = new CheckStockCommand(skuIds.stream().map(id -> new CheckStockItem(id, 1)).toList());
+        var items = checkStockUseCase.check(command).items().stream()
+                .map(line -> new SkuStockSummaryResponse(line.skuId(), line.availableStock()))
+                .toList();
+        return new StockSummaryResponse(items);
     }
 
     private String operator(String identityAssertion) {

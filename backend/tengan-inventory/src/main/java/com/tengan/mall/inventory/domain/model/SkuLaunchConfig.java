@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
  * gateProtectedStock/gateWarmedAt/gateSettledAt 是 tengan-inventory 自己的閘門生命週期狀態，
  * 不是從 product 同步過來的，product 那邊的 upsert 也絕對不會覆寫這三欄。
  */
-public record SkuLaunchConfig(Long skuId, LocalDateTime saleStartTime, boolean trafficGateEnabled,
+public record SkuLaunchConfig(Long skuId, Long spuId, LocalDateTime saleStartTime, boolean trafficGateEnabled,
         LocalDateTime gateCloseTime, Integer purchaseLimitPerUser, Integer gateProtectedStock,
         LocalDateTime gateWarmedAt, LocalDateTime gateSettledAt) {
 

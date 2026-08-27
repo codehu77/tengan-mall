@@ -2,7 +2,5 @@ package com.tengan.mall.inventory.interfaces.rest.dto;
 
 import java.time.LocalDateTime;
 
-public record GateConfigResponse(Long skuId, boolean synced, boolean trafficGateEnabled,
-        LocalDateTime saleStartTime, LocalDateTime gateCloseTime, LocalDateTime gateWarmedAt,
-        LocalDateTime gateSettledAt) {
+public record GateConfigResponse(Long spuId, LocalDateTime gateWarmedAt, LocalDateTime gateCloseTime) {
 }

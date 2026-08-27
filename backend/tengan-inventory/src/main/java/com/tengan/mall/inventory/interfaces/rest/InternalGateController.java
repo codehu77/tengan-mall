@@ -7,8 +7,10 @@ import com.tengan.mall.inventory.application.gate.WarmUpGatesUseCase;
 import com.tengan.mall.inventory.interfaces.rest.dto.ConfigureGateRequest;
 import com.tengan.mall.inventory.interfaces.rest.dto.GateConfigResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.GateStatusResponse;
+import com.tengan.mall.inventory.interfaces.rest.dto.ListGateConfigResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.ListGateStatusResponse;
 import com.tengan.mall.inventory.interfaces.rest.dto.WarmUpGatesNowResponse;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 供 tengan-admin 呼叫，「即將開賣」庫存流量閘門(Phase B)的後台監控/手動操作用端點。 */
@@ -58,19 +61,20 @@ public class InternalGateController {
         return new WarmUpGatesNowResponse(count);
     }
 
-    /** 供 tengan-admin 庫存頁面「設定庫存流量閘門」對話框開啟時回填目前設定用，查無資料不是 404。 */
-    @GetMapping("/{skuId}")
+    /** 供 tengan-admin SPU 列表頁「防超賣保護」欄位批次回填用。 */
+    @GetMapping("/by-spu")
     @PreAuthorize("hasAuthority('SCOPE_inventory.read')")
-    public GateConfigResponse get(@PathVariable Long skuId) {
-        var v = getGateStatusUseCase.get(skuId);
-        return new GateConfigResponse(v.skuId(), v.synced(), v.trafficGateEnabled(), v.saleStartTime(),
-                v.gateCloseTime(), v.gateWarmedAt(), v.gateSettledAt());
+    public ListGateConfigResponse getBySpuIds(@RequestParam List<Long> spuIds) {
+        var items = getGateStatusUseCase.getBySpuIds(spuIds).stream()
+                .map(v -> new GateConfigResponse(v.spuId(), v.gateWarmedAt(), v.gateCloseTime()))
+                .toList();
+        return new ListGateConfigResponse(items);
     }
 
-    /** 管理員在庫存頁面直接設定庫存流量閘門，取代舊的「SPU 表單開啟閘門」入口。 */
+    /** 管理員在 SPU 列表頁「啟用/重設防超賣保護」，一顆 SPU 底下每顆 SKU 各呼叫一次。 */
     @PutMapping("/{skuId}")
     @PreAuthorize("hasAuthority('SCOPE_inventory.write')")
     public void configure(@PathVariable Long skuId, @RequestBody ConfigureGateRequest request) {
-        configureGateUseCase.configure(skuId, request.trafficGateEnabled(), request.gateCloseTime());
+        configureGateUseCase.configure(skuId, request.gateCloseTime());
     }
 }

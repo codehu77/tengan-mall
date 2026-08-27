@@ -53,6 +53,15 @@ public class SettleGatesService implements SettleGatesUseCase {
         return settledCount;
     }
 
+    @Override
+    public boolean settleOne(Long skuId) {
+        SkuLaunchConfig config = skuLaunchConfigRepository.findBySkuId(skuId).orElse(null);
+        if (config == null || config.gateWarmedAt() == null || config.gateSettledAt() != null) {
+            return false;
+        }
+        return settleOne(config);
+    }
+
     private boolean settleOne(SkuLaunchConfig config) {
         try {
             int protectedStock = config.gateProtectedStock() == null ? 0 : config.gateProtectedStock();

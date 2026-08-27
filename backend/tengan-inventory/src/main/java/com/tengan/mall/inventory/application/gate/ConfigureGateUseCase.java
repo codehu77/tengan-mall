@@ -4,5 +4,5 @@ import java.time.LocalDateTime;
 
 public interface ConfigureGateUseCase {
 
-    void configure(Long skuId, boolean trafficGateEnabled, LocalDateTime gateCloseTime);
+    void configure(Long skuId, LocalDateTime gateCloseTime);
 }

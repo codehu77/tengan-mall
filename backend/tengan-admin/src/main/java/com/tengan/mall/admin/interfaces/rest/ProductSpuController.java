@@ -1,19 +1,27 @@
 package com.tengan.mall.admin.interfaces.rest;
 
 import com.tengan.mall.admin.application.port.CreateSpuPayload;
+import com.tengan.mall.admin.application.port.InventoryGatePort;
+import com.tengan.mall.admin.application.port.InventoryStockPort;
 import com.tengan.mall.admin.application.port.ProductSpuPort;
 import com.tengan.mall.admin.application.port.SkuImagePayload;
 import com.tengan.mall.admin.application.port.SkuItem;
 import com.tengan.mall.admin.application.port.SkuPayload;
 import com.tengan.mall.admin.application.port.SkuSaleAttrValuePayload;
+import com.tengan.mall.admin.application.port.SkuStockSummary;
 import com.tengan.mall.admin.application.port.SpuBaseAttrValuePayload;
 import com.tengan.mall.admin.application.port.SpuDetailItem;
 import com.tengan.mall.admin.application.port.SpuImageItem;
 import com.tengan.mall.admin.application.port.SpuImagePayload;
 import com.tengan.mall.admin.application.port.SpuSearchParams;
 import com.tengan.mall.admin.application.port.UpdateSpuPayload;
+import com.tengan.mall.admin.interfaces.rest.dto.ConfigureGateRequest;
 import com.tengan.mall.admin.interfaces.rest.dto.CreateSpuRequest;
 import com.tengan.mall.admin.interfaces.rest.dto.CreateSpuResponse;
+import com.tengan.mall.admin.interfaces.rest.dto.GateConfigResponse;
+import com.tengan.mall.admin.interfaces.rest.dto.GateStockCheckItemResponse;
+import com.tengan.mall.admin.interfaces.rest.dto.GateStockCheckResponse;
+import com.tengan.mall.admin.interfaces.rest.dto.ListGateConfigResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.ListSpusResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.SkuDetailResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.SkuImageRequest;
@@ -30,6 +38,9 @@ import com.tengan.mall.admin.interfaces.rest.dto.SpuSummaryResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.UpdateSpuRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -49,9 +60,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductSpuController {
 
     private final ProductSpuPort productSpuPort;
+    private final InventoryGatePort inventoryGatePort;
+    private final InventoryStockPort inventoryStockPort;
 
-    public ProductSpuController(ProductSpuPort productSpuPort) {
+    public ProductSpuController(ProductSpuPort productSpuPort, InventoryGatePort inventoryGatePort,
+            InventoryStockPort inventoryStockPort) {
         this.productSpuPort = productSpuPort;
+        this.inventoryGatePort = inventoryGatePort;
+        this.inventoryStockPort = inventoryStockPort;
     }
 
     @GetMapping
@@ -126,6 +142,42 @@ public class ProductSpuController {
     public CreateSpuResponse duplicate(@AuthenticationPrincipal Jwt operatorJwt, @PathVariable Long id) {
         Long newId = productSpuPort.duplicateSpu(id, operatorJwt.getTokenValue());
         return new CreateSpuResponse(newId);
+    }
+
+    /** SPU 列表頁「防超賣保護」欄位批次回填用。 */
+    @GetMapping("/gate-status")
+    @PreAuthorize("hasAuthority('product:spu:read')")
+    public ListGateConfigResponse gateStatus(@RequestParam List<Long> ids) {
+        var items = inventoryGatePort.getGatesBySpuIds(ids).stream()
+                .map(g -> new GateConfigResponse(g.spuId(), g.gateWarmedAt(), g.gateCloseTime()))
+                .toList();
+        return new ListGateConfigResponse(items);
+    }
+
+    /** 「啟用/重設防超賣保護」點擊當下用，回報這顆 SPU 底下哪些 SKU 目前沒有庫存，前端組軟性提醒文字。 */
+    @GetMapping("/{id}/gate-stock-check")
+    @PreAuthorize("hasAuthority('inventory:gate:write')")
+    public GateStockCheckResponse gateStockCheck(@PathVariable Long id) {
+        var skus = productSpuPort.getSpu(id).skus();
+        var skuIds = skus.stream().map(SkuItem::id).toList();
+        Map<Long, Integer> stockBySkuId = inventoryStockPort.sumAvailableStock(skuIds).stream()
+                .collect(Collectors.toMap(SkuStockSummary::skuId, SkuStockSummary::availableStock));
+        var items = skus.stream()
+                .filter(s -> stockBySkuId.getOrDefault(s.id(), 0) <= 0)
+                .map(s -> new GateStockCheckItemResponse(s.id(), s.name()))
+                .toList();
+        return new GateStockCheckResponse(items);
+    }
+
+    /** 「啟用/重設防超賣保護」真正送出，對這顆 SPU 底下「當下所有」SKU 一次套用同一組設定。 */
+    @PutMapping("/{id}/gate")
+    @PreAuthorize("hasAuthority('inventory:gate:write')")
+    public void configureGate(@AuthenticationPrincipal Jwt operatorJwt, @PathVariable Long id,
+            @RequestBody ConfigureGateRequest request) {
+        var skus = productSpuPort.getSpu(id).skus();
+        for (SkuItem sku : skus) {
+            inventoryGatePort.configureGate(sku.id(), request.gateCloseTime(), operatorJwt.getTokenValue());
+        }
     }
 
     private List<SpuBaseAttrValuePayload> toAttrValuePayloads(List<SpuBaseAttrValueRequest> requests) {

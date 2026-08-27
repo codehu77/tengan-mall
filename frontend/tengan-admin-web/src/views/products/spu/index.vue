@@ -14,10 +14,14 @@ import {
   publishSpu,
   unlistSpu,
   deleteSpu,
-  duplicateSpu
+  duplicateSpu,
+  getGateStatusBySpus,
+  getGateStockCheck,
+  configureSpuGate
 } from "@/api/productSpu";
 import spuStockDialog from "./stockDialog.vue";
 import spuViewDialog from "./viewDialog.vue";
+import spuGateForm from "./gateForm.vue";
 
 defineOptions({
   name: "ProductSpu"
@@ -36,6 +40,7 @@ const pagination = reactive({
 
 const categoryTree = ref<Array<CategoryTreeItem>>([]);
 const brandList = ref<Array<BrandItem>>([]);
+const gateStatusMap = ref<Map<number, { gateWarmedAt?: string; gateCloseTime?: string }>>(new Map());
 
 const categoryNameMap = computed(() => {
   const map = new Map<number, string>();
@@ -73,6 +78,11 @@ function statusTagType(status: number): "info" | "success" | "warning" | "danger
   return "warning";
 }
 
+/** 後端回傳 ISO 格式（帶 T），列表頁只是純顯示，換成空白比較好讀。 */
+function formatDateTime(value?: string) {
+  return value ? value.replace("T", " ") : "";
+}
+
 const searchForm = reactive<{
   categoryId?: number;
   brandId?: number;
@@ -93,6 +103,7 @@ const columns: TableColumns[] = [
   { label: "品牌", prop: "brandId", minWidth: 120, slot: "brand" },
   { label: "SKU數量", prop: "skuCount", width: 100 },
   { label: "狀態", prop: "status", width: 100, slot: "status" },
+  { label: "防超賣保護", width: 200, slot: "gate" },
   { label: "操作", fixed: "right", width: 400, slot: "operation" }
 ];
 
@@ -118,6 +129,16 @@ async function onSearch() {
   dataList.value = items;
   pagination.total = total;
   loading.value = false;
+  refreshGateStatus(items.map(i => i.id));
+}
+
+async function refreshGateStatus(spuIds: Array<number>) {
+  if (spuIds.length === 0) {
+    gateStatusMap.value = new Map();
+    return;
+  }
+  const { items } = await getGateStatusBySpus(spuIds);
+  gateStatusMap.value = new Map(items.map(i => [i.spuId, i]));
 }
 
 function onReset() {
@@ -171,6 +192,54 @@ function onManageStock(row: SpuSummaryItem) {
     closeOnClickModal: false,
     hideFooter: true,
     contentRenderer: () => h(spuStockDialog, { spuId: row.id })
+  });
+}
+
+const gateFormRef = ref();
+
+async function onConfigureGate(row: SpuSummaryItem) {
+  const { items } = await getGateStockCheck(row.id);
+  if (items.length > 0) {
+    const list = items.map(i => `${i.skuName}(${i.skuId})`).join("、");
+    try {
+      await ElMessageBox.confirm(`以下商品尚未有庫存：${list}，確定要執行嗎？`, "提示", {
+        type: "warning"
+      });
+    } catch {
+      return;
+    }
+  }
+  openGateDialog(row);
+}
+
+function openGateDialog(row: SpuSummaryItem) {
+  const formInline: { gateCloseTime?: string } = { gateCloseTime: undefined };
+
+  addDialog({
+    title: `防超賣保護（${row.name}）`,
+    width: "32%",
+    draggable: true,
+    closeOnClickModal: false,
+    contentRenderer: () => h(spuGateForm, { ref: gateFormRef, formInline }),
+    beforeSure: (done, { closeLoading }) => {
+      const FormRef = gateFormRef.value.getRef();
+      FormRef.validate((valid: boolean) => {
+        if (!valid) {
+          closeLoading();
+          return;
+        }
+        configureSpuGate(row.id, formInline.gateCloseTime!)
+          .then(() => {
+            message("設定成功", { type: "success" });
+            done();
+            refreshGateStatus(dataList.value.map(i => i.id));
+          })
+          .catch((error: any) => {
+            message(error?.response?.data?.message ?? "設定失敗", { type: "error" });
+            closeLoading();
+          });
+      });
+    }
   });
 }
 
@@ -340,6 +409,15 @@ onMounted(async () => {
             <el-tag :type="statusTagType(row.status)" effect="plain">
               {{ statusLabel(row.status) }}
             </el-tag>
+          </template>
+          <template #gate="{ row }">
+            <el-button link type="primary" @click="onConfigureGate(row)">
+              {{ gateStatusMap.get(row.id)?.gateWarmedAt ? "重啟" : "啟用" }}
+            </el-button>
+            <div v-if="gateStatusMap.get(row.id)?.gateWarmedAt" class="text-gray-400 text-xs">
+              {{ formatDateTime(gateStatusMap.get(row.id)?.gateWarmedAt) }} ~
+              {{ formatDateTime(gateStatusMap.get(row.id)?.gateCloseTime) }}
+            </div>
           </template>
           <template #operation="{ row }">
             <el-button link type="primary" @click="onView(row)">瀏覽</el-button>

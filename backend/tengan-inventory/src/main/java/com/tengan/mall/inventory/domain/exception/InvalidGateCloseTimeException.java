@@ -1,9 +1,9 @@
 package com.tengan.mall.inventory.domain.exception;
 
-/** 庫存流量閘門關閉時間必須晚於開賣時間，不然閘門一開就已經關了，毫無保護意義。 */
+/** 保護結束時間必須晚於現在，不然一啟用就已經結束了，毫無保護意義。 */
 public class InvalidGateCloseTimeException extends RuntimeException {
 
     public InvalidGateCloseTimeException(Long skuId) {
-        super("閘門關閉時間必須晚於開賣時間: skuId=" + skuId);
+        super("保護結束時間必須晚於現在: skuId=" + skuId);
     }
 }

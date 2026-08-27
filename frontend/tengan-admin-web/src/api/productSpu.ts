@@ -164,3 +164,37 @@ export const duplicateSpu = (id: number) => {
     `/api/admin/products/spus/${id}/duplicate`
   );
 };
+
+/** gateWarmedAt 為 null 代表這顆 SPU 從未啟用過防超賣保護，列表頁「防超賣保護」欄位顯示「啟用」而非「重設」。 */
+export type GateConfigItem = {
+  spuId: number;
+  gateWarmedAt?: string;
+  gateCloseTime?: string;
+};
+
+/** SPU 列表頁「防超賣保護」欄位批次回填用，只回傳有資料的 spuId。 */
+export const getGateStatusBySpus = (ids: Array<number>) => {
+  return http.request<{ items: Array<GateConfigItem> }>("get", "/api/admin/products/spus/gate-status", {
+    params: { ids: ids.join(",") }
+  });
+};
+
+export type GateStockCheckItem = {
+  skuId: number;
+  skuName: string;
+};
+
+/** 「啟用/重設防超賣保護」點擊當下用，回傳目前沒有庫存的 SKU 清單（空陣列代表全部都有庫存）。 */
+export const getGateStockCheck = (id: number) => {
+  return http.request<{ items: Array<GateStockCheckItem> }>(
+    "get",
+    `/api/admin/products/spus/${id}/gate-stock-check`
+  );
+};
+
+/** 「啟用/重設防超賣保護」真正送出，對這顆 SPU 底下當下所有 SKU 一次套用同一組保護結束時間。 */
+export const configureSpuGate = (id: number, gateCloseTime: string) => {
+  return http.request<void>("put", `/api/admin/products/spus/${id}/gate`, {
+    data: { gateCloseTime }
+  });
+};

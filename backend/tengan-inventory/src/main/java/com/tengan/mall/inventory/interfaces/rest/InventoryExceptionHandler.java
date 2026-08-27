@@ -1,13 +1,10 @@
 package com.tengan.mall.inventory.interfaces.rest;
 
-import com.tengan.mall.inventory.domain.exception.GateActiveCannotDisableException;
 import com.tengan.mall.inventory.domain.exception.InsufficientStockException;
 import com.tengan.mall.inventory.domain.exception.InvalidGateCloseTimeException;
 import com.tengan.mall.inventory.domain.exception.NegativeStockException;
-import com.tengan.mall.inventory.domain.exception.NoStockForGateException;
 import com.tengan.mall.inventory.domain.exception.PurchaseOrderAlreadyReceivedException;
 import com.tengan.mall.inventory.domain.exception.PurchaseOrderNotFoundException;
-import com.tengan.mall.inventory.domain.exception.SaleStartTimeNotSetException;
 import com.tengan.mall.inventory.domain.exception.SkuLaunchConfigNotFoundException;
 import com.tengan.mall.inventory.domain.exception.WareSkuAlreadyExistsException;
 import com.tengan.mall.inventory.domain.exception.WareSkuNotFoundException;
@@ -35,8 +32,7 @@ public class InventoryExceptionHandler {
 
     @ExceptionHandler({InsufficientStockException.class, NegativeStockException.class,
             WareSkuAlreadyExistsException.class, PurchaseOrderAlreadyReceivedException.class,
-            SaleStartTimeNotSetException.class, InvalidGateCloseTimeException.class,
-            NoStockForGateException.class, GateActiveCannotDisableException.class})
+            InvalidGateCloseTimeException.class})
     public ResponseEntity<Map<String, String>> handleConflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }

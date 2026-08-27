@@ -3,9 +3,8 @@ package com.tengan.mall.inventory.application.gate;
 import java.time.LocalDateTime;
 
 /**
- * 供 tengan-admin 庫存頁面「設定庫存流量閘門」對話框開啟時回填用。skuId 還沒同步過商品設定時
- * synced=false，其餘欄位都是 null/false，前端顯示「尚未設定開賣時間」而不是報錯。
+ * 供 tengan-admin SPU 列表頁「防超賣保護」欄位回填用，一個 spuId 一筆代表——同一 SPU 底下的 SKU
+ * 都是同一顆按鈕 fan-out 設定的，理論上永遠同步，gateWarmedAt 為 null 代表從未啟用過。
  */
-public record GateConfigView(Long skuId, boolean synced, boolean trafficGateEnabled, LocalDateTime saleStartTime,
-        LocalDateTime gateCloseTime, LocalDateTime gateWarmedAt, LocalDateTime gateSettledAt) {
+public record GateConfigView(Long spuId, LocalDateTime gateWarmedAt, LocalDateTime gateCloseTime) {
 }

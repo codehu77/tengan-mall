@@ -14,10 +14,10 @@ public interface SkuLaunchConfigRepository {
      * 既有值——只覆蓋這幾個從 product 同步的欄位，絕對不動 traffic_gate_enabled/gate_close_time 跟
      * gate_protected_stock/gate_warmed_at/gate_settled_at，這些改由 {@link #configureGate} 管理。
      */
-    void upsert(Long skuId, LocalDateTime saleStartTime, Integer purchaseLimitPerUser);
+    void upsert(Long skuId, Long spuId, LocalDateTime saleStartTime, Integer purchaseLimitPerUser);
 
-    /** 管理員在庫存頁面直接設定庫存流量閘門用，見 SkuLaunchConfigMapper#configureGate 的重置邏輯說明。 */
-    void configureGate(Long skuId, boolean trafficGateEnabled, LocalDateTime gateCloseTime);
+    /** 管理員在 SPU 列表頁「啟用/重設防超賣保護」用，見 SkuLaunchConfigMapper#configureGate 的重置邏輯說明。 */
+    void configureGate(Long skuId, LocalDateTime gateCloseTime);
 
     /** warm-up 排程用：找開了閘門、還沒預熱、開賣時間落在 [now, horizon] 內的候選。 */
     List<SkuLaunchConfig> findReadyToWarmUp(LocalDateTime now, LocalDateTime horizon);
@@ -33,6 +33,9 @@ public interface SkuLaunchConfigRepository {
 
     /** 後台「流量閘門」頁面用：列出所有開啟閘門的 sku（不管有沒有預熱/結算過）。 */
     List<SkuLaunchConfig> findAllGateEnabled();
+
+    /** SPU 列表頁「防超賣保護」欄位批次回填用。 */
+    List<SkuLaunchConfig> findAllBySpuIds(List<Long> spuIds);
 
     /** 訂閱 product.launch-config.removed 事件用：SPU 整批替換 SKU 時，舊 skuId 的副本列要跟著清掉，
      * 不然會一直累積查不到對應商品的孤兒列。 */

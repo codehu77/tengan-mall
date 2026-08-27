@@ -14,33 +14,30 @@ import org.apache.ibatis.annotations.Update;
 public interface SkuLaunchConfigMapper extends BaseMapper<SkuLaunchConfigPO> {
 
     /**
-     * 只覆蓋從 tengan-product 同步的欄位（sale_start_time/purchase_limit_per_user），絕不觸碰
+     * 只覆蓋從 tengan-product 同步的欄位（spu_id/sale_start_time/purchase_limit_per_user），絕不觸碰
      * traffic_gate_enabled/gate_close_time 跟 gate_protected_stock/gate_warmed_at/gate_settled_at
      * ——這幾欄改由管理員直接呼叫 {@link #configureGate} 設定，商品編輯同步事件不再處理閘門本身。
      */
-    @Insert("INSERT INTO sku_launch_config (sku_id, sale_start_time, purchase_limit_per_user) "
-            + "VALUES (#{skuId}, #{saleStartTime}, #{purchaseLimitPerUser}) "
-            + "ON DUPLICATE KEY UPDATE sale_start_time = VALUES(sale_start_time), "
+    @Insert("INSERT INTO sku_launch_config (sku_id, spu_id, sale_start_time, purchase_limit_per_user) "
+            + "VALUES (#{skuId}, #{spuId}, #{saleStartTime}, #{purchaseLimitPerUser}) "
+            + "ON DUPLICATE KEY UPDATE spu_id = VALUES(spu_id), sale_start_time = VALUES(sale_start_time), "
             + "purchase_limit_per_user = VALUES(purchase_limit_per_user)")
-    int upsert(@Param("skuId") Long skuId, @Param("saleStartTime") LocalDateTime saleStartTime,
+    int upsert(@Param("skuId") Long skuId, @Param("spuId") Long spuId,
+            @Param("saleStartTime") LocalDateTime saleStartTime,
             @Param("purchaseLimitPerUser") Integer purchaseLimitPerUser);
 
     /**
-     * 管理員在庫存頁面直接設定庫存流量閘門用。正常情況下絕不觸碰 gate_protected_stock/gate_warmed_at/
-     * gate_settled_at 這三欄閘門生命週期狀態。唯一例外：如果這顆 sku 已經結算過（gate_settled_at
-     * 有值），而且這次傳入的 gate_close_time 比那個結算時間點還晚——這是管理員把閘門關閉時間改到
-     * 未來、真的要重開一輪閘門的明確訊號，此時要把三欄一起重置成 NULL，讓這個 sku 重新變成可以被
-     * 預熱的狀態。不這樣做的話，gate_warmed_at 留著舊值會讓 isGateActive() 誤判成「閘門仍在保護中」
-     * （它只檢查 gate_warmed_at 是否非 null，沒有連帶檢查 gate_settled_at），但 Redis 的 semaphore
-     * 其實已經在上一輪結算時被刪掉了——變成商品永遠顯示 0 剩餘、永遠買不到，而且 gate_warmed_at/
-     * gate_settled_at 都非 null 會讓這顆 sku 同時被 findReadyToWarmUp/findReadyToSettle 的 WHERE
-     * 條件排除，沒有任何排程救得回來。IF 條件刻意用「還沒被這個語句改到之前」的 gate_settled_at
-     * 原始值判斷（gate_protected_stock/gate_warmed_at 這兩欄的 SET 都排在 gate_settled_at 自己的
-     * SET 之前，MySQL 同一句 UPDATE 裡後面的欄位看得到前面欄位剛寫入的新值，所以順序不能反過來，
-     * 不然條件會被自己剛重置的 gate_settled_at=NULL 污染掉）。
+     * 管理員在 SPU 列表頁「啟用/重設防超賣保護」用，一定是 enable 語意（沒有獨立的停用動作了，
+     * traffic_gate_enabled 固定寫 1）。正常情況下絕不觸碰 gate_protected_stock/gate_warmed_at/
+     * gate_settled_at 這三欄保護生命週期狀態。唯一例外：如果這顆 sku 已經結算過（gate_settled_at
+     * 有值），而且這次傳入的 gate_close_time 比那個結算時間點還晚——呼叫端（ConfigureGateService）
+     * 一定會在呼叫這支之前，對還在保護中的舊一輪先強制結算過，所以這個條件在新流程下天然成立，
+     * 藉此把三欄一起重置成 NULL，讓這個 sku 重新變成可以被預熱的狀態。IF 條件刻意用「還沒被這個
+     * 語句改到之前」的 gate_settled_at 原始值判斷（gate_protected_stock/gate_warmed_at 這兩欄的
+     * SET 都排在 gate_settled_at 自己的 SET 之前，MySQL 同一句 UPDATE 裡後面的欄位看得到前面欄位
+     * 剛寫入的新值，所以順序不能反過來，不然條件會被自己剛重置的 gate_settled_at=NULL 污染掉）。
      */
-    @Update("UPDATE sku_launch_config SET traffic_gate_enabled = #{trafficGateEnabled}, "
-            + "gate_close_time = #{gateCloseTime}, "
+    @Update("UPDATE sku_launch_config SET traffic_gate_enabled = 1, gate_close_time = #{gateCloseTime}, "
             + "gate_protected_stock = IF(gate_settled_at IS NOT NULL AND #{gateCloseTime} > gate_settled_at, "
             + "NULL, gate_protected_stock), "
             + "gate_warmed_at = IF(gate_settled_at IS NOT NULL AND #{gateCloseTime} > gate_settled_at, "
@@ -48,8 +45,7 @@ public interface SkuLaunchConfigMapper extends BaseMapper<SkuLaunchConfigPO> {
             + "gate_settled_at = IF(gate_settled_at IS NOT NULL AND #{gateCloseTime} > gate_settled_at, "
             + "NULL, gate_settled_at) "
             + "WHERE sku_id = #{skuId}")
-    int configureGate(@Param("skuId") Long skuId, @Param("trafficGateEnabled") boolean trafficGateEnabled,
-            @Param("gateCloseTime") LocalDateTime gateCloseTime);
+    int configureGate(@Param("skuId") Long skuId, @Param("gateCloseTime") LocalDateTime gateCloseTime);
 
     /**
      * 只用 horizon 當上界（別預熱太早），刻意不拿 now 當 sale_start_time 的下界——如果拿 now 當下界，
@@ -78,6 +74,12 @@ public interface SkuLaunchConfigMapper extends BaseMapper<SkuLaunchConfigPO> {
 
     @Select("SELECT * FROM sku_launch_config WHERE traffic_gate_enabled = 1 ORDER BY sku_id DESC")
     List<SkuLaunchConfigPO> findAllGateEnabled();
+
+    /** SPU 列表頁「防超賣保護」欄位批次回填用，同一 spu_id 底下的列理論上永遠同步(同一顆按鈕 fan-out 設定的)。 */
+    @Select("<script>SELECT * FROM sku_launch_config WHERE spu_id IN "
+            + "<foreach collection='spuIds' item='spuId' open='(' separator=',' close=')'>#{spuId}</foreach>"
+            + "</script>")
+    List<SkuLaunchConfigPO> findAllBySpuIds(@Param("spuIds") List<Long> spuIds);
 
     @Delete("<script>DELETE FROM sku_launch_config WHERE sku_id IN "
             + "<foreach collection='skuIds' item='skuId' open='(' separator=',' close=')'>#{skuId}</foreach>"

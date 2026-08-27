@@ -2,7 +2,6 @@ package com.tengan.mall.admin.application.port;
 
 import java.time.LocalDateTime;
 
-/** synced=false 代表這顆 skuId 還沒同步過商品的開賣時間設定，不是後端出錯。 */
-public record GateConfigItem(Long skuId, boolean synced, boolean trafficGateEnabled, LocalDateTime saleStartTime,
-        LocalDateTime gateCloseTime, LocalDateTime gateWarmedAt, LocalDateTime gateSettledAt) {
+/** SPU 列表頁「防超賣保護」欄位用，gateWarmedAt 為 null 代表這顆 SPU 從未啟用過。 */
+public record GateConfigItem(Long spuId, LocalDateTime gateWarmedAt, LocalDateTime gateCloseTime) {
 }

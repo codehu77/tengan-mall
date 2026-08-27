@@ -1,5 +1,6 @@
 package com.tengan.mall.inventory.application.gate;
 
+import com.tengan.mall.inventory.domain.exception.SkuLaunchConfigNotFoundException;
 import com.tengan.mall.inventory.domain.model.SkuLaunchConfig;
 import com.tengan.mall.inventory.domain.repository.SkuLaunchConfigRepository;
 import com.tengan.mall.inventory.domain.repository.WareSkuRepository;
@@ -55,6 +56,20 @@ public class WarmUpGatesService implements WarmUpGatesUseCase {
             }
         }
         return warmed;
+    }
+
+    /**
+     * 「啟用/重設防超賣保護」用：不套用 findReadyToWarmUp 的候選篩選條件（不看 sale_start_time/horizon），
+     * 呼叫端（ConfigureGateService）已經確保這是「剛被設定、要立刻生效」的動作，直接快照現在的庫存。
+     */
+    @Override
+    public void warmUpOne(Long skuId) {
+        SkuLaunchConfig config = skuLaunchConfigRepository.findBySkuId(skuId)
+                .orElseThrow(() -> new SkuLaunchConfigNotFoundException(skuId));
+        int protectedStock = wareSkuRepository.sumAvailableStock(skuId);
+        Instant expireAt = toInstant(config.gateCloseTime()).plus(Duration.ofMinutes(settlementGraceMinutes));
+        gateQuotaAdapter.warmUp(skuId, protectedStock, expireAt);
+        skuLaunchConfigRepository.markWarmed(skuId, protectedStock, LocalDateTime.now());
     }
 
     private Instant toInstant(LocalDateTime dateTime) {

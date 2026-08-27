@@ -23,13 +23,13 @@ public class SkuLaunchConfigRepositoryImpl implements SkuLaunchConfigRepository 
     }
 
     @Override
-    public void upsert(Long skuId, LocalDateTime saleStartTime, Integer purchaseLimitPerUser) {
-        mapper.upsert(skuId, saleStartTime, purchaseLimitPerUser);
+    public void upsert(Long skuId, Long spuId, LocalDateTime saleStartTime, Integer purchaseLimitPerUser) {
+        mapper.upsert(skuId, spuId, saleStartTime, purchaseLimitPerUser);
     }
 
     @Override
-    public void configureGate(Long skuId, boolean trafficGateEnabled, LocalDateTime gateCloseTime) {
-        mapper.configureGate(skuId, trafficGateEnabled, gateCloseTime);
+    public void configureGate(Long skuId, LocalDateTime gateCloseTime) {
+        mapper.configureGate(skuId, gateCloseTime);
     }
 
     @Override
@@ -62,8 +62,13 @@ public class SkuLaunchConfigRepositoryImpl implements SkuLaunchConfigRepository 
         mapper.deleteBySkuIds(skuIds);
     }
 
+    @Override
+    public List<SkuLaunchConfig> findAllBySpuIds(List<Long> spuIds) {
+        return mapper.findAllBySpuIds(spuIds).stream().map(this::toDomain).toList();
+    }
+
     private SkuLaunchConfig toDomain(SkuLaunchConfigPO po) {
-        return new SkuLaunchConfig(po.getSkuId(), po.getSaleStartTime(), po.isTrafficGateEnabled(),
+        return new SkuLaunchConfig(po.getSkuId(), po.getSpuId(), po.getSaleStartTime(), po.isTrafficGateEnabled(),
                 po.getGateCloseTime(), po.getPurchaseLimitPerUser(), po.getGateProtectedStock(),
                 po.getGateWarmedAt(), po.getGateSettledAt());
     }

@@ -16,6 +16,11 @@ const warmUpLoading = ref(false);
 
 type StatusTag = { text: string; type: "info" | "warning" | "danger" | "success" };
 
+/** 後端回傳 ISO 格式（帶 T），列表頁只是純顯示，換成空白比較好讀。 */
+function formatDateTime(value?: string) {
+  return value ? value.replace("T", " ") : "—";
+}
+
 /**
  * 純前端依現有欄位推導，後端沒有額外存一個 status 欄位（見 tengan-inventory 的 SkuLaunchConfig 設計）。
  * 未預熱的情況拆成三種，因為「還沒到開賣時間」跟「已經超過開賣時間卻還沒預熱」意義完全不同——後者代表
@@ -45,15 +50,15 @@ const columns: TableColumns[] = [
   { label: "圖片", width: 80, slot: "image" },
   { label: "SKU", prop: "skuId", minWidth: 100 },
   { label: "商品名稱", prop: "skuName", minWidth: 160, formatter: row => row.skuName ?? "—" },
-  { label: "開賣時間", prop: "saleStartTime", minWidth: 160, formatter: row => row.saleStartTime ?? "—" },
-  { label: "閘門關閉時間", prop: "gateCloseTime", minWidth: 160, formatter: row => row.gateCloseTime ?? "—" },
+  { label: "開賣時間", prop: "saleStartTime", minWidth: 160, formatter: row => formatDateTime(row.saleStartTime) },
+  { label: "閘門關閉時間", prop: "gateCloseTime", minWidth: 160, formatter: row => formatDateTime(row.gateCloseTime) },
   { label: "限購", prop: "purchaseLimitPerUser", minWidth: 80, formatter: row => row.purchaseLimitPerUser ?? "不限" },
   { label: "保護庫存", prop: "gateProtectedStock", minWidth: 90, formatter: row => row.gateProtectedStock ?? "—" },
   { label: "目前剩餘(Redis)", prop: "currentAvailablePermits", minWidth: 110, formatter: row => row.currentAvailablePermits ?? "—" },
   { label: "已購買人數", prop: "buyersCount", minWidth: 90, formatter: row => row.buyersCount ?? "—" },
   { label: "狀態", width: 90, slot: "status" },
-  { label: "預熱時間", prop: "gateWarmedAt", minWidth: 160, formatter: row => row.gateWarmedAt ?? "—" },
-  { label: "結算時間", prop: "gateSettledAt", minWidth: 160, formatter: row => row.gateSettledAt ?? "—" }
+  { label: "預熱時間", prop: "gateWarmedAt", minWidth: 160, formatter: row => formatDateTime(row.gateWarmedAt) },
+  { label: "結算時間", prop: "gateSettledAt", minWidth: 160, formatter: row => formatDateTime(row.gateSettledAt) }
 ];
 
 async function onSearch() {

@@ -9,6 +9,7 @@ public class SkuLaunchConfigPO {
 
     @TableId
     private Long skuId;
+    private Long spuId;
     private LocalDateTime saleStartTime;
     private boolean trafficGateEnabled;
     private LocalDateTime gateCloseTime;
@@ -24,6 +25,14 @@ public class SkuLaunchConfigPO {
 
     public void setSkuId(Long skuId) {
         this.skuId = skuId;
+    }
+
+    public Long getSpuId() {
+        return spuId;
+    }
+
+    public void setSpuId(Long spuId) {
+        this.spuId = spuId;
     }
 
     public LocalDateTime getSaleStartTime() {
