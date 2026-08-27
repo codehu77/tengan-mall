@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -36,9 +37,13 @@ public class OrderQueryAdapter implements OrderQueryPort {
         Page<OrderPO> page = orderMapper.selectPage(new Page<>(pageNum, pageSize),
                 buildWrapper(memberId, status, createdFrom, createdTo).orderByDesc(OrderPO::getCreatedAt)
                         .orderByDesc(OrderPO::getId));
-        return page.getRecords().stream()
+        List<OrderPO> records = page.getRecords();
+        Map<Long, List<OrderItemView>> itemsByOrderId = findItemsByOrderIds(
+                records.stream().map(OrderPO::getId).toList());
+        return records.stream()
                 .map(po -> new OrderSummary(po.getId(), po.getOrderSn(), po.getMemberId(), po.getStatus().getValue(),
-                        po.getPayAmount(), po.getPaymentMethod(), toInstant(po.getCreatedAt())))
+                        po.getPayAmount(), po.getPaymentMethod(), toInstant(po.getCreatedAt()),
+                        itemsByOrderId.getOrDefault(po.getId(), List.of())))
                 .toList();
     }
 
@@ -107,6 +112,18 @@ public class OrderQueryAdapter implements OrderQueryPort {
         return orderMapper.findPendingPointsCredit(cutoffDateTime, limit).stream()
                 .map(po -> new PointsGrantCandidate(po.getOrderSn(), po.getMemberId(), po.getPayAmount()))
                 .toList();
+    }
+
+    /** 分頁清單一次批次撈所有訂單的商品快照，避免對每筆訂單各發一次查詢（N+1）。 */
+    private Map<Long, List<OrderItemView>> findItemsByOrderIds(List<Long> orderIds) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        return orderItemMapper.selectList(new LambdaQueryWrapper<OrderItemPO>().in(OrderItemPO::getOrderId, orderIds))
+                .stream()
+                .collect(Collectors.groupingBy(OrderItemPO::getOrderId,
+                        Collectors.mapping(i -> new OrderItemView(i.getSkuId(), i.getSpuId(), i.getSkuName(),
+                                i.getSkuImage(), i.getPrice(), i.getCount(), i.getSubtotal()), Collectors.toList())));
     }
 
     private LambdaQueryWrapper<OrderPO> buildWrapper(Long memberId, Integer status, Instant createdFrom,

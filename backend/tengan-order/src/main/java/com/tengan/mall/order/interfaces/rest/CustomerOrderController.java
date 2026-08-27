@@ -10,6 +10,7 @@ import com.tengan.mall.order.application.order.CreateOrderUseCase;
 import com.tengan.mall.order.application.order.GetMyOrderDetailUseCase;
 import com.tengan.mall.order.application.order.ListMyOrdersQuery;
 import com.tengan.mall.order.application.order.ListMyOrdersUseCase;
+import com.tengan.mall.order.application.order.OrderItemView;
 import com.tengan.mall.order.application.order.ReceiverInfo;
 import com.tengan.mall.order.interfaces.rest.dto.ConfirmedItemResponse;
 import com.tengan.mall.order.interfaces.rest.dto.CreateOrderRequest;
@@ -20,6 +21,7 @@ import com.tengan.mall.order.interfaces.rest.dto.OrderItemResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderListResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderSummaryResponse;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -85,7 +87,7 @@ public class CustomerOrderController {
         var result = listMyOrdersUseCase.list(new ListMyOrdersQuery(memberId(jwt), status, page, pageSize));
         var items = result.items().stream()
                 .map(s -> new OrderSummaryResponse(s.id(), s.orderSn(), s.memberId(), s.status(), s.payAmount(),
-                        s.paymentMethod(), s.createdAt()))
+                        s.paymentMethod(), s.createdAt(), toItemResponses(s.items())))
                 .toList();
         return new OrderListResponse(items, result.total());
     }
@@ -93,14 +95,11 @@ public class CustomerOrderController {
     @GetMapping("/{orderSn}")
     public OrderDetailResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable String orderSn) {
         var d = getMyOrderDetailUseCase.get(memberId(jwt), orderSn);
-        var items = d.items().stream()
-                .map(i -> new OrderItemResponse(i.skuId(), i.spuId(), i.skuName(), i.skuImage(), i.price(),
-                        i.count(), i.subtotal()))
-                .toList();
         return new OrderDetailResponse(d.id(), d.orderSn(), d.memberId(), d.status(), d.cancelReason(),
                 d.totalAmount(), d.discountAmount(), d.payAmount(), d.paymentMethod(), d.couponId(),
                 d.pointsUsed(), d.pointsDiscountAmount(), d.receiverName(), d.receiverPhone(), d.city(),
-                d.district(), d.postalCode(), d.street(), d.remark(), d.receiptTime(), d.createdAt(), items);
+                d.district(), d.postalCode(), d.street(), d.remark(), d.receiptTime(), d.createdAt(),
+                toItemResponses(d.items()));
     }
 
     @PutMapping("/{orderSn}/cancel")
@@ -117,5 +116,12 @@ public class CustomerOrderController {
 
     private Long memberId(Jwt jwt) {
         return Long.valueOf(jwt.getSubject());
+    }
+
+    private List<OrderItemResponse> toItemResponses(List<OrderItemView> items) {
+        return items.stream()
+                .map(i -> new OrderItemResponse(i.skuId(), i.spuId(), i.skuName(), i.skuImage(), i.price(),
+                        i.count(), i.subtotal()))
+                .toList();
     }
 }

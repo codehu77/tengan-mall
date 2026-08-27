@@ -11,6 +11,7 @@ import com.tengan.mall.order.application.admin.ShipOrderCommand;
 import com.tengan.mall.order.application.admin.ShipOrderUseCase;
 import com.tengan.mall.order.application.order.CloseOrderIfUnpaidUseCase;
 import com.tengan.mall.order.application.order.MarkOrderPaidUseCase;
+import com.tengan.mall.order.application.order.OrderItemView;
 import com.tengan.mall.order.interfaces.rest.dto.AdminCancelOrderRequest;
 import com.tengan.mall.order.interfaces.rest.dto.DailyRevenuePointResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderDetailResponse;
@@ -22,6 +23,7 @@ import com.tengan.mall.order.interfaces.rest.dto.RevenueTrendResponse;
 import com.tengan.mall.jwt.IdentityAssertionVerifier;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -74,7 +76,7 @@ public class InternalOrderController {
         var result = adminListOrdersUseCase.list(new AdminListOrdersQuery(status, from, to, page, pageSize));
         var items = result.items().stream()
                 .map(s -> new OrderSummaryResponse(s.id(), s.orderSn(), s.memberId(), s.status(), s.payAmount(),
-                        s.paymentMethod(), s.createdAt()))
+                        s.paymentMethod(), s.createdAt(), toItemResponses(s.items())))
                 .toList();
         return new OrderListResponse(items, result.total());
     }
@@ -83,10 +85,7 @@ public class InternalOrderController {
     @PreAuthorize("hasAuthority('SCOPE_order.read')")
     public OrderDetailResponse get(@PathVariable String orderSn) {
         var d = adminGetOrderDetailUseCase.get(orderSn);
-        var items = d.items().stream()
-                .map(i -> new OrderItemResponse(i.skuId(), i.spuId(), i.skuName(), i.skuImage(), i.price(),
-                        i.count(), i.subtotal()))
-                .toList();
+        var items = toItemResponses(d.items());
         return new OrderDetailResponse(d.id(), d.orderSn(), d.memberId(), d.status(), d.cancelReason(),
                 d.totalAmount(), d.discountAmount(), d.payAmount(), d.paymentMethod(), d.couponId(),
                 d.pointsUsed(), d.pointsDiscountAmount(), d.receiverName(), d.receiverPhone(), d.city(),
@@ -145,5 +144,12 @@ public class InternalOrderController {
 
     private String operator(String identityAssertion) {
         return adminIdentityAssertionVerifier.verify(identityAssertion).getClaimAsString("username");
+    }
+
+    private List<OrderItemResponse> toItemResponses(List<OrderItemView> items) {
+        return items.stream()
+                .map(i -> new OrderItemResponse(i.skuId(), i.spuId(), i.skuName(), i.skuImage(), i.price(),
+                        i.count(), i.subtotal()))
+                .toList();
     }
 }

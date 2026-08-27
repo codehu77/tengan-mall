@@ -43,16 +43,6 @@ export interface CreateOrderResult {
   payAmount: number
 }
 
-export interface OrderSummary {
-  id: number
-  orderSn: string
-  memberId: number
-  status: OrderStatus
-  payAmount: number
-  paymentMethod: PaymentMethod
-  createdAt: string
-}
-
 export interface OrderItem {
   skuId: number
   spuId: number
@@ -61,6 +51,18 @@ export interface OrderItem {
   price: number
   count: number
   subtotal: number
+}
+
+export interface OrderSummary {
+  id: number
+  orderSn: string
+  memberId: number
+  status: OrderStatus
+  payAmount: number
+  paymentMethod: PaymentMethod
+  createdAt: string
+  /** 訂單頁要顯示的商品快照（下單當下的 name/image/price，不是即時查詢），見 order_item 設計。 */
+  items: OrderItem[]
 }
 
 export interface OrderDetail {

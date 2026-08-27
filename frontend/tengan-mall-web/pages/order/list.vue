@@ -39,13 +39,33 @@
             </UBadge>
           </div>
 
-          <div class="px-6 py-4 flex items-center justify-between">
+          <!-- 商品快照 -->
+          <div class="px-6 py-4 divide-y divide-gray-50">
+            <div
+              v-for="item in order.items"
+              :key="item.skuId"
+              class="py-3 first:pt-0 last:pb-0 flex items-center gap-4"
+            >
+              <img
+                :src="item.skuImage ?? ''"
+                :alt="item.skuName"
+                class="w-16 h-16 rounded border border-gray-100 object-cover shrink-0"
+              />
+              <div class="flex-1 text-base min-w-0">
+                <p class="text-gray-700 line-clamp-2">{{ item.skuName }}</p>
+                <p class="text-gray-400 mt-1">x{{ item.count }}</p>
+              </div>
+              <p class="text-base font-medium text-gray-800 shrink-0">NT$ {{ item.subtotal.toLocaleString() }}</p>
+            </div>
+          </div>
+
+          <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
             <div class="text-base text-gray-500">
               付款方式：{{ PAYMENT_METHOD_META[order.paymentMethod].label }}
             </div>
             <div class="flex items-center gap-4">
               <span class="text-base text-gray-500">
-                應付金額：<span class="font-semibold text-red-500">NT$ {{ order.payAmount.toLocaleString() }}</span>
+                訂單金額：<span class="font-semibold text-red-500">NT$ {{ order.payAmount.toLocaleString() }}</span>
               </span>
               <template v-if="order.status === 1">
                 <button
@@ -73,6 +93,12 @@
             </div>
           </div>
         </div>
+
+        <!-- 無限捲動觸發點：進入可視範圍就載入下一頁，載完自動 unobserve/disconnect，比照首頁「猜你喜歡」的模式 -->
+        <div ref="sentinel" class="py-4 text-center text-sm text-gray-400">
+          <span v-if="loadingMore">載入中...</span>
+          <span v-else-if="exhausted">已顯示全部訂單</span>
+        </div>
       </div>
 
       <!-- 空狀態 -->
@@ -95,6 +121,8 @@ definePageMeta({ middleware: 'auth', layout: 'member' })
 
 useHead({ title: '我的訂單' })
 
+const PAGE_SIZE = 10
+
 const toast = useToast()
 const { fetchOrders, cancelOrder, confirmReceipt } = useOrder()
 
@@ -110,16 +138,39 @@ const tabs: Array<{ label: string; value: OrderStatus | undefined }> = [
 const activeTab = ref<OrderStatus | undefined>(undefined)
 const orders = ref<OrderSummary[]>([])
 const loading = ref(true)
+const loadingMore = ref(false)
+const exhausted = ref(false)
+let page = 1
 
 async function loadOrders() {
   loading.value = true
+  page = 1
+  exhausted.value = false
   try {
-    const { items } = await fetchOrders(activeTab.value, 1, 50)
+    const { items, total } = await fetchOrders(activeTab.value, page, PAGE_SIZE)
     orders.value = items
+    exhausted.value = items.length >= total
   } catch (e: any) {
     toast.add({ title: '訂單載入失敗', description: e.data?.data?.message ?? e.message, color: 'red', timeout: 3000 })
   } finally {
     loading.value = false
+  }
+}
+
+// 像 YouTube 那樣捲到底部才載入更舊的訂單，不一次把全部訂單載完——見首頁「猜你喜歡」的無限捲動先例。
+async function loadMore() {
+  if (loadingMore.value || exhausted.value) return
+  loadingMore.value = true
+  try {
+    const nextPage = page + 1
+    const { items, total } = await fetchOrders(activeTab.value, nextPage, PAGE_SIZE)
+    orders.value.push(...items)
+    page = nextPage
+    exhausted.value = orders.value.length >= total
+  } catch (e: any) {
+    toast.add({ title: '訂單載入失敗', description: e.data?.data?.message ?? e.message, color: 'red', timeout: 3000 })
+  } finally {
+    loadingMore.value = false
   }
 }
 
@@ -152,5 +203,26 @@ async function handleConfirmReceipt(orderSn: string) {
   }
 }
 
-onMounted(loadOrders)
+// sentinel 元素只在「有訂單」的分支裡存在（v-else-if="orders.length > 0"），切換分頁 tab 若
+// 從有訂單切到空分頁（或反過來）會整個卸載/重新掛載——不能只在 onMounted 綁一次，要跟著
+// template ref 變化重新 observe/unobserve，否則切到原本沒訂單的 tab 再切回來就再也捲不動了。
+const sentinel = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+
+watch(sentinel, (el, oldEl) => {
+  if (oldEl) observer?.unobserve(oldEl)
+  if (el) observer?.observe(el)
+})
+
+onMounted(async () => {
+  observer = new IntersectionObserver((entries) => {
+    if (entries[0]?.isIntersecting) loadMore()
+  })
+  await loadOrders()
+  await nextTick()
+  if (sentinel.value) observer.observe(sentinel.value)
+})
+onUnmounted(() => {
+  observer?.disconnect()
+})
 </script>
