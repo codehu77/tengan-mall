@@ -1,5 +1,6 @@
 package com.tengan.mall.inventory.application.stock;
 
+import com.tengan.mall.inventory.application.gate.SettleGatesUseCase;
 import com.tengan.mall.inventory.domain.model.SkuLaunchConfig;
 import com.tengan.mall.inventory.domain.model.WareOrderTask;
 import com.tengan.mall.inventory.domain.model.WareOrderTaskDetail;
@@ -29,6 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link GateQuotaAdapter} 的 Redis 原子保留，完全跳過本來的 MySQL 條件式 UPDATE 路徑；產生的
  * {@link WareOrderTaskDetail} 用 {@code wareId=null} 當哨兵標記「這是閘門保留，不是真倉鎖定」，
  * 後續 release/deduct 都靠這個哨兵分流。</p>
+ *
+ * <p>閘門剛關閉、還沒結算的 sku 落回 MySQL 路徑前會先懶結算一次（見下面 lock() 內的呼叫），避免
+ * 乾等排程結算造成的空窗期超賣——{@link com.tengan.mall.inventory.infrastructure.scheduler
+ * .GateSettlementScheduler} 因此降級成沒人下單時的收尾備援，不再是唯一觸發點。</p>
  */
 @Service
 public class LockInventoryService implements LockInventoryUseCase {
@@ -38,17 +43,20 @@ public class LockInventoryService implements LockInventoryUseCase {
     private final SkuLaunchConfigRepository skuLaunchConfigRepository;
     private final MemberSkuPurchaseCountRepository memberSkuPurchaseCountRepository;
     private final GateQuotaAdapter gateQuotaAdapter;
+    private final SettleGatesUseCase settleGatesUseCase;
     private final long settlementGraceMinutes;
 
     public LockInventoryService(WareOrderTaskRepository wareOrderTaskRepository, WareSkuRepository wareSkuRepository,
             SkuLaunchConfigRepository skuLaunchConfigRepository,
             MemberSkuPurchaseCountRepository memberSkuPurchaseCountRepository, GateQuotaAdapter gateQuotaAdapter,
+            SettleGatesUseCase settleGatesUseCase,
             @Value("${tengan.inventory.gate-settlement-grace-minutes:60}") long settlementGraceMinutes) {
         this.wareOrderTaskRepository = wareOrderTaskRepository;
         this.wareSkuRepository = wareSkuRepository;
         this.skuLaunchConfigRepository = skuLaunchConfigRepository;
         this.memberSkuPurchaseCountRepository = memberSkuPurchaseCountRepository;
         this.gateQuotaAdapter = gateQuotaAdapter;
+        this.settleGatesUseCase = settleGatesUseCase;
         this.settlementGraceMinutes = settlementGraceMinutes;
     }
 
@@ -78,6 +86,15 @@ public class LockInventoryService implements LockInventoryUseCase {
             if (launchConfig != null && launchConfig.isGateActive(now)) {
                 lockGateItem(command, item, launchConfig, lockedDetails, failures);
                 continue;
+            }
+
+            // 閘門關閉時間一過就落回這裡走一般 MySQL 路徑，但 ware_sku.stock 在整個保護期間都沒被
+            // 動過（Redis 賣出量還沒結算回真實庫存），如果乾等排程結算，關閉後到下次排程掃到之間
+            // 最多幾分鐘的空窗，新單會拿一個偏高、沒扣到 Redis 賣出量的庫存數字判斷夠不夠賣，等於
+            // 超賣。這裡在落回 MySQL 路徑之前，先同步結算掉「已預熱、還沒結算」的上一輪，
+            // 讓這一筆(以及之後所有)請求都是拿結算後的真實數字判斷，空窗直接關到 0，不用等排程。
+            if (launchConfig != null && launchConfig.gateWarmedAt() != null && launchConfig.gateSettledAt() == null) {
+                settleGatesUseCase.settleOne(item.skuId());
             }
 
             Integer limit = launchConfig == null ? null : launchConfig.purchaseLimitPerUser();

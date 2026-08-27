@@ -6,8 +6,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** 固定間隔掃描已關閉但還沒結算的閘門，完全比照 tengan-seckill 的 SettlementScheduler，間隔比預熱短
- * 很多——結算完成才是「模式復原」的觸發點，拖太久會讓已經關閉的閘門遲遲無法恢復一般購買流程。 */
+/**
+ * 固定間隔掃描已關閉但還沒結算的閘門，完全比照 tengan-seckill 的 SettlementScheduler，間隔比預熱短
+ * 很多。{@link com.tengan.mall.inventory.application.stock.LockInventoryService} 落回 MySQL
+ * 路徑前已經會懶結算一次，真正有人下單的 sku 不會等到這支排程——這支現在是「關閉後都沒人碰、
+ * 沒有懶結算機會觸發」的收尾備援，避免那種 sku 的 gate_settled_at 永遠停在 NULL。
+ */
 @Component
 public class GateSettlementScheduler {
 
