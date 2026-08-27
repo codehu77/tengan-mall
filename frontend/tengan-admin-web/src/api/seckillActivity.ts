@@ -3,7 +3,7 @@ import { http } from "@/utils/http";
 /** 對齊 tengan-admin SeckillActivityController 的回應形狀（BFF 轉發 tengan-seckill）。 */
 export type ActivityItem = {
   id: number;
-  activityType: "FLASH_SALE" | "LAUNCH";
+  activityType: "FLASH_SALE";
   startTime: string;
   endTime: string;
   sessionId: number | null;
@@ -45,13 +45,10 @@ export const getActivity = (id: number) => {
   );
 };
 
-/** FLASH_SALE 填 sessionId+activityDate；LAUNCH 填 startTime+endTime（另一組留空）。 */
 export type CreateActivityData = {
-  activityType: "FLASH_SALE" | "LAUNCH";
+  activityType: "FLASH_SALE";
   sessionId?: number | null;
   activityDate?: string | null;
-  startTime?: string | null;
-  endTime?: string | null;
 };
 
 export const createActivity = (data: CreateActivityData) => {

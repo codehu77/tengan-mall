@@ -26,16 +26,8 @@ export interface PublicFlashSaleSession {
   products: PublicSeckillProduct[]
 }
 
-export interface PublicLaunch {
-  activityId: number
-  startTime: string
-  endTime: string
-  products: PublicSeckillProduct[]
-}
-
 export interface PublicSeckillDisplayResult {
   flashSaleSessions: PublicFlashSaleSession[]
-  launches: PublicLaunch[]
 }
 
 /** 純轉發，不需要登入。 */
@@ -44,7 +36,7 @@ export async function fetchSeckillActivities(): Promise<PublicSeckillDisplayResu
 }
 
 /**
- * 供購物車/商品詳情頁顯示搶購價用——攤平成 skuId 對應表。**只收 ACTIVE 場次 + 首發，且 remaining=0
+ * 供購物車/商品詳情頁顯示搶購價用——攤平成 skuId 對應表。**只收 ACTIVE 場次，且 remaining=0
  * 的規格不進這張表**（賣完的規格不該顯示搶購價/讓人加價購物車，商品頁另外用 fetchSeckillActivities()
  * 的原始資料判斷要不要把選項反灰，見場次機制/SPU 規劃文件）。活動結束後 tengan-seckill 那支 Redis key
  * 過期，這裡自然拿不到該 skuId，顯示會自動變回原價，不用寫「是否過期」判斷式（延續後端同一個設計原則）。
@@ -52,19 +44,11 @@ export async function fetchSeckillActivities(): Promise<PublicSeckillDisplayResu
  */
 export async function fetchActiveSeckillMap(): Promise<Map<number, PublicSeckillSku>> {
   try {
-    const { flashSaleSessions, launches } = await fetchSeckillActivities()
+    const { flashSaleSessions } = await fetchSeckillActivities()
     const map = new Map<number, PublicSeckillSku>()
     for (const session of flashSaleSessions) {
       if (session.status !== 'ACTIVE') continue
       for (const product of session.products) {
-        for (const sku of product.skus) {
-          if (sku.remaining <= 0) continue
-          map.set(sku.skuId, sku)
-        }
-      }
-    }
-    for (const launch of launches) {
-      for (const product of launch.products) {
         for (const sku of product.skus) {
           if (sku.remaining <= 0) continue
           map.set(sku.skuId, sku)

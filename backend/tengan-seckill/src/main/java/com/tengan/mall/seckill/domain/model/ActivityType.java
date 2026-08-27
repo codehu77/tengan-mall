@@ -4,16 +4,14 @@ import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.baomidou.mybatisplus.annotation.IEnum;
 
 /**
- * 限時搶購跟首發合併成同一套機制後，用這個欄位參數化「配額是不是真的稀缺」：
- * FLASH_SALE 的 {@code seckillCount} 是真正的可售上限，賣完就是真的沒了；LAUNCH（首發）的
- * {@code seckillCount} 是節流用的放行速率參考值，不代表庫存上限，實際庫存另外查 tengan-inventory。
- * 兩者共用同一套「時間窗+配額+高併發保護」骨架，差異只在這個欄位怎麼被解讀，不需要另開新服務
- * （見 Phase 9 規劃 Context 第 2 點）。
+ * 2026-08-27：原本還有一個 LAUNCH(2)（首發/流量閘門）類型，跟 FLASH_SALE 共用同一套「時間窗+
+ * 配額+高併發保護」骨架，只是 seckillCount 的解讀方式不同（LAUNCH 是節流參考值，不是真實庫存上限）。
+ * 已經被獨立的「即將開賣」+「防超賣保護」功能（tengan-product/tengan-inventory）取代並移除——
+ * `activity_type` 欄位保留（歷史 migration 已套用，不回頭改），但新資料不會再出現 code=2。
  */
 public enum ActivityType implements IEnum<Integer> {
 
-    FLASH_SALE(1),
-    LAUNCH(2);
+    FLASH_SALE(1);
 
     @EnumValue
     private final int code;

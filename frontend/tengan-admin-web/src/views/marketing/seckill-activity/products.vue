@@ -24,8 +24,7 @@ const router = useRouter();
 const activityId = Number(route.params.id);
 
 const activityTypeLabel: Record<ActivityItem["activityType"], string> = {
-  FLASH_SALE: "限時搶購",
-  LAUNCH: "首發"
+  FLASH_SALE: "限時搶購"
 };
 
 const activityCaption = ref("");
@@ -56,7 +55,7 @@ async function onSearch() {
 async function loadActivityCaption() {
   const activity = await getActivity(activityId);
   const time =
-    activity.activityType === "FLASH_SALE" && activity.sessionName && activity.activityDate
+    activity.sessionName && activity.activityDate
       ? `${activity.sessionName}（${activity.activityDate}）`
       : `${new Date(activity.startTime).toLocaleString("zh-TW", { hour12: false })} ~ ${new Date(activity.endTime).toLocaleString("zh-TW", { hour12: false })}`;
   activityCaption.value = `${activityTypeLabel[activity.activityType]} · ${time}`;

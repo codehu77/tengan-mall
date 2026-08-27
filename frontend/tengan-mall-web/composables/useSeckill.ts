@@ -25,16 +25,8 @@ export interface FlashSaleSession {
   products: SeckillProduct[]
 }
 
-export interface Launch {
-  activityId: number
-  startTime: string
-  endTime: string
-  products: SeckillProduct[]
-}
-
 export interface SeckillDisplayResult {
   flashSaleSessions: FlashSaleSession[]
-  launches: Launch[]
 }
 
 /**

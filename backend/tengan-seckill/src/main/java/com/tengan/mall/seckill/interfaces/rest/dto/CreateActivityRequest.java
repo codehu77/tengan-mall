@@ -1,10 +1,11 @@
 package com.tengan.mall.seckill.interfaces.rest.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import java.time.Instant;
 import java.time.LocalDate;
 
-/** FLASH_SALE 填 sessionId+activityDate；LAUNCH 填 startTime+endTime——依 activityType 由 controller 決定要驗證哪一組（見 InternalSeckillController）。 */
-public record CreateActivityRequest(@NotBlank String activityType, Long sessionId, LocalDate activityDate,
-        Instant startTime, Instant endTime) {
+/**
+ * activityType 目前恆為 "FLASH_SALE"，保留這個欄位只是為了不用同時改 tengan-admin 那邊的
+ * pass-through DTO——controller 不再讀取/驗證它的值。
+ */
+public record CreateActivityRequest(@NotBlank String activityType, Long sessionId, LocalDate activityDate) {
 }

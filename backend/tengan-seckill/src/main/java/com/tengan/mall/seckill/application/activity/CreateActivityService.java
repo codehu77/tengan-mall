@@ -1,7 +1,6 @@
 package com.tengan.mall.seckill.application.activity;
 
 import com.tengan.mall.seckill.domain.exception.SessionNotFoundException;
-import com.tengan.mall.seckill.domain.model.ActivityType;
 import com.tengan.mall.seckill.domain.model.SeckillActivity;
 import com.tengan.mall.seckill.domain.model.SeckillSession;
 import com.tengan.mall.seckill.domain.repository.SeckillActivityRepository;
@@ -22,9 +21,8 @@ public class CreateActivityService implements CreateActivityUseCase {
 
     @Override
     public Long create(CreateActivityCommand command) {
-        SeckillActivity activity = command.activityType() == ActivityType.FLASH_SALE
-                ? SeckillActivity.createFlashSale(requireSession(command.sessionId()), command.activityDate())
-                : SeckillActivity.createLaunch(command.startTime(), command.endTime());
+        SeckillActivity activity = SeckillActivity.createFlashSale(requireSession(command.sessionId()),
+                command.activityDate());
         return activityRepository.save(activity).getId();
     }
 

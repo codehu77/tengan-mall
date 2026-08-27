@@ -4,7 +4,6 @@ import com.tengan.mall.seckill.application.port.ProductPort;
 import com.tengan.mall.seckill.application.port.SkuInfo;
 import com.tengan.mall.seckill.application.port.SpuInfo;
 import com.tengan.mall.seckill.domain.model.ActivityStatus;
-import com.tengan.mall.seckill.domain.model.ActivityType;
 import com.tengan.mall.seckill.domain.model.SeckillActivity;
 import com.tengan.mall.seckill.domain.model.SeckillSession;
 import com.tengan.mall.seckill.domain.model.SeckillSku;
@@ -25,9 +24,9 @@ import org.springframework.stereotype.Service;
 
 /**
  * 商品名稱/圖片/原價這幾個 tengan-seckill 自己不存的欄位，向 tengan-product 批次補（見規劃文件第 1 節）。
- * FLASH_SALE 回傳「今天所有場次」（PUBLISHED+ACTIVE，供前台多場次分頁），LAUNCH 維持只回傳 ACTIVE
- * （不分場次，見場次機制規劃文件）。ACTIVE 場次的 remaining 讀 Redis 即時值；PUBLISHED（還沒預熱，
- * Redis semaphore 尚未建立）的 remaining 用 DB 靜態 seckillCount，避免誤判成 0。
+ * 回傳「今天所有場次」（PUBLISHED+ACTIVE，供前台多場次分頁）。ACTIVE 場次的 remaining 讀 Redis
+ * 即時值；PUBLISHED（還沒預熱，Redis semaphore 尚未建立）的 remaining 用 DB 靜態 seckillCount，
+ * 避免誤判成 0。
  *
  * <p>一場活動底下的 SKU 依 spuId 分組成 {@link ActiveProductView}（一個商品一張卡，不是一個規格
  * 一張卡，見「秒殺改成綁 SPU」規劃文件）；remaining=0 的規格不會被濾掉，繼續回傳讓前端顯示成
@@ -56,16 +55,11 @@ public class ListActiveActivitiesService implements ListActiveActivitiesUseCase 
     public SeckillDisplayView list() {
         LocalDate today = LocalDate.now(ZoneId.systemDefault());
         List<SeckillActivity> flashSaleActivities = activityRepository.findFlashSaleSessionsOnDate(today);
-        List<SeckillActivity> launchActivities = activityRepository.findActive().stream()
-                .filter(a -> a.getActivityType() == ActivityType.LAUNCH).toList();
-
-        List<SeckillActivity> allActivities = new ArrayList<>(flashSaleActivities);
-        allActivities.addAll(launchActivities);
-        if (allActivities.isEmpty()) {
-            return new SeckillDisplayView(List.of(), List.of());
+        if (flashSaleActivities.isEmpty()) {
+            return new SeckillDisplayView(List.of());
         }
 
-        Map<Long, List<SeckillSku>> skusByActivity = allActivities.stream()
+        Map<Long, List<SeckillSku>> skusByActivity = flashSaleActivities.stream()
                 .collect(Collectors.toMap(SeckillActivity::getId, a -> skuRepository.findByActivityId(a.getId())));
         List<Long> allSkuIds = skusByActivity.values().stream().flatMap(List::stream).map(SeckillSku::getSkuId)
                 .distinct().toList();
@@ -98,13 +92,7 @@ public class ListActiveActivitiesService implements ListActiveActivitiesUseCase 
                 .filter(view -> !view.products().isEmpty())
                 .toList();
 
-        List<LaunchView> launches = launchActivities.stream()
-                .map(a -> new LaunchView(a.getId(), a.getStartTime(), a.getEndTime(),
-                        toProductViews(skusByActivity.get(a.getId()), skuInfoBySkuId, spuInfoBySpuId, true)))
-                .filter(view -> !view.products().isEmpty())
-                .toList();
-
-        return new SeckillDisplayView(flashSaleSessions, launches);
+        return new SeckillDisplayView(flashSaleSessions);
     }
 
     private String sessionName(Long sessionId, Map<Long, String> cache) {

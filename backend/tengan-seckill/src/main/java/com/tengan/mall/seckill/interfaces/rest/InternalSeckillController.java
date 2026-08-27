@@ -22,7 +22,6 @@ import com.tengan.mall.seckill.application.session.ListSessionsUseCase;
 import com.tengan.mall.seckill.application.session.UpdateSessionCommand;
 import com.tengan.mall.seckill.application.session.UpdateSessionUseCase;
 import com.tengan.mall.seckill.application.warmup.WarmUpActivitiesUseCase;
-import com.tengan.mall.seckill.domain.model.ActivityType;
 import com.tengan.mall.seckill.interfaces.rest.dto.ActiveSkuResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.ActivityDetailResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.ActivityListResponse;
@@ -43,7 +42,6 @@ import com.tengan.mall.seckill.interfaces.rest.dto.SkuResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.UpdateActivitySkusRequest;
 import com.tengan.mall.seckill.interfaces.rest.dto.WarmUpNowResponse;
 import jakarta.validation.Valid;
-import java.util.Locale;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -126,13 +124,12 @@ public class InternalSeckillController {
                 detail.status().name(), skus);
     }
 
-    /** 供 tengan-admin 呼叫；FLASH_SALE 帶 sessionId+activityDate，LAUNCH 帶 startTime+endTime（見 CreateActivityRequest）。 */
+    /** 供 tengan-admin 呼叫；帶 sessionId+activityDate。 */
     @PostMapping("/activities")
     @PreAuthorize("hasAuthority('SCOPE_seckill.write')")
     public CreateActivityResponse createActivity(@Valid @RequestBody CreateActivityRequest request) {
-        ActivityType activityType = ActivityType.valueOf(request.activityType().toUpperCase(Locale.ROOT));
-        Long id = createActivityUseCase.create(new CreateActivityCommand(activityType, request.sessionId(),
-                request.activityDate(), request.startTime(), request.endTime()));
+        Long id = createActivityUseCase.create(new CreateActivityCommand(request.sessionId(),
+                request.activityDate()));
         return new CreateActivityResponse(id);
     }
 

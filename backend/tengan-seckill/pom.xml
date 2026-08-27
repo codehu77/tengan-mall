@@ -14,10 +14,10 @@
   <packaging>jar</packaging>
 
   <!--
-    秒殺網域（開發順序與清單.md Phase 9，2026-08-21 重新規劃）：限時搶購跟首發合併成同一套機制，
-    用 activity_type 參數化配額是否真的稀缺。核心是「保留配額」這個 internal 端點供 tengan-order
-    的訂單建立 Saga 呼叫（比照 inventory lock/release 的既有模式），三道防線本體（限購計數 INCRBY +
-    RSemaphore.tryAcquire）用 Redisson 實作，是整個專案第一次引入這個依賴。
+    秒殺網域（開發順序與清單.md Phase 9，2026-08-21 重新規劃；2026-08-27 移除首發(LAUNCH)類型，
+    只剩限時搶購(FLASH_SALE)，見 ActivityType.java 的說明）。核心是「保留配額」這個 internal 端點
+    供 tengan-order 的訂單建立 Saga 呼叫（比照 inventory lock/release 的既有模式），三道防線本體
+    （限購計數 INCRBY + RSemaphore.tryAcquire）用 Redisson 實作，是整個專案第一次引入這個依賴。
   -->
 
   <dependencies>

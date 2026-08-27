@@ -235,7 +235,7 @@ const selectedSkuId = ref(defaultSkuId)
 
 const currentSku = computed(() => skus.value.find(s => s.id === selectedSkuId.value) ?? skus.value[0])
 
-// 目前這顆 sku 是不是活躍秒殺——只認 ACTIVE 場次+首發，PUBLISHED（還沒開賣）的場次不算，
+// 目前這顆 sku 是不是活躍秒殺——只認 ACTIVE 場次，PUBLISHED（還沒開賣）的場次不算，
 // remaining=0（賣完/被設 0）也不算，活動結束後 useSeckill() 的資料自然不會再包含這個 skuId，
 // 這裡不用寫「是否過期」的額外判斷。
 const activeSeckillSku = computed(() => {
@@ -246,11 +246,6 @@ const activeSeckillSku = computed(() => {
     const product = session.products.find(p => p.spuId === spuId)
     const sku = product?.skus.find(s => s.skuId === skuId && s.remaining > 0)
     if (sku) return { ...sku, endTime: session.endTime }
-  }
-  for (const launch of seckillData.value?.launches ?? []) {
-    const product = launch.products.find(p => p.spuId === spuId)
-    const sku = product?.skus.find(s => s.skuId === skuId && s.remaining > 0)
-    if (sku) return { ...sku, endTime: launch.endTime }
   }
   return null
 })
@@ -266,12 +261,6 @@ const soldOutSeckillSkuIds = computed(() => {
       if (sku.remaining <= 0) ids.add(sku.skuId)
     }
   }
-  for (const launch of seckillData.value?.launches ?? []) {
-    const product = launch.products.find(p => p.spuId === spuId)
-    for (const sku of product?.skus ?? []) {
-      if (sku.remaining <= 0) ids.add(sku.skuId)
-    }
-  }
   return ids
 })
 
@@ -282,10 +271,6 @@ const activeSeckillSkuIds = computed(() => {
   for (const session of seckillData.value?.flashSaleSessions ?? []) {
     if (session.status !== 'ACTIVE') continue
     const product = session.products.find(p => p.spuId === spuId)
-    for (const sku of product?.skus ?? []) ids.add(sku.skuId)
-  }
-  for (const launch of seckillData.value?.launches ?? []) {
-    const product = launch.products.find(p => p.spuId === spuId)
     for (const sku of product?.skus ?? []) ids.add(sku.skuId)
   }
   return ids

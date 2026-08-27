@@ -28,9 +28,6 @@ public interface SeckillActivityRepository {
     /** status=ACTIVE 且 endTime<=cutoff——結算排程的候選（見規劃第 6 節）。 */
     List<SeckillActivity> findActiveEndedBefore(Instant cutoff);
 
-    /** status=ACTIVE，不限時間——公開展示端點（LAUNCH 部分）用（見規劃文件第 1 節）。 */
-    List<SeckillActivity> findActive();
-
     /** activityType=FLASH_SALE 且 status IN (PUBLISHED, ACTIVE) 且 activityDate=date——公開展示端點的多場次分頁用（見場次機制規劃文件）。 */
     List<SeckillActivity> findFlashSaleSessionsOnDate(LocalDate date);
 }

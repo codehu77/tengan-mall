@@ -3,7 +3,6 @@ package com.tengan.mall.seckill.interfaces.rest;
 import com.tengan.mall.seckill.application.display.ActiveProductView;
 import com.tengan.mall.seckill.application.display.ListActiveActivitiesUseCase;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicFlashSaleSessionResponse;
-import com.tengan.mall.seckill.interfaces.rest.dto.PublicLaunchResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicProductResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicSeckillDisplayResponse;
 import com.tengan.mall.seckill.interfaces.rest.dto.PublicSkuResponse;
@@ -30,11 +29,7 @@ public class PublicSeckillController {
                 .map(s -> new PublicFlashSaleSessionResponse(s.activityId(), s.sessionId(), s.sessionName(),
                         s.startTime(), s.endTime(), s.status(), toProductResponses(s.products())))
                 .toList();
-        var launches = display.launches().stream()
-                .map(l -> new PublicLaunchResponse(l.activityId(), l.startTime(), l.endTime(),
-                        toProductResponses(l.products())))
-                .toList();
-        return new PublicSeckillDisplayResponse(flashSaleSessions, launches);
+        return new PublicSeckillDisplayResponse(flashSaleSessions);
     }
 
     private List<PublicProductResponse> toProductResponses(List<ActiveProductView> products) {

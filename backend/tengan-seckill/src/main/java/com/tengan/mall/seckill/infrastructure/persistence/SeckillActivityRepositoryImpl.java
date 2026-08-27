@@ -76,11 +76,6 @@ public class SeckillActivityRepositoryImpl implements SeckillActivityRepository 
     }
 
     @Override
-    public List<SeckillActivity> findActive() {
-        return mapper.findActive().stream().map(this::toDomain).toList();
-    }
-
-    @Override
     public List<SeckillActivity> findFlashSaleSessionsOnDate(LocalDate date) {
         return mapper.findFlashSaleSessionsOnDate(date).stream().map(this::toDomain).toList();
     }

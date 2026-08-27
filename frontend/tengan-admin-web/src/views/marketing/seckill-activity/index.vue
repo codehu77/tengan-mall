@@ -25,8 +25,7 @@ const loading = ref(true);
 const dataList = ref<Array<ActivityItem>>([]);
 
 const activityTypeLabel: Record<ActivityItem["activityType"], string> = {
-  FLASH_SALE: "限時搶購",
-  LAUNCH: "首發"
+  FLASH_SALE: "限時搶購"
 };
 
 const statusLabel: Record<
@@ -50,9 +49,9 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleString("zh-TW", { hour12: false });
 }
 
-/** FLASH_SALE 顯示場次名稱+日期比原始 startTime~endTime 更直觀；LAUNCH 維持原樣。 */
+/** 顯示場次名稱+日期比原始 startTime~endTime 更直觀。 */
 function formatActivityTime(row: ActivityItem) {
-  if (row.activityType === "FLASH_SALE" && row.sessionName && row.activityDate) {
+  if (row.sessionName && row.activityDate) {
     return `${row.sessionName}（${row.activityDate}）`;
   }
   return `${formatTime(row.startTime)} ~ ${formatTime(row.endTime)}`;
@@ -71,9 +70,7 @@ function openCreateDialog() {
   const formInline = {
     activityType: "FLASH_SALE" as const,
     sessionId: null,
-    activityDate: null,
-    startTime: "",
-    endTime: ""
+    activityDate: null
   };
 
   addDialog({

@@ -3,9 +3,9 @@ package com.tengan.mall.seckill.domain.model;
 import java.time.LocalTime;
 
 /**
- * 場次範本：FLASH_SALE 專用，定義每日固定開賣時間點+固定時長（例如「早場」10:00 開賣、賣 2 小時）。
- * 後台建立 FLASH_SALE 活動時選一個場次範本 + 一個日期，由 {@link SeckillActivity#createFlashSale}
- * 算出實際的 startTime/endTime。LAUNCH 活動不使用場次，維持自由起訖時間。
+ * 場次範本：定義每日固定開賣時間點+固定時長（例如「早場」10:00 開賣、賣 2 小時）。
+ * 後台建立活動時選一個場次範本 + 一個日期，由 {@link SeckillActivity#createFlashSale}
+ * 算出實際的 startTime/endTime。
  */
 public class SeckillSession {
 

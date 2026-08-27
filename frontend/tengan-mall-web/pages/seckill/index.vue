@@ -5,7 +5,6 @@ useHead({ title: '限時搶購' })
 
 const { data: seckillData } = await useSeckill()
 const flashSaleSessions = computed(() => seckillData.value?.flashSaleSessions ?? [])
-const launches = computed(() => seckillData.value?.launches ?? [])
 
 /** 卡片代表值：同一活動同一商品理論上共用同一個秒殺價，取第一個還有貨的規格。 */
 function representativeSku(product: SeckillProduct) {
@@ -31,9 +30,9 @@ function sessionLabel(session: { sessionName: string | null; startTime: string; 
 
 <template>
   <div class="max-w-7xl mx-auto px-6 py-8">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">限時搶購 / 首發</h1>
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">限時搶購</h1>
 
-    <div v-if="flashSaleSessions.length === 0 && launches.length === 0" class="bg-white rounded-lg py-24 text-center text-gray-400">
+    <div v-if="flashSaleSessions.length === 0" class="bg-white rounded-lg py-24 text-center text-gray-400">
       目前沒有進行中的活動
     </div>
 
@@ -74,40 +73,6 @@ function sessionLabel(session: { sessionName: string | null; startTime: string; 
                 {{ session.status === 'ACTIVE' ? `剩餘 ${totalRemaining(product)} 件` : '尚未開賣' }}
               </span>
             </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 首發：不分場次，一個活動一區塊；一個商品一張卡 -->
-    <section v-for="launch in launches" :key="launch.activityId" class="mb-10">
-      <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-        <UBadge color="red" variant="solid">首發</UBadge>
-        <span class="text-sm text-gray-400 font-normal">
-          結束時間：{{ new Date(launch.endTime).toLocaleString('zh-TW', { hour12: false }) }}
-        </span>
-      </h2>
-
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-        <div
-          v-for="product in launch.products"
-          :key="product.spuId"
-          class="bg-white rounded-xl shadow-sm hover:shadow-md transition cursor-pointer overflow-hidden"
-          @click="navigateTo(`/item/${product.spuId}`)"
-        >
-          <div class="relative aspect-square overflow-hidden bg-gray-50">
-            <img :src="product.mainImage" :alt="product.name" class="w-full h-full object-cover" />
-            <span class="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
-              {{ discountLabel(representativeSku(product)) }}
-            </span>
-          </div>
-          <div class="p-3">
-            <p class="text-sm text-gray-700 line-clamp-2 mb-2 min-h-[2.5rem]">{{ product.name }}</p>
-            <p class="text-red-500 font-bold text-lg leading-none mb-1">NT$ {{ representativeSku(product).seckillPrice.toLocaleString() }}</p>
-            <p class="text-gray-400 text-xs line-through mb-2">NT$ {{ representativeSku(product).originalPrice.toLocaleString() }}</p>
-            <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500">
-              剩餘 {{ totalRemaining(product) }} 件
-            </span>
           </div>
         </div>
       </div>
