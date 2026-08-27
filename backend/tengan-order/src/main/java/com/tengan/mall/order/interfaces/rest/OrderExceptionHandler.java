@@ -15,6 +15,7 @@ import com.tengan.mall.order.domain.exception.PurchaseLimitExceededException;
 import com.tengan.mall.order.domain.exception.SeckillReservationFailedException;
 import com.tengan.mall.order.domain.exception.SkuNotYetOnSaleException;
 import com.tengan.mall.order.interfaces.rest.dto.InventoryShortageResponse;
+import com.tengan.mall.order.interfaces.rest.dto.PurchaseLimitExceededResponse;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,8 +54,16 @@ public class OrderExceptionHandler {
             CouponNotApplicableException.class, OrderCancellationNotAllowedException.class,
             OrderShipmentNotAllowedException.class, OrderReceiptNotAllowedException.class,
             OrderMarkPaidNotAllowedException.class, SeckillReservationFailedException.class,
-            SkuNotYetOnSaleException.class, PurchaseLimitExceededException.class})
+            SkuNotYetOnSaleException.class})
     public ResponseEntity<Map<String, String>> handleConflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
+    }
+
+    /** 帶 skuIds 讓前端能查回商品名稱組出看得懂的訊息，比照 InventoryShortageException 同樣的模式。 */
+    @ExceptionHandler(PurchaseLimitExceededException.class)
+    public ResponseEntity<PurchaseLimitExceededResponse> handlePurchaseLimitExceeded(
+            PurchaseLimitExceededException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new PurchaseLimitExceededResponse(e.getMessage(), e.getSkuIds()));
     }
 }

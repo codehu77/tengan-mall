@@ -432,6 +432,7 @@ async function submitOrder() {
     // （這裡踩到的坑：這個專案好幾個地方都寫成 e.data?.message，一路都在讀到 undefined 沒發現，
     // 因為都有 fallback 字串接住，不會直接壞掉，只是訊息一直是錯的）。
     const shortageSkuIds: number[] | undefined = e.data?.data?.shortageSkuIds
+    const purchaseLimitSkuIds: number[] | undefined = e.data?.data?.skuIds
     const rawMessage: string = e.data?.data?.message ?? ''
     let title: string
     let description: string
@@ -441,6 +442,12 @@ async function submitOrder() {
         .filter((n): n is string => !!n)
       title = '商品庫存不足'
       description = `${names.length ? `「${names.join('、')}」` : '您選購的商品'}庫存不足，已為您更新最新資訊，請重新確認後再送出一次`
+    } else if (rawMessage.includes('限購') && purchaseLimitSkuIds?.length) {
+      const names = purchaseLimitSkuIds
+        .map(id => confirmResult.value?.items.find(i => i.skuId === id)?.name)
+        .filter((n): n is string => !!n)
+      title = '超過限購數量'
+      description = `${names.length ? `「${names.join('、')}」` : '您選購的商品'}已達每人限購數量，請調整購買數量後再送出一次`
     } else if (rawMessage.includes('優惠券')) {
       title = '優惠券無法使用'
       description = '選擇的優惠券可能已被使用或不符合資格，已為您重新整理，請重新選擇後再送出一次'
