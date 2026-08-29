@@ -29,10 +29,13 @@
           {{ product.skuName }}
         </p>
 
-        <div class="h-6 flex items-baseline gap-1.5">
+        <div class="h-5 flex items-baseline">
           <span class="text-danger font-bold text-lg leading-none">
             NT$ {{ product.price.toLocaleString() }}
           </span>
+        </div>
+
+        <div class="h-4 leading-none">
           <span v-if="product.isSeckill && product.originalPrice" class="text-muted text-xs line-through">
             NT$ {{ product.originalPrice.toLocaleString() }}
           </span>
