@@ -4,7 +4,7 @@
       class="flex flex-col h-full bg-card border border-border rounded-xl shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 overflow-hidden group"
     >
       <!-- 商品圖片：固定高度，滿版鋪滿(cover)不留白邊；不同圖片比例都裁切塞進同一個框，Card 高度不受影響 -->
-      <div class="relative h-[150px] shrink-0 bg-background overflow-hidden">
+      <div class="relative h-[170px] shrink-0 bg-background overflow-hidden">
         <img
           :src="product.skuDefaultImg"
           :alt="product.skuName"
