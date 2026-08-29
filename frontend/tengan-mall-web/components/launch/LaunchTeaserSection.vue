@@ -42,7 +42,7 @@ function toCardProduct(product: LaunchTeaserProduct): Product {
       <div
         v-for="product in visibleProducts"
         :key="product.spuId"
-        class="shrink-0 snap-start w-[46%] sm:w-[31%] lg:w-[19%]"
+        class="shrink-0 snap-start w-[46%] sm:w-[31%] lg:w-[calc((100%-60px)/6)]"
       >
         <ProductCard :product="toCardProduct(product)">
           <template #badge>

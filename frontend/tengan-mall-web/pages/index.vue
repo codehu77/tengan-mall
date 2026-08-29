@@ -37,7 +37,7 @@
     <!-- 熱門商品 -->
     <section v-if="hotProducts.length > 0" class="mb-10">
       <SectionHeader icon="i-heroicons-tag" title="熱門商品" accent="primary" to="/search" toLabel="查看更多" />
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <ProductCard
           v-for="product in hotProducts"
           :key="product.skuId"
@@ -49,7 +49,7 @@
     <!-- 猜你喜歡：訪客也看得到（退化成洗牌過的全站熱銷），會員才有個人化排序 -->
     <section v-if="guessItems.length > 0">
       <SectionHeader icon="i-heroicons-heart" title="猜你喜歡" accent="primary" />
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <ProductCard
           v-for="product in guessItems"
           :key="product.skuId"
