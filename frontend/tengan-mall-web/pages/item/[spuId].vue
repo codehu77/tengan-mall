@@ -52,13 +52,13 @@
             </div>
 
             <!-- 價格：即將開賣 > 有活躍秒殺(搶購價+倒數) > 一般優惠價，三者互斥 -->
-            <div v-if="isNotYetOnSale" class="bg-gray-50 rounded-lg px-5 py-4 space-y-2">
+            <div v-if="isNotYetOnSale" class="bg-launch-soft rounded-lg px-5 py-4 space-y-2">
               <div class="flex items-center gap-2">
-                <UBadge color="gray" variant="solid">即將開賣</UBadge>
+                <UBadge color="violet" variant="solid">即將開賣</UBadge>
                 <span class="text-xs text-gray-500 font-mono">{{ saleStartText }}（倒數 {{ saleHh }}:{{ saleMm }}:{{ saleSs }}）</span>
               </div>
               <div class="flex items-baseline gap-2">
-                <span class="text-3xl font-bold text-gray-500">
+                <span class="text-3xl font-bold text-danger">
                   NT$ {{ currentSku.price.toLocaleString() }}
                 </span>
               </div>
