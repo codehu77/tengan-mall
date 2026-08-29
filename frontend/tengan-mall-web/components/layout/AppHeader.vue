@@ -1,19 +1,20 @@
 <template>
-  <header class="bg-white shadow-sm sticky top-0 z-50">
+  <header class="bg-card border-b border-border sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
 
       <!-- Logo -->
-      <NuxtLink to="/" class="text-2xl font-bold text-red-600 shrink-0">
+      <NuxtLink to="/" class="text-2xl font-bold text-danger shrink-0">
         天願商城
       </NuxtLink>
 
       <!-- 搜尋框 -->
-      <div class="flex-1 max-w-xl">
-        <UInput
+      <div class="flex-1 max-w-xl relative">
+        <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+        <input
           v-model="keyword"
-          placeholder="搜尋商品..."
-          icon="i-heroicons-magnifying-glass"
-          size="lg"
+          type="text"
+          placeholder="搜尋商品、品牌、分類..."
+          class="w-full h-11 pl-10 pr-4 rounded-[10px] border border-border bg-card text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
           @keyup.enter="handleSearch"
         />
       </div>
@@ -22,7 +23,7 @@
       <div class="flex items-center gap-4 shrink-0">
         <!-- 購物車 -->
         <div class="relative" @mouseenter="openMiniCart" @mouseleave="closeMiniCart">
-          <NuxtLink to="/cart" class="relative flex items-center h-10 text-gray-600 hover:text-red-600">
+          <NuxtLink to="/cart" class="relative flex items-center h-10 text-body hover:text-brand transition-colors">
             <UIcon name="i-heroicons-shopping-cart" class="w-6 h-6" />
             <span
               v-if="cartCount > 0"

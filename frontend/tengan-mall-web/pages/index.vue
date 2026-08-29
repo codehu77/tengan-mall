@@ -5,9 +5,27 @@
     <BannerCarousel v-if="banners.length > 0" :banners="banners" />
     <div
       v-else
-      class="bg-red-50 border border-red-100 rounded-xl h-[470px] flex items-center justify-center mb-10"
+      class="bg-card border border-border rounded-2xl h-[470px] flex items-center justify-center"
     >
-      <p class="text-red-400 text-xl">尚未設定輪播圖</p>
+      <p class="text-muted text-xl">尚未設定輪播圖</p>
+    </div>
+
+    <!-- 活動廣告卡：純推廣入口，優惠券目前沒有領取頁面/API，先做視覺+提示；PRO 卡連到真實存在的訂閱頁 -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 mb-12">
+      <PromoCard
+        variant="coupon"
+        title="領取優惠券"
+        subtitle="多種優惠券任你選擇"
+        cta-label="立即領取"
+        @cta="showCouponComingSoon"
+      />
+      <PromoCard
+        variant="pro"
+        title="升級天願 PRO 會員"
+        subtitle="立即獲得消費回饋，購物更划算"
+        cta-label="立即升級"
+        to="/member/subscription"
+      />
     </div>
 
     <!-- 限時搶購 -->
@@ -17,8 +35,8 @@
     <LaunchTeaserSection v-if="teaserProducts.length > 0" :products="teaserProducts" />
 
     <!-- 熱門商品 -->
-    <section v-if="hotProducts.length > 0">
-      <h2 class="text-2xl font-bold text-gray-800 mb-4">熱門商品</h2>
+    <section v-if="hotProducts.length > 0" class="mb-12">
+      <SectionHeader icon="i-heroicons-tag" title="熱門商品" accent="primary" to="/search" toLabel="查看更多" />
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <ProductCard
           v-for="product in hotProducts"
@@ -29,8 +47,8 @@
     </section>
 
     <!-- 猜你喜歡：訪客也看得到（退化成洗牌過的全站熱銷），會員才有個人化排序 -->
-    <section v-if="guessItems.length > 0" class="mt-10">
-      <h2 class="text-2xl font-bold text-gray-800 mb-4">猜你喜歡</h2>
+    <section v-if="guessItems.length > 0">
+      <SectionHeader icon="i-heroicons-heart" title="猜你喜歡" accent="primary" />
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <ProductCard
           v-for="product in guessItems"
@@ -39,7 +57,7 @@
         />
       </div>
       <div ref="guessSentinel" class="h-4" />
-      <p v-if="guessExhausted" class="text-center text-gray-400 text-sm py-4">已經沒有更多推薦了</p>
+      <p v-if="guessExhausted" class="text-center text-muted text-sm py-4">已經沒有更多推薦了</p>
     </section>
 
   </div>
@@ -50,6 +68,11 @@ import type { Product } from '~/mocks/products'
 import type { ProductSearchQuery, SearchItem } from '~/composables/useProductSearch'
 
 useHead({ title: '首頁' })
+
+const toast = useToast()
+function showCouponComingSoon() {
+  toast.add({ title: '優惠券活動即將推出', color: 'blue', timeout: 3000 })
+}
 
 // 直接把泛用搜尋端點當「銷量前 N 名」用（sort=sale，不帶 keyword/catId），不用新增後端端點。
 // 首頁熱門商品區塊不需要 search.vue 那支 toProduct 的秒殺價覆蓋邏輯，用一個簡化版本就好。

@@ -2,9 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 網站級 Design Tokens：色彩／陰影統一定義在這裡，元件一律透過 tailwind.config.ts
+   註冊的 utility class（bg-primary、text-danger…）使用，不要在各元件散落 hex 色碼。 */
+:root {
+  --color-primary: #5B66FF;
+  --color-primary-hover: #4F5AEF;
+  --color-primary-light: #EEF0FF;
+  --color-primary-lighter: #F6F7FF;
+
+  --color-danger: #FF4D5A;
+  --color-success: #20BF6B;
+  --color-warning: #FFB020;
+
+  --color-heading: #1F2937;
+  --color-text: #374151;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+
+  --color-border: #E5E7EB;
+  --color-background: #F7F8FA;
+  --color-card: #FFFFFF;
+
+  --shadow-card: 0 2px 8px rgba(31, 41, 55, 0.04);
+  --shadow-card-hover: 0 6px 16px rgba(31, 41, 55, 0.08);
+}
+
+body {
+  font-family: "Noto Sans TC", "Noto Sans", sans-serif;
+  background-color: var(--color-background);
+}
+
 /* 訂單列表切換狀態頁籤時，內容高度差異很大（全部訂單 vs 只有 1 筆的狀態頁籤），
    捲軸的出現/消失會讓可視寬度跳動，切頁籤時整個內容區塊看起來會抽動。
    固定保留捲軸溝槽寬度，讓寬度不再受捲軸有無影響。 */
 html {
   scrollbar-gutter: stable;
+}
+
+/* 商品輪播（限時搶購／即將開賣）用的水平捲動容器，隱藏捲軸但保留可捲動性。 */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

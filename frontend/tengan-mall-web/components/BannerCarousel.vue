@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="banners.length > 0"
-    class="relative rounded-xl overflow-hidden h-[470px] mb-10 bg-gray-100"
+    class="relative rounded-2xl overflow-hidden h-[470px] border border-border shadow-card bg-background"
   >
     <template v-for="(banner, index) in banners" :key="banner.id">
       <component
@@ -34,8 +34,8 @@
           v-for="(banner, index) in banners"
           :key="banner.id"
           type="button"
-          class="w-2 h-2 rounded-full"
-          :class="index === activeIndex ? 'bg-white' : 'bg-white/50'"
+          class="h-2 rounded-full transition-all"
+          :class="index === activeIndex ? 'w-5 bg-white' : 'w-2 bg-white/50'"
           @click="activeIndex = index"
         />
       </div>

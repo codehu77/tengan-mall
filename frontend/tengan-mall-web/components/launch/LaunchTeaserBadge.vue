@@ -10,11 +10,11 @@ const { hh, mm, ss, isPast } = useCountdown(target)
 <template>
   <span
     v-if="!isPast"
-    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"
+    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning font-medium"
   >
     即將開賣・{{ hh }}:{{ mm }}:{{ ss }}
   </span>
-  <span v-else class="inline-block text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500">
+  <span v-else class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success/10 text-success font-medium">
     熱門搶購中
   </span>
 </template>
