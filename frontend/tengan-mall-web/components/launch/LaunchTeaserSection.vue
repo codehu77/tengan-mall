@@ -36,7 +36,7 @@ function toCardProduct(product: LaunchTeaserProduct): Product {
 
 <template>
   <section class="mb-10">
-    <SectionHeader icon="i-heroicons-sparkles" title="即將開賣" accent="success" to="/launch" toLabel="看更多" />
+    <SectionHeader icon="i-heroicons-clock" title="即將開賣" accent="launch" to="/launch" toLabel="看更多" />
 
     <ProductCarousel>
       <div
@@ -46,7 +46,7 @@ function toCardProduct(product: LaunchTeaserProduct): Product {
       >
         <ProductCard :product="toCardProduct(product)">
           <template #badge>
-            <span class="inline-flex items-center bg-success text-white text-xs font-bold px-1.5 py-0.5 rounded">
+            <span class="inline-flex items-center bg-launch text-white text-xs font-bold px-1.5 py-0.5 rounded">
               預告
             </span>
           </template>

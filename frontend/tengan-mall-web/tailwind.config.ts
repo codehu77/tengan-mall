@@ -25,6 +25,7 @@ export default <Partial<Config>>{
         danger: 'var(--color-danger)',
         success: 'var(--color-success)',
         warning: 'var(--color-warning)',
+        launch: 'var(--color-launch)',
         heading: 'var(--color-heading)',
         body: 'var(--color-text)',
         subtle: 'var(--color-text-secondary)',
