@@ -46,6 +46,9 @@ export default <Partial<Config>>{
         card: 'var(--shadow-card)',
         'card-hover': 'var(--shadow-card-hover)',
       },
+      fontFamily: {
+        sans: ['"Noto Sans TC"', '"Noto Sans"', 'sans-serif'],
+      },
     },
   },
 }
