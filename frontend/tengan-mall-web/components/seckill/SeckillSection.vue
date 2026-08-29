@@ -73,7 +73,7 @@ function toCardProduct(product: SeckillProduct): Product {
 </script>
 
 <template>
-  <section v-if="currentSession" class="mb-12">
+  <section v-if="currentSession" class="mb-10">
     <SectionHeader icon="i-heroicons-bolt" title="限時搶購" accent="danger" to="/seckill" toLabel="看更多">
       <!-- 倒數 -->
       <div class="flex items-center gap-1.5 text-sm shrink-0">

@@ -11,7 +11,7 @@
     </div>
 
     <!-- 活動廣告卡：純推廣入口，優惠券目前沒有領取頁面/API，先做視覺+提示；PRO 卡連到真實存在的訂閱頁 -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 mb-12">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 mb-10">
       <PromoCard
         variant="coupon"
         title="領取優惠券"
@@ -35,9 +35,9 @@
     <LaunchTeaserSection v-if="teaserProducts.length > 0" :products="teaserProducts" />
 
     <!-- 熱門商品 -->
-    <section v-if="hotProducts.length > 0" class="mb-12">
+    <section v-if="hotProducts.length > 0" class="mb-10">
       <SectionHeader icon="i-heroicons-tag" title="熱門商品" accent="primary" to="/search" toLabel="查看更多" />
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <ProductCard
           v-for="product in hotProducts"
           :key="product.skuId"
@@ -49,7 +49,7 @@
     <!-- 猜你喜歡：訪客也看得到（退化成洗牌過的全站熱銷），會員才有個人化排序 -->
     <section v-if="guessItems.length > 0">
       <SectionHeader icon="i-heroicons-heart" title="猜你喜歡" accent="primary" />
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <ProductCard
           v-for="product in guessItems"
           :key="product.skuId"

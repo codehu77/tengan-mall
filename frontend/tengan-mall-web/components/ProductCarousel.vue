@@ -15,7 +15,7 @@ function scrollByAmount(dir: 1 | -1) {
 
 <template>
   <div class="relative">
-    <div ref="scrollerRef" class="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar pb-1">
+    <div ref="scrollerRef" class="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar pb-1">
       <slot />
     </div>
 

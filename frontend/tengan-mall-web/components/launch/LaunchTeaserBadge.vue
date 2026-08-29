@@ -10,7 +10,7 @@ const { hh, mm, ss, isPast } = useCountdown(target)
 <template>
   <span
     v-if="!isPast"
-    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-warning/10 text-warning font-medium"
+    class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-background text-subtle font-medium"
   >
     即將開賣・{{ hh }}:{{ mm }}:{{ ss }}
   </span>
