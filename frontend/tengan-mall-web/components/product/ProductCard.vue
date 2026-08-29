@@ -25,7 +25,7 @@
 
       <!-- 商品資訊：名稱／價格／原價／次要資訊都固定高度，同一排 Card 底部才會對齊 -->
       <div class="flex flex-col flex-1 p-3">
-        <p class="text-sm text-body leading-[1.4] line-clamp-2 h-10 mb-1.5">
+        <p class="text-sm text-body leading-[1.4] line-clamp-1 h-5 mb-1.5">
           {{ product.skuName }}
         </p>
 
