@@ -10,11 +10,12 @@
           @mouseenter="activeId = cat.catId"
         >
           <button
-            class="px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2"
+            class="flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2"
             :class="activeId === cat.catId
               ? 'text-brand border-brand'
               : 'text-body border-transparent hover:text-brand'"
           >
+            <UIcon v-if="cat.icon" :name="cat.icon" class="w-4 h-4 shrink-0" />
             {{ cat.name }}
           </button>
         </li>
