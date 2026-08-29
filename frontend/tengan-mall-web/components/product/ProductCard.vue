@@ -33,9 +33,6 @@
           <span class="text-danger font-bold text-lg leading-none">
             NT$ {{ product.price.toLocaleString() }}
           </span>
-        </div>
-
-        <div class="h-4 mb-0.5">
           <span v-if="product.isSeckill && product.originalPrice" class="text-muted text-xs line-through">
             NT$ {{ product.originalPrice.toLocaleString() }}
           </span>
