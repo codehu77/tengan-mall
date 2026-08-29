@@ -34,6 +34,8 @@ export default <Partial<Config>>{
         warning: 'var(--color-warning)',
         launch: 'var(--color-launch)',
         'launch-soft': 'var(--color-launch-soft)',
+        pink: 'var(--color-pink)',
+        'pink-soft': 'var(--color-pink-soft)',
         heading: 'var(--color-heading)',
         body: 'var(--color-text)',
         subtle: 'var(--color-text-secondary)',

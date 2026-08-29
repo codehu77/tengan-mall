@@ -7,7 +7,7 @@ withDefaults(
   defineProps<{
     icon: string
     title: string
-    accent?: 'primary' | 'danger' | 'success' | 'launch'
+    accent?: 'primary' | 'danger' | 'success' | 'launch' | 'pink'
     to?: string
     toLabel?: string
   }>(),
@@ -19,6 +19,7 @@ const accentBg: Record<string, string> = {
   danger: 'bg-danger',
   success: 'bg-success',
   launch: 'bg-launch',
+  pink: 'bg-pink',
 }
 </script>
 
