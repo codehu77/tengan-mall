@@ -17,7 +17,7 @@ withDefaults(
 
 const emit = defineEmits<{ cta: [] }>()
 
-const theme: Record<string, { bg: string; icon: string; iconBg: string; iconColor: string; btn: string }> = {
+const theme: Record<string, { bg: string; icon: string; iconBg: string; iconColor: string; btn: string; titleIcon?: string; titleIconColor?: string }> = {
   coupon: {
     bg: 'bg-gradient-to-br from-[#FFF1F0] to-[#FFF7F0]',
     icon: 'i-heroicons-ticket',
@@ -31,6 +31,10 @@ const theme: Record<string, { bg: string; icon: string; iconBg: string; iconColo
     iconBg: 'bg-brand-light',
     iconColor: 'text-brand',
     btn: 'bg-brand hover:bg-brand-hover',
+    // 皇冠用金色(warning token)，跟卡片本身的品牌藍形成經典「藍+金」尊爵配色，比全部套用同一個
+    // brand 藍更能凸顯「這是升級/尊榮方案」的視覺語意。
+    titleIcon: 'mdi:crown',
+    titleIconColor: 'text-warning',
   },
 }
 </script>
@@ -41,7 +45,10 @@ const theme: Record<string, { bg: string; icon: string; iconBg: string; iconColo
     :class="theme[variant].bg"
   >
     <div class="min-w-0">
-      <p class="text-base font-bold text-heading mb-1">{{ title }}</p>
+      <p class="flex items-center gap-1.5 text-base font-bold text-heading mb-1">
+        <UIcon v-if="theme[variant].titleIcon" :name="theme[variant].titleIcon" class="w-5 h-5 shrink-0" :class="theme[variant].titleIconColor" />
+        {{ title }}
+      </p>
       <p class="text-sm text-subtle truncate">{{ subtitle }}</p>
     </div>
 
