@@ -1,5 +1,5 @@
 <script setup lang="ts">
-useHead({ title: '即將開賣' })
+useHead({ title: '話題新品預告' })
 
 const page = ref(1)
 const { data } = await useLaunchTeaserPage(page)
@@ -8,10 +8,10 @@ const items = computed(() => data.value?.items ?? [])
 
 <template>
   <div class="max-w-7xl mx-auto px-6 py-8">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">即將開賣</h1>
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">話題新品預告</h1>
 
     <div v-if="items.length === 0" class="bg-white rounded-lg py-24 text-center text-gray-400">
-      目前沒有即將開賣的商品
+      目前沒有話題新品預告的商品
     </div>
 
     <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">

@@ -36,7 +36,7 @@ function toCardProduct(product: LaunchTeaserProduct): Product {
 
 <template>
   <section class="mb-10">
-    <SectionHeader icon="i-heroicons-clock" title="即將開賣" accent="launch" to="/launch" toLabel="看更多" />
+    <SectionHeader icon="i-heroicons-clock" title="話題新品預告" accent="launch" to="/launch" toLabel="看更多" />
 
     <ProductCarousel>
       <div
