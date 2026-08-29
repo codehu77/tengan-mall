@@ -14,7 +14,7 @@
           v-model="keyword"
           type="text"
           placeholder="搜尋商品、品牌、分類..."
-          class="w-full h-11 pl-10 pr-4 rounded-[10px] border border-border bg-card text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
+          class="w-full h-11 pl-10 pr-4 rounded-[10px] border border-border bg-card text-sm text-body placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand-light focus:border-brand transition-colors"
           @keyup.enter="handleSearch"
         />
       </div>

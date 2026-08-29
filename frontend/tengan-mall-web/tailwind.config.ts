@@ -7,6 +7,11 @@ import type { Config } from 'tailwindcss'
  *
  * 純新增（extend），不覆寫 Tailwind 內建的 red/gray 色盤，既有頁面用到的
  * color="red" / text-gray-500 等寫法完全不受影響。
+ *
+ * 這些顏色值都是 var(--color-x) 字串，不是 Tailwind 認得出的 hex/rgb，所以套用
+ * 「顏色/透明度」語法（例如 bg-danger/10）在編譯期會被直接忽略、不產生任何 CSS
+ * 規則——不是報錯，是背景整個消失，很難察覺。需要淡色底時改用下面已經配好的
+ * -soft token（bg-danger-soft），不要在這些 token 後面加 /數字。
  */
 export default <Partial<Config>>{
   theme: {
@@ -23,9 +28,12 @@ export default <Partial<Config>>{
           lighter: 'var(--color-primary-lighter)',
         },
         danger: 'var(--color-danger)',
+        'danger-soft': 'var(--color-danger-soft)',
         success: 'var(--color-success)',
+        'success-soft': 'var(--color-success-soft)',
         warning: 'var(--color-warning)',
         launch: 'var(--color-launch)',
+        'launch-soft': 'var(--color-launch-soft)',
         heading: 'var(--color-heading)',
         body: 'var(--color-text)',
         subtle: 'var(--color-text-secondary)',

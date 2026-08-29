@@ -3,7 +3,11 @@
 @tailwind utilities;
 
 /* 網站級 Design Tokens：色彩／陰影統一定義在這裡，元件一律透過 tailwind.config.ts
-   註冊的 utility class（bg-primary、text-danger…）使用，不要在各元件散落 hex 色碼。 */
+   註冊的 utility class（bg-primary、text-danger…）使用，不要在各元件散落 hex 色碼。
+   注意：這些顏色的值是 var(--color-x) 字串，Tailwind 在編譯期沒辦法拆解成 RGB 通道，
+   所以 bg-danger/10 這種「顏色/透明度」語法會被靜默丟棄、完全不會產生任何 CSS 規則
+   （不會報錯，畫面上就是背景整個消失）。需要淡色底時要用下面這些預先算好的 -soft
+   token（bg-danger-soft），不要在 class 裡對這些 token 加 /數字。 */
 :root {
   --color-primary: #5B66FF;
   --color-primary-hover: #4F5AEF;
@@ -11,9 +15,12 @@
   --color-primary-lighter: #F6F7FF;
 
   --color-danger: #FF4D5A;
+  --color-danger-soft: #FFEDEF;
   --color-success: #20BF6B;
+  --color-success-soft: #E9F9F0;
   --color-warning: #FFB020;
   --color-launch: #8B5CF6;
+  --color-launch-soft: #F3EFFE;
 
   --color-heading: #1F2937;
   --color-text: #374151;

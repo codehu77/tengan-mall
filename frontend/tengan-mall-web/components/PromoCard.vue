@@ -21,14 +21,14 @@ const theme: Record<string, { bg: string; icon: string; iconBg: string; iconColo
   coupon: {
     bg: 'bg-gradient-to-br from-[#FFF1F0] to-[#FFF7F0]',
     icon: 'i-heroicons-ticket',
-    iconBg: 'bg-danger/10',
+    iconBg: 'bg-danger-soft',
     iconColor: 'text-danger',
-    btn: 'bg-danger hover:bg-danger/90',
+    btn: 'bg-danger hover:opacity-90',
   },
   pro: {
     bg: 'bg-gradient-to-br from-brand-lighter to-brand-light',
     icon: 'i-heroicons-sparkles',
-    iconBg: 'bg-brand/10',
+    iconBg: 'bg-brand-light',
     iconColor: 'text-brand',
     btn: 'bg-brand hover:bg-brand-hover',
   },

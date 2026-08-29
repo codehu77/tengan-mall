@@ -94,8 +94,8 @@ function toCardProduct(product: SeckillProduct): Product {
           :key="session.activityId"
           class="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap"
           :class="session.activityId === currentSession.activityId
-            ? 'border border-danger text-danger bg-danger/10'
-            : 'bg-background text-subtle hover:bg-border/60'"
+            ? 'border border-danger text-danger bg-danger-soft'
+            : 'bg-background text-subtle hover:bg-border'"
           @click="selectSession(session.activityId)"
         >
           {{ sessionTabLabel(session) }}
