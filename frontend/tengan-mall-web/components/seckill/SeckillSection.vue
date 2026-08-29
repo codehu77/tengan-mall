@@ -116,7 +116,10 @@ function toCardProduct(product: SeckillProduct): Product {
             </span>
           </template>
           <template #meta>
-            <span :class="currentSession.status === 'ACTIVE' ? 'text-danger' : 'text-muted'">
+            <span
+              class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+              :class="currentSession.status === 'ACTIVE' ? 'bg-danger-soft text-danger' : 'bg-background text-muted'"
+            >
               {{ currentSession.status === 'ACTIVE' ? `剩餘 ${totalRemaining(product)} 件` : '尚未開賣' }}
             </span>
           </template>
