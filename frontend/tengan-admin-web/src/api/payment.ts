@@ -5,7 +5,7 @@ export type PaymentRecord = {
   id: number;
   orderSn: string;
   memberId: number;
-  memberUsername?: string;
+  memberAccount?: string;
   memberNickname?: string;
   method: string;
   amount: number;

@@ -50,12 +50,12 @@ const statusTagType: Record<number, "warning" | "success" | "info"> = {
 
 /** 即時向 tengan-member 批次組裝，查不到（時序邊角案例）時顯示原始 memberId 別讓欄位空白。 */
 function memberLabel(row: SubscriptionRecord) {
-  if (!row.memberUsername) {
+  if (!row.memberAccount) {
     return `#${row.memberId}`;
   }
   return row.memberNickname
-    ? `${row.memberUsername}（${row.memberNickname}）`
-    : row.memberUsername;
+    ? `${row.memberAccount}（${row.memberNickname}）`
+    : row.memberAccount;
 }
 
 function tierLabel(tier: string) {
@@ -71,7 +71,7 @@ const columns: TableColumns[] = [
   { label: "會員 ID", prop: "memberId", minWidth: 90 },
   {
     label: "會員帳號",
-    prop: "memberUsername",
+    prop: "memberAccount",
     minWidth: 140,
     formatter: row => memberLabel(row)
   },

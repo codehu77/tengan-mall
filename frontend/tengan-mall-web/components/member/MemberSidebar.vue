@@ -83,7 +83,7 @@ const route = useRoute()
 const memberStore = useMemberStore()
 const authStore = useAuthStore()
 
-const displayName = computed(() => memberStore.profile?.nickname || authStore.username)
+const displayName = computed(() => memberStore.profile?.nickname || authStore.identifier)
 
 function isActive(prefix: string) {
   return route.path.startsWith(prefix)

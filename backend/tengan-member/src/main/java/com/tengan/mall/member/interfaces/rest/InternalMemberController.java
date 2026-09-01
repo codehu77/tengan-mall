@@ -70,7 +70,7 @@ public class InternalMemberController {
     }
 
     private MemberSummaryResponse toResponse(MemberSummary summary) {
-        return new MemberSummaryResponse(summary.id(), summary.username(), summary.phone(), summary.nickname(),
+        return new MemberSummaryResponse(summary.id(), summary.phone(), summary.email(), summary.nickname(),
                 summary.avatarUrl());
     }
 }

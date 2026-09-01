@@ -16,7 +16,7 @@ public class GetMembersByIdsService implements GetMembersByIdsUseCase {
     @Override
     public List<MemberSummary> get(List<Long> ids) {
         return memberRepository.findByIds(ids).stream()
-                .map(m -> new MemberSummary(m.getId(), m.getUsername(), m.getPhone(), m.getNickname(),
+                .map(m -> new MemberSummary(m.getId(), m.getPhone(), m.getEmail(), m.getNickname(),
                         m.getAvatarUrl()))
                 .toList();
     }

@@ -7,8 +7,8 @@ import { http } from "@/utils/http";
  */
 export type MemberItem = {
   id: number;
-  username: string;
   phone?: string;
+  email?: string;
   nickname: string;
   avatarUrl?: string;
   status: number;

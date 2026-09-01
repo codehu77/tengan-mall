@@ -18,7 +18,7 @@ public class ListMembersService implements ListMembersUseCase {
         MemberPage page = memberRepository.search(query.keyword(), query.createdFrom(), query.createdTo(),
                 query.pageNum(), query.pageSize());
         var items = page.items().stream()
-                .map(m -> new MemberSummary(m.getId(), m.getUsername(), m.getPhone(), m.getNickname(),
+                .map(m -> new MemberSummary(m.getId(), m.getPhone(), m.getEmail(), m.getNickname(),
                         m.getAvatarUrl()))
                 .toList();
         return new ListMembersResult(items, page.total());

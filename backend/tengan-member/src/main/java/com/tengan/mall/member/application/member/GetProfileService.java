@@ -18,7 +18,7 @@ public class GetProfileService implements GetProfileUseCase {
     public GetProfileResult get(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberNotFoundException(memberId));
-        return new GetProfileResult(member.getId(), member.getUsername(), member.getPhone(), member.getNickname(),
+        return new GetProfileResult(member.getId(), member.getPhone(), member.getEmail(), member.getNickname(),
                 member.getAvatarUrl());
     }
 }

@@ -45,12 +45,12 @@
           <UInput v-model="form.nickname" placeholder="請輸入暱稱" />
         </div>
         <div>
-          <label class="block text-base text-gray-500 mb-1">帳號</label>
-          <UInput :model-value="profile?.username" disabled />
-        </div>
-        <div>
           <label class="block text-base text-gray-500 mb-1">手機號碼</label>
           <UInput :model-value="profile?.phone || '未設定'" disabled />
+        </div>
+        <div>
+          <label class="block text-base text-gray-500 mb-1">Email</label>
+          <UInput :model-value="profile?.email || '未設定'" disabled />
         </div>
       </div>
 

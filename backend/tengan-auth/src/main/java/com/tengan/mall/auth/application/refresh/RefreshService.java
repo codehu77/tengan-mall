@@ -41,8 +41,9 @@ public class RefreshService implements RefreshUseCase {
 
         Account account = accountRepository.findById(new AccountId(entry.accountId()))
                 .orElseThrow(() -> new InvalidRefreshTokenException("account not found: " + entry.accountId()));
-        String newAccessToken = accessTokenIssuerPort.issue(account.getId(), account.getUsername().value());
+        String newAccessToken = accessTokenIssuerPort.issue(account.getId());
 
-        return new RefreshResult(newAccessToken, newRefreshToken);
+        long ttlSeconds = refreshTokenStorePort.ttlSecondsFor(entry.rememberMe());
+        return new RefreshResult(newAccessToken, newRefreshToken, ttlSeconds);
     }
 }

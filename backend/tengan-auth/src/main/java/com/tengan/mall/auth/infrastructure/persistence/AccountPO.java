@@ -11,7 +11,6 @@ public class AccountPO {
 
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String username;
     private String phone;
     private String email;
     private String passwordHash;
@@ -25,14 +24,6 @@ public class AccountPO {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
     }
 
     public String getPhone() {

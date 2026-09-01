@@ -11,8 +11,8 @@ public class MemberPO {
     /** id 不是自增——沿用 tengan-auth 的 accountId，由呼叫端（MQ consumer）指定。 */
     @TableId(type = IdType.INPUT)
     private Long id;
-    private String username;
     private String phone;
+    private String email;
     private String nickname;
     private String avatarUrl;
     private LocalDateTime createdAt;
@@ -26,20 +26,20 @@ public class MemberPO {
         this.id = id;
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
     public String getPhone() {
         return phone;
     }
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getNickname() {

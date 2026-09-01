@@ -43,13 +43,13 @@ public class CustomerAuthController {
     @PostMapping("/refresh")
     public RefreshResponse refresh(@Valid @RequestBody RefreshRequest request) {
         var result = refreshUseCase.refresh(new RefreshCommand(request.refreshToken()));
-        return new RefreshResponse(result.accessToken(), result.refreshToken());
+        return new RefreshResponse(result.accessToken(), result.refreshToken(), result.refreshTokenTtlSeconds());
     }
 
     @GetMapping("/me")
     public MeResponse me(@AuthenticationPrincipal Jwt userJwt) {
         Long accountId = Long.valueOf(userJwt.getSubject());
         var result = getMeUseCase.getMe(new GetMeQuery(accountId));
-        return new MeResponse(result.accountId(), result.username(), result.phone());
+        return new MeResponse(result.accountId(), result.phone(), result.email());
     }
 }

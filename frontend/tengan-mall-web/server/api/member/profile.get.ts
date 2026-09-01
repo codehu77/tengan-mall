@@ -3,8 +3,8 @@ export default defineEventHandler(async (event) => {
 
   return await callBackend<{
     id: number
-    username: string
     phone: string | null
+    email: string | null
     nickname: string
     avatarUrl: string | null
   }>('/api/customer/member/profile', {

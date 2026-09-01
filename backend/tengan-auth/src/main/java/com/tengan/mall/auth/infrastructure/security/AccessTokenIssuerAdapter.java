@@ -12,8 +12,9 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Component;
 
 /**
- * claims 只放 userId/username（微服務前台API待開發清單.md 第2節「Access Token + Refresh
- * Token（無黑名單）」），TTL 15 分鐘，Gateway 與下游服務只驗簽章 + exp，不查任何狀態。
+ * claims 只放 userId（微服務前台API待開發清單.md 第2節「Access Token + Refresh
+ * Token（無黑名單）」），TTL 15 分鐘，Gateway 與下游服務只驗簽章 + exp，不查任何狀態、
+ * 不信任任何明文身份 claim（zero-trust）。
  */
 @Component
 public class AccessTokenIssuerAdapter implements AccessTokenIssuerPort {
@@ -27,14 +28,13 @@ public class AccessTokenIssuerAdapter implements AccessTokenIssuerPort {
     }
 
     @Override
-    public String issue(AccountId accountId, String username) {
+    public String issue(AccountId accountId) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("tengan-mall-auth")
                 .issuedAt(now)
                 .expiresAt(now.plus(ACCESS_TOKEN_TTL_MINUTES, ChronoUnit.MINUTES))
                 .subject(String.valueOf(accountId.value()))
-                .claim("username", username)
                 .build();
         JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256).build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();

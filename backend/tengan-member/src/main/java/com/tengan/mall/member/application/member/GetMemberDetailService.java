@@ -18,7 +18,7 @@ public class GetMemberDetailService implements GetMemberDetailUseCase {
     public MemberSummary get(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new MemberNotFoundException(memberId));
-        return new MemberSummary(member.getId(), member.getUsername(), member.getPhone(), member.getNickname(),
+        return new MemberSummary(member.getId(), member.getPhone(), member.getEmail(), member.getNickname(),
                 member.getAvatarUrl());
     }
 }

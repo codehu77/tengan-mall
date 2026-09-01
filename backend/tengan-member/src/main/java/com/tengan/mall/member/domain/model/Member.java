@@ -5,7 +5,7 @@ package com.tengan.mall.member.domain.model;
  * 事件時原樣帶入，不是自增）——這是這個服務跟其他聚合根（Category/Brand 等 id 由 DB 自增）唯一不同
  * 的地方，見 create() 直接收 id 參數。
  *
- * <p>暱稱/大頭貼可改，username/phone 是 tengan-auth 那邊的唯讀快照（帳密變更目前不會回頭同步，
+ * <p>暱稱/大頭貼可改，phone/email 是 tengan-auth 那邊的唯讀快照（帳密變更目前不會回頭同步，
  * 這個專案的帳號系統還沒有改密碼/改手機的流程，暫不處理）。等級/會員權益屬於 Wallet
  * （見 backend_dev_plan.md wallet_rule 設計），不在這個聚合根範圍內。</p>
  *
@@ -18,26 +18,29 @@ package com.tengan.mall.member.domain.model;
 public class Member {
 
     private final Long id;
-    private final String username;
     private String phone;
+    private String email;
     private String nickname;
     private String avatarUrl;
 
-    private Member(Long id, String username, String phone, String nickname, String avatarUrl) {
+    private Member(Long id, String phone, String email, String nickname, String avatarUrl) {
         this.id = id;
-        this.username = username;
         this.phone = phone;
+        this.email = email;
         this.nickname = nickname;
         this.avatarUrl = avatarUrl;
     }
 
-    /** 消費 member.registered 事件時呼叫，暱稱預設=username，大頭貼給預設 placeholder。 */
-    public static Member create(Long id, String username, String phone) {
-        return new Member(id, username, phone, username, DefaultAvatar.URL);
+    /**
+     * 消費 member.registered 事件時呼叫。account 不再有 username，暱稱改用通用預設值
+     * "會員" + accountId（唯一、使用者之後可在會員中心自行修改），大頭貼給預設 placeholder。
+     */
+    public static Member create(Long id, String phone, String email) {
+        return new Member(id, phone, email, "會員" + id, DefaultAvatar.URL);
     }
 
-    public static Member reconstitute(Long id, String username, String phone, String nickname, String avatarUrl) {
-        return new Member(id, username, phone, nickname, avatarUrl);
+    public static Member reconstitute(Long id, String phone, String email, String nickname, String avatarUrl) {
+        return new Member(id, phone, email, nickname, avatarUrl);
     }
 
     public void updateProfile(String nickname, String avatarUrl) {
@@ -49,12 +52,12 @@ public class Member {
         return id;
     }
 
-    public String getUsername() {
-        return username;
-    }
-
     public String getPhone() {
         return phone;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     public String getNickname() {

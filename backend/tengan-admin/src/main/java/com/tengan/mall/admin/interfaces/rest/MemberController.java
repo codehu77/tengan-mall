@@ -79,6 +79,6 @@ public class MemberController {
         // 理論上每個 member.id 在 tengan-auth 都該有對應帳號；萬一查不到（時序上的邊角案例），
         // 前端顯示成「正常」比顯示成一個未定義的狀態碼更安全，不擋整頁渲染。
         int status = statusById.getOrDefault(m.id(), 1);
-        return new MemberSummaryResponse(m.id(), m.username(), m.phone(), m.nickname(), m.avatarUrl(), status);
+        return new MemberSummaryResponse(m.id(), m.phone(), m.email(), m.nickname(), m.avatarUrl(), status);
     }
 }

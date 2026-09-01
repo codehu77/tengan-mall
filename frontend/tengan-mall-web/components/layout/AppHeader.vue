@@ -153,7 +153,7 @@ const cartStore = useCartStore()
 const pointsStore = usePointsStore()
 const { fetchMiniCart } = useCart()
 
-const displayName = computed(() => memberStore.profile?.nickname || authStore.username)
+const displayName = computed(() => memberStore.profile?.nickname || authStore.identifier)
 const memberTier = computed(() => pointsStore.tierCurrent?.tier)
 
 const cartCount = computed(() => cartStore.count)

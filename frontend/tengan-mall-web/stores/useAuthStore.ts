@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 
 interface UserInfo {
   userId: number
-  username: string
+  phone: string | null
+  email: string | null
 }
 
 /**
@@ -13,13 +14,16 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserInfo | null>(null)
 
   const isLoggedIn = computed(() => user.value !== null)
-  const username = computed(() => user.value?.username ?? '')
+  /** header/sidebar 暱稱抓不到時的顯示 fallback，account 不再有 username，改用 phone/email 二選一。 */
+  const identifier = computed(() => user.value?.phone ?? user.value?.email ?? '')
 
   async function fetchMe() {
     const requestFetch = useRequestFetch()
     try {
-      const data = await requestFetch<{ accountId: number; username: string; phone: string }>('/api/auth/me')
-      user.value = { userId: data.accountId, username: data.username }
+      const data = await requestFetch<{ accountId: number; phone: string | null; email: string | null }>(
+        '/api/auth/me',
+      )
+      user.value = { userId: data.accountId, phone: data.phone, email: data.email }
     } catch {
       user.value = null
     }
@@ -43,5 +47,5 @@ export const useAuthStore = defineStore('auth', () => {
     navigateTo('/login')
   }
 
-  return { user, isLoggedIn, username, setUser, clearSession, fetchMe, logout }
+  return { user, isLoggedIn, identifier, setUser, clearSession, fetchMe, logout }
 })

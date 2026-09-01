@@ -22,7 +22,7 @@ public class RegisterMemberFromEventService implements RegisterMemberFromEventUs
         if (memberRepository.existsById(command.memberId())) {
             return;
         }
-        Member member = Member.create(command.memberId(), command.username(), command.phone());
+        Member member = Member.create(command.memberId(), command.phone(), command.email());
         memberRepository.save(member);
     }
 }

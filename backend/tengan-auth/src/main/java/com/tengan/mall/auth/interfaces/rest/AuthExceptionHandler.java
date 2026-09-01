@@ -1,12 +1,14 @@
 package com.tengan.mall.auth.interfaces.rest;
 
 import com.tengan.mall.auth.domain.exception.AccountNotFoundException;
-import com.tengan.mall.auth.domain.exception.DuplicatePhoneException;
-import com.tengan.mall.auth.domain.exception.DuplicateUsernameException;
+import com.tengan.mall.auth.domain.exception.IdentifierAlreadyExistsException;
 import com.tengan.mall.auth.domain.exception.InvalidCredentialsException;
+import com.tengan.mall.auth.domain.exception.InvalidOrExpiredVerificationTokenException;
+import com.tengan.mall.auth.domain.exception.InvalidOtpCodeException;
 import com.tengan.mall.auth.domain.exception.InvalidRefreshTokenException;
-import com.tengan.mall.auth.domain.exception.InvalidSmsCodeException;
-import com.tengan.mall.auth.domain.exception.SmsCooldownException;
+import com.tengan.mall.auth.domain.exception.OtpCooldownException;
+import com.tengan.mall.auth.domain.exception.TooManyLoginAttemptsException;
+import com.tengan.mall.auth.domain.exception.TooManyOtpAttemptsException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,19 +30,20 @@ public class AuthExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
     }
 
-    @ExceptionHandler({DuplicateUsernameException.class, DuplicatePhoneException.class})
-    public ResponseEntity<Map<String, String>> handleDuplicate(RuntimeException e) {
+    @ExceptionHandler(IdentifierAlreadyExistsException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicate(IdentifierAlreadyExistsException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }
 
-    @ExceptionHandler({InvalidCredentialsException.class, InvalidSmsCodeException.class,
-            InvalidRefreshTokenException.class})
+    @ExceptionHandler({InvalidCredentialsException.class, InvalidOtpCodeException.class,
+            InvalidRefreshTokenException.class, InvalidOrExpiredVerificationTokenException.class})
     public ResponseEntity<Map<String, String>> handleUnauthorized(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
     }
 
-    @ExceptionHandler(SmsCooldownException.class)
-    public ResponseEntity<Map<String, String>> handleCooldown(SmsCooldownException e) {
+    @ExceptionHandler({OtpCooldownException.class, TooManyOtpAttemptsException.class,
+            TooManyLoginAttemptsException.class})
+    public ResponseEntity<Map<String, String>> handleTooManyRequests(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(Map.of("message", e.getMessage()));
     }
 }

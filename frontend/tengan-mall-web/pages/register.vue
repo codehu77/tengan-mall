@@ -13,44 +13,36 @@
         <h1 class="text-xl font-bold text-gray-800 text-center">會員註冊</h1>
       </template>
 
-      <form class="space-y-5" @submit.prevent="handleRegister">
-
-        <!-- 使用者名稱 -->
-        <UFormGroup label="使用者名稱" required>
+      <!-- Step 1：輸入手機/Email -->
+      <form v-if="step === 1" class="space-y-5" @submit.prevent="handleStart">
+        <UFormGroup label="手機或 Email" required>
           <UInput
-            v-model="username"
-            placeholder="請輸入使用者名稱"
+            v-model="identifier"
+            placeholder="請輸入手機號碼或 Email"
             icon="i-heroicons-user"
             size="lg"
             :disabled="loading"
           />
         </UFormGroup>
 
-        <!-- 手機號碼 + 發送驗證碼 -->
-        <UFormGroup label="手機號碼" required>
-          <div class="flex gap-2">
-            <UInput
-              v-model="phone"
-              placeholder="09xxxxxxxx"
-              icon="i-heroicons-phone"
-              size="lg"
-              class="flex-1"
-              :disabled="loading"
-            />
-            <UButton
-              color="gray"
-              size="lg"
-              variant="outline"
-              :disabled="loading || countdown > 0"
-              @click="handleSendCode"
-            >
-              {{ countdown > 0 ? `${countdown}s` : '發送驗證碼' }}
-            </UButton>
-          </div>
-        </UFormGroup>
+        <UAlert
+          v-if="error"
+          color="red"
+          variant="soft"
+          icon="i-heroicons-exclamation-circle"
+          :description="error"
+        />
 
-        <!-- 驗證碼 -->
-        <UFormGroup label="簡訊驗證碼" required>
+        <UButton type="submit" color="red" size="lg" block :loading="loading">
+          發送驗證碼
+        </UButton>
+      </form>
+
+      <!-- Step 2：輸入驗證碼 -->
+      <form v-else-if="step === 2" class="space-y-5" @submit.prevent="handleVerify">
+        <p class="text-sm text-gray-500">驗證碼已發送至 {{ identifier }}</p>
+
+        <UFormGroup label="驗證碼" required>
           <UInput
             v-model="code"
             placeholder="請輸入驗證碼"
@@ -60,19 +52,6 @@
           />
         </UFormGroup>
 
-        <!-- 密碼 -->
-        <UFormGroup label="密碼" required>
-          <UInput
-            v-model="password"
-            type="password"
-            placeholder="請設定密碼（至少 8 碼）"
-            icon="i-heroicons-lock-closed"
-            size="lg"
-            :disabled="loading"
-          />
-        </UFormGroup>
-
-        <!-- 錯誤訊息 -->
         <UAlert
           v-if="error"
           color="red"
@@ -81,17 +60,31 @@
           :description="error"
         />
 
-        <!-- 註冊按鈕 -->
-        <UButton
-          type="submit"
-          color="red"
-          size="lg"
-          block
-          :loading="loading"
-        >
-          立即註冊
+        <UButton type="submit" color="red" size="lg" block :loading="loading">
+          下一步
         </UButton>
+        <UButton color="gray" variant="ghost" size="lg" block :disabled="loading" @click="step = 1">
+          返回上一步
+        </UButton>
+      </form>
 
+      <!-- Step 3：設定密碼 -->
+      <form v-else class="space-y-5" @submit.prevent="handleComplete">
+        <UFormGroup label="密碼" required>
+          <PasswordInput v-model="password" placeholder="請設定密碼（至少 6 碼）" :disabled="loading" />
+        </UFormGroup>
+
+        <UAlert
+          v-if="error"
+          color="red"
+          variant="soft"
+          icon="i-heroicons-exclamation-circle"
+          :description="error"
+        />
+
+        <UButton type="submit" color="red" size="lg" block :loading="loading">
+          完成註冊
+        </UButton>
       </form>
 
       <template #footer>
@@ -106,13 +99,13 @@
 
     <!-- 測試提示 -->
     <UAlert
-      v-if="smsCode"
+      v-if="otpCode"
       class="mt-4"
       color="blue"
       variant="soft"
       icon="i-heroicons-information-circle"
       title="開發模式"
-      :description="`目前沒有接真實簡訊廠商，驗證碼直接顯示在這裡：${smsCode}`"
+      :description="`目前沒有接真實簡訊/郵件廠商，驗證碼直接顯示在這裡：${otpCode}`"
     />
 
   </div>
@@ -125,25 +118,27 @@ definePageMeta({
 
 useHead({ title: '註冊會員' })
 
-const username = ref('')
-const phone = ref('')
+const step = ref(1)
+const identifier = ref('')
 const code = ref('')
 const password = ref('')
-const countdown = ref(0)
-const { register, sendSmsCode, smsCode, loading, error } = useAuth()
+const registrationToken = ref('')
+const { startRegister, verifyRegister, completeRegister, otpCode, loading, error } = useAuth()
 
-async function handleSendCode() {
-  if (!phone.value || countdown.value > 0) return
-  const ok = await sendSmsCode(phone.value)
-  if (!ok) return
-  countdown.value = 60
-  const timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) clearInterval(timer)
-  }, 1000)
+async function handleStart() {
+  const ok = await startRegister(identifier.value)
+  if (ok) step.value = 2
 }
 
-async function handleRegister() {
-  await register(username.value, phone.value, password.value, code.value)
+async function handleVerify() {
+  const token = await verifyRegister(identifier.value, code.value)
+  if (token) {
+    registrationToken.value = token
+    step.value = 3
+  }
+}
+
+async function handleComplete() {
+  await completeRegister(registrationToken.value, password.value)
 }
 </script>

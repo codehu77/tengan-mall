@@ -41,8 +41,8 @@ public class SubscriptionController {
         var items = result.items().stream()
                 .map(r -> {
                     MemberItem member = memberById.get(r.memberId());
-                    return new SubscriptionRecordResponse(r.id(), r.memberId(),
-                            member == null ? null : member.username(), member == null ? null : member.nickname(),
+                    return new SubscriptionRecordResponse(r.id(), r.memberId(), memberAccount(member),
+                            member == null ? null : member.nickname(),
                             r.targetTier(), r.status(), r.ecpayMerchantTradeNo(), r.periodAmount(),
                             r.consecutiveFailures(), r.paidUntil(), r.benefitExpiredAt(), r.createdAt(),
                             r.cancelledAt());
@@ -54,6 +54,14 @@ public class SubscriptionController {
     private Map<Long, MemberItem> memberById(List<Long> memberIds) {
         List<Long> distinctIds = memberIds.stream().distinct().toList();
         return memberPort.getMembers(distinctIds).stream().collect(Collectors.toMap(MemberItem::id, Function.identity()));
+    }
+
+    /** 顯示用買家識別欄，member 沒有 username 了，改用 phone（沒有就 email）。 */
+    private String memberAccount(MemberItem member) {
+        if (member == null) {
+            return null;
+        }
+        return member.phone() != null ? member.phone() : member.email();
     }
 
     @GetMapping("/{id}/payments")

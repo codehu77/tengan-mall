@@ -1,4 +1,4 @@
 package com.tengan.mall.auth.application.login;
 
-public record LoginResult(String accessToken, String refreshToken, Long accountId, String username) {
+public record LoginResult(String accessToken, String refreshToken, Long accountId, long refreshTokenTtlSeconds) {
 }

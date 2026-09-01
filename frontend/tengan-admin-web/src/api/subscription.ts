@@ -5,7 +5,7 @@ import { http } from "@/utils/http";
 export type SubscriptionRecord = {
   id: number;
   memberId: number;
-  memberUsername?: string;
+  memberAccount?: string;
   memberNickname?: string;
   targetTier: string;
   status: number;

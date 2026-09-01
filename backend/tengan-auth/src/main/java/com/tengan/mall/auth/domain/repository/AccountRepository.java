@@ -11,11 +11,10 @@ public interface AccountRepository {
 
     Optional<Account> findById(AccountId id);
 
-    Optional<Account> findByUsername(String username);
+    /** identifier 是 phone 或 email，WHERE phone = ? OR email = ?（兩欄位都 UNIQUE，不會有歧義）。 */
+    Optional<Account> findByIdentifier(String identifier);
 
-    boolean existsByUsername(String username);
-
-    boolean existsByPhone(String phone);
+    boolean existsByIdentifier(String identifier);
 
     /** 供 tengan-admin 的會員列表批次組裝狀態用，不逐筆查（見 GetAccountStatusesService）。 */
     List<Account> findAllById(List<Long> ids);

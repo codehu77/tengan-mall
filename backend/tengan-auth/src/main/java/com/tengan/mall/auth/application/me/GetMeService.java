@@ -19,6 +19,8 @@ public class GetMeService implements GetMeUseCase {
     public GetMeResult getMe(GetMeQuery query) {
         Account account = accountRepository.findById(new AccountId(query.accountId()))
                 .orElseThrow(() -> new NoSuchElementException("account not found: " + query.accountId()));
-        return new GetMeResult(account.getId().value(), account.getUsername().value(), account.getPhone().value());
+        return new GetMeResult(account.getId().value(),
+                account.getPhone() != null ? account.getPhone().value() : null,
+                account.getEmail() != null ? account.getEmail().value() : null);
     }
 }

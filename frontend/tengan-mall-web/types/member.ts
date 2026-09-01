@@ -1,7 +1,7 @@
 export interface MemberProfile {
   id: number
-  username: string
   phone: string | null
+  email: string | null
   nickname: string
   avatarUrl: string | null
 }

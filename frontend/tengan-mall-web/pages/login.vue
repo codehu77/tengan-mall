@@ -18,10 +18,10 @@
         <form class="space-y-5" @submit.prevent="handleLogin">
 
           <!-- 帳號 -->
-          <UFormGroup label="帳號" required>
+          <UFormGroup label="手機或 Email" required>
             <UInput
-              v-model="loginId"
-              placeholder="請輸入使用者名稱"
+              v-model="identifier"
+              placeholder="請輸入手機號碼或 Email"
               icon="i-heroicons-user"
               size="lg"
               :disabled="loading"
@@ -30,15 +30,15 @@
 
           <!-- 密碼 -->
           <UFormGroup label="密碼" required>
-            <UInput
-              v-model="password"
-              type="password"
-              placeholder="請輸入密碼"
-              icon="i-heroicons-lock-closed"
-              size="lg"
-              :disabled="loading"
-            />
+            <PasswordInput v-model="password" placeholder="請輸入密碼" :disabled="loading" />
           </UFormGroup>
+
+          <div class="flex items-center justify-between text-sm">
+            <UCheckbox v-model="rememberMe" label="保持登入" :disabled="loading" />
+            <NuxtLink to="/forgot-password" class="text-red-600 hover:underline">
+              忘記密碼？
+            </NuxtLink>
+          </div>
 
           <!-- 錯誤訊息 -->
           <UAlert
@@ -136,12 +136,13 @@ definePageMeta({
 useHead({ title: '會員登入' })
 
 const toast = useToast()
-const loginId = ref('')
+const identifier = ref('')
 const password = ref('')
+const rememberMe = ref(false)
 const { login, loading, error } = useAuth()
 
 async function handleLogin() {
-  await login(loginId.value, password.value)
+  await login(identifier.value, password.value, rememberMe.value)
 }
 
 function showComingSoon() {

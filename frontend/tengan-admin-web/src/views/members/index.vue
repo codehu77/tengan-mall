@@ -44,9 +44,9 @@ function onDateRangeChange(value: [Date, Date] | null) {
 
 const columns: TableColumns[] = [
   { label: "ID", prop: "id", minWidth: 80 },
-  { label: "帳號", prop: "username", minWidth: 130 },
   { label: "暱稱", prop: "nickname", minWidth: 130 },
   { label: "手機", prop: "phone", minWidth: 130 },
+  { label: "Email", prop: "email", minWidth: 160 },
   { label: "狀態", prop: "status", minWidth: 90, slot: "status" },
   { label: "操作", fixed: "right", width: 140, slot: "operation" }
 ];
@@ -86,7 +86,7 @@ function onPageCurrentChange(page: number) {
 function onToggleStatus(row: MemberItem) {
   const nextBan = row.status === 1;
   ElMessageBox.confirm(
-    `確定要${nextBan ? "停權" : "復權"}會員「${row.username}」嗎？`,
+    `確定要${nextBan ? "停權" : "復權"}會員「${row.nickname}」嗎？`,
     "提示",
     { type: "warning" }
   ).then(() => {
@@ -115,7 +115,7 @@ onMounted(() => {
       <el-form-item label="關鍵字">
         <el-input
           v-model="searchForm.keyword"
-          placeholder="帳號/暱稱/手機"
+          placeholder="暱稱/手機/Email"
           clearable
         />
       </el-form-item>

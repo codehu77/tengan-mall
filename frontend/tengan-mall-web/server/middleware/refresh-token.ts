@@ -6,6 +6,11 @@
  * request header 解出來的舊值，setCookie 只影響回應，不會讓同一 request 之後的 getCookie
  * 讀到新值。
  *
+ * refresh cookie 的 maxAge 吃後端這次回傳的 refreshTokenTtlSeconds，不是寫死常數——
+ * remember-me 的 session 每次自動續期都要維持 30 天，非 remember-me 的維持 ~1 天，
+ * 兩者靠 rememberMe 存在 Redis 裡的 RefreshTokenEntry 一路沿用，見 tengan-auth 的
+ * RedisRefreshTokenStoreAdapter.rotate()。
+ *
  * 沒有 refresh token（訪客、或從沒登入過）直接 return，這是最大宗流量，成本只有一次
  * getCookie，不會打到後端。
  */
@@ -23,18 +28,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const result = await refreshAccessToken(refreshToken)
-    setCookie(event, config.cookieName, result.accessToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 15 * 60,
-    })
-    setCookie(event, config.refreshCookieName, result.refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60,
-    })
+    setAuthCookies(event, result.accessToken, result.refreshToken, result.refreshTokenTtlSeconds)
     event.context.accessToken = result.accessToken
   } catch {
     // refresh token 過期/已撤銷/重複使用被 revoke——清掉兩顆 cookie，讓後續 requireAccessToken

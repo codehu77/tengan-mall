@@ -2,20 +2,20 @@ package com.tengan.mall.auth.interfaces.rest;
 
 import com.tengan.mall.auth.application.login.LoginCommand;
 import com.tengan.mall.auth.application.login.LoginUseCase;
-import com.tengan.mall.auth.application.register.RegisterCommand;
-import com.tengan.mall.auth.application.register.RegisterUseCase;
-import com.tengan.mall.auth.application.sms.SendSmsCodeCommand;
-import com.tengan.mall.auth.application.sms.SendSmsCodeUseCase;
-import com.tengan.mall.auth.application.sms.VerifySmsCodeCommand;
-import com.tengan.mall.auth.application.sms.VerifySmsCodeUseCase;
+import com.tengan.mall.auth.application.register.RegisterCompleteCommand;
+import com.tengan.mall.auth.application.register.RegisterCompleteUseCase;
+import com.tengan.mall.auth.application.register.RegisterStartCommand;
+import com.tengan.mall.auth.application.register.RegisterStartUseCase;
+import com.tengan.mall.auth.application.register.RegisterVerifyCommand;
+import com.tengan.mall.auth.application.register.RegisterVerifyUseCase;
 import com.tengan.mall.auth.interfaces.rest.dto.LoginRequest;
 import com.tengan.mall.auth.interfaces.rest.dto.LoginResponse;
-import com.tengan.mall.auth.interfaces.rest.dto.RegisterRequest;
-import com.tengan.mall.auth.interfaces.rest.dto.RegisterResponse;
-import com.tengan.mall.auth.interfaces.rest.dto.SendSmsCodeRequest;
-import com.tengan.mall.auth.interfaces.rest.dto.SendSmsCodeResponse;
-import com.tengan.mall.auth.interfaces.rest.dto.VerifySmsCodeRequest;
-import com.tengan.mall.auth.interfaces.rest.dto.VerifySmsCodeResponse;
+import com.tengan.mall.auth.interfaces.rest.dto.RegisterCompleteRequest;
+import com.tengan.mall.auth.interfaces.rest.dto.RegisterCompleteResponse;
+import com.tengan.mall.auth.interfaces.rest.dto.RegisterStartRequest;
+import com.tengan.mall.auth.interfaces.rest.dto.RegisterStartResponse;
+import com.tengan.mall.auth.interfaces.rest.dto.RegisterVerifyRequest;
+import com.tengan.mall.auth.interfaces.rest.dto.RegisterVerifyResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,42 +26,45 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/public/auth")
 public class PublicAuthController {
 
-    private final RegisterUseCase registerUseCase;
+    private final RegisterStartUseCase registerStartUseCase;
+    private final RegisterVerifyUseCase registerVerifyUseCase;
+    private final RegisterCompleteUseCase registerCompleteUseCase;
     private final LoginUseCase loginUseCase;
-    private final SendSmsCodeUseCase sendSmsCodeUseCase;
-    private final VerifySmsCodeUseCase verifySmsCodeUseCase;
 
-    public PublicAuthController(RegisterUseCase registerUseCase, LoginUseCase loginUseCase,
-            SendSmsCodeUseCase sendSmsCodeUseCase, VerifySmsCodeUseCase verifySmsCodeUseCase) {
-        this.registerUseCase = registerUseCase;
+    public PublicAuthController(RegisterStartUseCase registerStartUseCase,
+            RegisterVerifyUseCase registerVerifyUseCase, RegisterCompleteUseCase registerCompleteUseCase,
+            LoginUseCase loginUseCase) {
+        this.registerStartUseCase = registerStartUseCase;
+        this.registerVerifyUseCase = registerVerifyUseCase;
+        this.registerCompleteUseCase = registerCompleteUseCase;
         this.loginUseCase = loginUseCase;
-        this.sendSmsCodeUseCase = sendSmsCodeUseCase;
-        this.verifySmsCodeUseCase = verifySmsCodeUseCase;
     }
 
-    @PostMapping("/register")
-    public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
-        var result = registerUseCase.register(
-                new RegisterCommand(request.username(), request.phone(), request.password(), request.code()));
-        return new RegisterResponse(result.accountId(), result.username());
+    @PostMapping("/register/start")
+    public RegisterStartResponse registerStart(@Valid @RequestBody RegisterStartRequest request) {
+        var result = registerStartUseCase.start(new RegisterStartCommand(request.identifier()));
+        return new RegisterStartResponse(result.code());
+    }
+
+    @PostMapping("/register/verify")
+    public RegisterVerifyResponse registerVerify(@Valid @RequestBody RegisterVerifyRequest request) {
+        var result = registerVerifyUseCase.verify(new RegisterVerifyCommand(request.identifier(), request.code()));
+        return new RegisterVerifyResponse(result.registrationToken());
+    }
+
+    @PostMapping("/register/complete")
+    public RegisterCompleteResponse registerComplete(@Valid @RequestBody RegisterCompleteRequest request) {
+        var result = registerCompleteUseCase.complete(
+                new RegisterCompleteCommand(request.registrationToken(), request.password()));
+        return new RegisterCompleteResponse(result.accountId(), result.accessToken(), result.refreshToken(),
+                result.refreshTokenTtlSeconds());
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        var result = loginUseCase.login(new LoginCommand(request.username(), request.password()));
-        return new LoginResponse(result.accessToken(), result.refreshToken(), result.accountId(), result.username());
-    }
-
-    @PostMapping("/sms/send")
-    public SendSmsCodeResponse sendSmsCode(@Valid @RequestBody SendSmsCodeRequest request) {
-        String code = sendSmsCodeUseCase.sendCode(new SendSmsCodeCommand(request.phone(), request.purpose()));
-        return new SendSmsCodeResponse(code);
-    }
-
-    @PostMapping("/sms/verify")
-    public VerifySmsCodeResponse verifySmsCode(@Valid @RequestBody VerifySmsCodeRequest request) {
-        boolean valid = verifySmsCodeUseCase.verify(
-                new VerifySmsCodeCommand(request.phone(), request.purpose(), request.code()));
-        return new VerifySmsCodeResponse(valid);
+        var result = loginUseCase.login(
+                new LoginCommand(request.identifier(), request.password(), request.rememberMe()));
+        return new LoginResponse(result.accessToken(), result.refreshToken(), result.accountId(),
+                result.refreshTokenTtlSeconds());
     }
 }

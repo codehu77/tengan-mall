@@ -6,5 +6,5 @@ package com.tengan.mall.auth.application.port;
  */
 public interface MemberRegisteredEventPublisherPort {
 
-    void publish(Long accountId, String username, String phone);
+    void publish(Long accountId, String phone, String email);
 }

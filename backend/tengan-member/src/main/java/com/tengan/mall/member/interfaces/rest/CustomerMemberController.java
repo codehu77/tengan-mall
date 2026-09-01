@@ -78,7 +78,7 @@ public class CustomerMemberController {
     @GetMapping("/profile")
     public ProfileResponse profile(@AuthenticationPrincipal Jwt jwt) {
         var result = getProfileUseCase.get(memberId(jwt));
-        return new ProfileResponse(result.id(), result.username(), result.phone(), result.nickname(),
+        return new ProfileResponse(result.id(), result.phone(), result.email(), result.nickname(),
                 result.avatarUrl());
     }
 

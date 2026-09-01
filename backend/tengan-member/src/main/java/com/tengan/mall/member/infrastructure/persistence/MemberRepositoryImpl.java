@@ -56,9 +56,9 @@ public class MemberRepositoryImpl implements MemberRepository {
     public MemberPage search(String keyword, Instant createdFrom, Instant createdTo, int pageNum, int pageSize) {
         LambdaQueryWrapper<MemberPO> wrapper = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.isBlank()) {
-            wrapper.and(w -> w.like(MemberPO::getUsername, keyword)
-                    .or().like(MemberPO::getNickname, keyword)
-                    .or().like(MemberPO::getPhone, keyword));
+            wrapper.and(w -> w.like(MemberPO::getNickname, keyword)
+                    .or().like(MemberPO::getPhone, keyword)
+                    .or().like(MemberPO::getEmail, keyword));
         }
         if (createdFrom != null) {
             wrapper.ge(MemberPO::getCreatedAt, LocalDateTime.ofInstant(createdFrom, ZoneId.systemDefault()));
@@ -85,15 +85,14 @@ public class MemberRepositoryImpl implements MemberRepository {
     private MemberPO toPO(Member member) {
         MemberPO po = new MemberPO();
         po.setId(member.getId());
-        po.setUsername(member.getUsername());
         po.setPhone(member.getPhone());
+        po.setEmail(member.getEmail());
         po.setNickname(member.getNickname());
         po.setAvatarUrl(member.getAvatarUrl());
         return po;
     }
 
     private Member toDomain(MemberPO po) {
-        return Member.reconstitute(po.getId(), po.getUsername(), po.getPhone(), po.getNickname(),
-                po.getAvatarUrl());
+        return Member.reconstitute(po.getId(), po.getPhone(), po.getEmail(), po.getNickname(), po.getAvatarUrl());
     }
 }

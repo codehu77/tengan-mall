@@ -6,18 +6,23 @@
  * 用 refresh token 當 key 把併發請求收斂成同一個 in-flight promise，確保同一顆舊 token
  * 只真的送出一次 /refresh。
  */
-const inFlightRefreshes = new Map<string, Promise<{ accessToken: string; refreshToken: string }>>()
+const inFlightRefreshes = new Map<
+  string,
+  Promise<{ accessToken: string; refreshToken: string; refreshTokenTtlSeconds: number }>
+>()
 
-export function refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+export function refreshAccessToken(
+  refreshToken: string,
+): Promise<{ accessToken: string; refreshToken: string; refreshTokenTtlSeconds: number }> {
   const existing = inFlightRefreshes.get(refreshToken)
   if (existing) {
     return existing
   }
 
-  const promise = callBackend<{ accessToken: string; refreshToken: string }>('/api/customer/auth/refresh', {
-    method: 'POST',
-    body: { refreshToken },
-  }).finally(() => {
+  const promise = callBackend<{ accessToken: string; refreshToken: string; refreshTokenTtlSeconds: number }>(
+    '/api/customer/auth/refresh',
+    { method: 'POST', body: { refreshToken } },
+  ).finally(() => {
     inFlightRefreshes.delete(refreshToken)
   })
 

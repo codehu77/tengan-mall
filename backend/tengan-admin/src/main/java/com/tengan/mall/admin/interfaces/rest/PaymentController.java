@@ -50,8 +50,8 @@ public class PaymentController {
         var items = result.items().stream()
                 .map(r -> {
                     MemberItem member = memberById.get(r.memberId());
-                    return new PaymentRecordResponse(r.id(), r.orderSn(), r.memberId(),
-                            member == null ? null : member.username(), member == null ? null : member.nickname(),
+                    return new PaymentRecordResponse(r.id(), r.orderSn(), r.memberId(), memberAccount(member),
+                            member == null ? null : member.nickname(),
                             r.method(), r.amount(), r.status(), r.gatewayTradeNo(), r.paidAt(), r.createdAt());
                 })
                 .toList();
@@ -61,6 +61,14 @@ public class PaymentController {
     private Map<Long, MemberItem> memberById(List<Long> memberIds) {
         List<Long> distinctIds = memberIds.stream().distinct().toList();
         return memberPort.getMembers(distinctIds).stream().collect(Collectors.toMap(MemberItem::id, Function.identity()));
+    }
+
+    /** 顯示用買家識別欄，member 沒有 username 了，改用 phone（沒有就 email）。 */
+    private String memberAccount(MemberItem member) {
+        if (member == null) {
+            return null;
+        }
+        return member.phone() != null ? member.phone() : member.email();
     }
 
     @GetMapping("/methods")
