@@ -34,7 +34,8 @@ public class Member {
 
     /**
      * 消費 member.registered 事件時呼叫。account 不再有 username，暱稱改用通用預設值
-     * "會員" + accountId（唯一、使用者之後可在會員中心自行修改），大頭貼給預設 placeholder。
+     * "會員" + accountId（唯一、使用者之後可在會員中心自行修改），大頭貼留空——不再塞
+     * DiceBear 之類的預設圖，前端沒有頭像時自行顯示 placeholder icon。
      */
     public static Member create(Long id, String phone, String email) {
         return create(id, phone, email, null, null);
@@ -42,15 +43,15 @@ public class Member {
 
     /**
      * OAuth 註冊用（Phase 13）：nickname/avatarUrl 有值就用 provider 回傳的個人資料寫入一次
-     * （見 oauth_login_design 定案「個人資料只在新建帳號當下同步一次」），空白/null 就退回
-     * 跟密碼註冊一樣的通用預設值，兩條路徑共用同一個工廠方法，不重複判斷邏輯。
+     * （見 oauth_login_design 定案「個人資料只在新建帳號當下同步一次」），空白/null 就跟密碼
+     * 註冊一樣留空，兩條路徑共用同一個工廠方法，不重複判斷邏輯。
      */
     public static Member create(Long id, String phone, String email, String nicknameOverride,
             String avatarUrlOverride) {
         String nickname = (nicknameOverride != null && !nicknameOverride.isBlank())
                 ? nicknameOverride : "會員" + id;
         String avatarUrl = (avatarUrlOverride != null && !avatarUrlOverride.isBlank())
-                ? avatarUrlOverride : DefaultAvatar.URL;
+                ? avatarUrlOverride : null;
         return new Member(id, phone, email, nickname, avatarUrl);
     }
 
@@ -87,9 +88,5 @@ public class Member {
 
     public String getAvatarUrl() {
         return avatarUrl;
-    }
-
-    private static final class DefaultAvatar {
-        private static final String URL = "https://api.dicebear.com/7.x/identicon/svg?seed=tengan-mall";
     }
 }

@@ -1,29 +1,35 @@
 <template>
   <div>
-    <label class="block text-base text-gray-500 mb-1">{{ label }}</label>
-
-    <div v-if="mode === 'view'" class="flex items-center gap-2">
-      <UInput :model-value="currentValue || '未設定'" :icon="icon" disabled class="flex-1" />
-      <UButton color="gray" variant="outline" @click="startEdit">修改</UButton>
+    <div v-if="mode === 'view'" class="flex items-center gap-4">
+      <div class="w-44 shrink-0 flex items-center gap-2.5">
+        <UIcon :name="icon" class="w-5 h-5 text-gray-400 shrink-0" />
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-gray-800">{{ label }}</p>
+          <p v-if="hint" class="text-xs text-gray-400 truncate">{{ hint }}</p>
+        </div>
+      </div>
+      <p class="flex-1 min-w-0 truncate text-[15px] text-gray-800">{{ currentValue || '未設定' }}</p>
+      <UButton color="gray" variant="outline" size="sm" class="shrink-0" @click="startEdit">修改</UButton>
     </div>
 
-    <div v-else-if="mode === 'edit'" class="space-y-2">
+    <div v-else-if="mode === 'edit'" class="bg-gray-50 rounded-xl border border-gray-100 p-4 space-y-3">
+      <p class="text-sm font-medium text-gray-600">修改{{ label }}</p>
       <p class="text-sm text-gray-400">目前：{{ currentValue || '未設定' }}</p>
       <UInput v-model="newValue" :placeholder="placeholder" :icon="icon" size="lg" :disabled="loading" />
       <PasswordInput v-model="currentPassword" placeholder="請輸入目前密碼（第三方登入帳號可留空）" :disabled="loading" />
       <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
-      <div class="flex gap-2">
+      <div class="flex gap-2 pt-1">
         <UButton color="red" :loading="loading" @click="handleStart">發送驗證碼</UButton>
         <UButton color="gray" variant="ghost" :disabled="loading" @click="cancel">取消</UButton>
       </div>
     </div>
 
-    <div v-else class="space-y-2">
-      <p class="text-sm text-gray-500">驗證碼已發送至 {{ newValue }}</p>
+    <div v-else class="bg-gray-50 rounded-xl border border-gray-100 p-4 space-y-3">
+      <p class="text-sm font-medium text-gray-600">驗證碼已發送至 {{ newValue }}</p>
       <UInput v-model="code" placeholder="請輸入驗證碼" icon="i-heroicons-shield-check" size="lg" :disabled="loading" />
       <p v-if="otpCode" class="text-xs text-blue-500">[展示模式] 驗證碼：{{ otpCode }}</p>
       <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
-      <div class="flex gap-2">
+      <div class="flex gap-2 pt-1">
         <UButton color="red" :loading="loading" @click="handleVerify">確認</UButton>
         <UButton color="gray" variant="ghost" :disabled="loading" @click="cancel">取消</UButton>
       </div>
@@ -43,6 +49,7 @@ const props = defineProps<{
   placeholder: string
   icon: string
   field: 'phone' | 'email'
+  hint?: string
 }>()
 
 const {

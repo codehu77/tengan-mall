@@ -1,70 +1,171 @@
 <template>
   <div>
-    <h1 class="text-2xl font-semibold text-gray-800 mb-6">個人檔案</h1>
+    <div class="mb-6">
+      <h1 class="text-[28px] font-bold text-gray-800">個人檔案</h1>
+      <p class="text-sm text-gray-400 mt-1">管理你的個人資料與聯絡方式</p>
+    </div>
 
     <div v-if="loading" class="py-10 text-center text-gray-400">載入中...</div>
 
-    <div v-else class="max-w-xl space-y-6">
-      <!-- 頭像 -->
-      <div class="flex items-center gap-4">
-        <img :src="form.avatarUrl || FALLBACK_AVATAR" alt="頭像" class="w-20 h-20 rounded-full object-cover border border-gray-100" />
-        <div class="flex-1 space-y-2">
-          <div class="flex gap-2">
-            <UInput v-model="form.avatarUrl" placeholder="貼上頭像圖片網址" class="flex-1" />
-            <UButton color="gray" variant="outline" :loading="uploading" @click="triggerFileSelect">
-              上傳照片
-            </UButton>
-            <input
-              ref="fileInputRef"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              class="hidden"
-              @change="handleFileSelected"
+    <div v-else class="space-y-6">
+      <!-- 個人頭像 -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-8">
+        <h2 class="text-lg font-semibold text-gray-800 mb-6">個人頭像</h2>
+
+        <div class="flex items-center gap-6">
+          <div class="relative shrink-0">
+            <img
+              v-if="form.avatarUrl"
+              :src="form.avatarUrl"
+              alt="頭像"
+              class="w-20 h-20 rounded-full object-cover border border-gray-100"
+              @error="form.avatarUrl = ''"
             />
-          </div>
-          <p v-if="uploadError" class="text-sm text-red-500">{{ uploadError }}</p>
-          <div class="flex flex-wrap gap-2">
+            <div v-else class="w-20 h-20 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center">
+              <UIcon name="i-heroicons-user" class="w-9 h-9 text-gray-300" />
+            </div>
             <button
-              v-for="preset in PRESET_AVATARS"
-              :key="preset"
               type="button"
-              class="w-10 h-10 rounded-full overflow-hidden border-2 transition"
-              :class="form.avatarUrl === preset ? 'border-red-500' : 'border-transparent hover:border-gray-200'"
-              @click="form.avatarUrl = preset"
+              class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center hover:bg-gray-50 transition"
+              aria-label="上傳照片"
+              @click="triggerFileSelect"
             >
-              <img :src="preset" alt="預設頭像" class="w-full h-full object-cover" />
+              <UIcon name="i-heroicons-camera" class="w-3.5 h-3.5 text-gray-500" />
             </button>
+          </div>
+
+          <div class="min-w-0 flex-1">
+            <p class="text-base font-semibold text-gray-800 truncate">{{ profile?.nickname || '會員' }}</p>
+            <p class="text-sm text-gray-400 mt-0.5">這是您在網站上顯示的名稱與頭像</p>
+
+            <div class="mt-4">
+              <UButton color="red" :loading="uploading" @click="triggerFileSelect">
+                <UIcon name="i-heroicons-arrow-up-tray" class="w-4 h-4" />
+                上傳照片
+              </UButton>
+              <input
+                ref="fileInputRef"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="hidden"
+                @change="handleFileSelected"
+              />
+            </div>
+            <p class="text-xs text-gray-400 mt-2">建議使用正方形圖片，檔案大小不超過 2MB</p>
+            <p v-if="uploadError" class="text-sm text-red-500 mt-2">{{ uploadError }}</p>
           </div>
         </div>
       </div>
 
       <!-- 基本資料 -->
-      <div class="space-y-4">
-        <div>
-          <label class="block text-base text-gray-500 mb-1">暱稱</label>
-          <UInput v-model="form.nickname" placeholder="請輸入暱稱" />
+      <div class="bg-white rounded-2xl border border-gray-100 p-8">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">基本資料</h2>
+
+        <div class="divide-y divide-gray-100">
+          <div class="flex items-center gap-4 py-5">
+            <div class="w-44 shrink-0 flex items-center gap-2.5">
+              <UIcon name="i-heroicons-user" class="w-5 h-5 text-gray-400 shrink-0" />
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-800">暱稱</p>
+                <p class="text-xs text-gray-400 truncate">您的公開顯示名稱</p>
+              </div>
+            </div>
+            <UInput v-model="form.nickname" placeholder="請輸入暱稱" size="lg" class="flex-1 min-w-0" />
+            <UButton
+              color="red"
+              :variant="isDirty ? 'solid' : 'soft'"
+              size="sm"
+              class="shrink-0"
+              :disabled="!isDirty"
+              :loading="saving"
+              @click="handleSave"
+            >
+              儲存
+            </UButton>
+          </div>
+
+          <div class="py-5">
+            <MemberContactEditRow
+              label="手機號碼"
+              field="phone"
+              icon="i-heroicons-phone"
+              hint="用於登入與安全驗證"
+              :current-value="authStore.user?.phone ?? null"
+              placeholder="請輸入新的手機號碼"
+            />
+          </div>
+
+          <div class="py-5">
+            <MemberContactEditRow
+              label="Email"
+              field="email"
+              icon="i-heroicons-envelope"
+              hint="用於接收通知與驗證信件"
+              :current-value="authStore.user?.email ?? null"
+              placeholder="請輸入新的 Email"
+            />
+          </div>
         </div>
-        <MemberContactEditRow
-          label="手機號碼"
-          field="phone"
-          icon="i-heroicons-phone"
-          :current-value="authStore.user?.phone ?? null"
-          placeholder="請輸入新的手機號碼"
-        />
-        <MemberContactEditRow
-          label="Email"
-          field="email"
-          icon="i-heroicons-envelope"
-          :current-value="authStore.user?.email ?? null"
-          placeholder="請輸入新的 Email"
-        />
+
+        <div class="mt-2 pt-6 border-t border-gray-100 flex items-center justify-between gap-3">
+          <p class="text-xs text-gray-400 flex items-center gap-1.5">
+            <UIcon name="i-heroicons-lock-closed" class="w-3.5 h-3.5 shrink-0" />
+            為了您的帳號安全，部分資訊修改後需要重新驗證。
+          </p>
+          <div class="flex items-center gap-3 shrink-0">
+            <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
+            <p v-if="saved" class="text-sm text-green-600">已儲存</p>
+            <UButton
+              color="red"
+              size="lg"
+              :disabled="!isDirty"
+              :loading="saving"
+              @click="handleSave"
+            >
+              儲存變更
+            </UButton>
+          </div>
+        </div>
       </div>
 
-      <p v-if="error" class="text-base text-red-500">{{ error }}</p>
-      <p v-if="saved" class="text-base text-green-600">已儲存</p>
+      <!-- 帳號安全小提醒 -->
+      <div class="bg-white rounded-2xl border border-gray-100 p-8">
+        <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-6">
+          <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-blue-500" />
+          帳號安全小提醒
+        </h2>
 
-      <div class="flex justify-end">
-        <UButton color="red" size="lg" :loading="saving" @click="handleSave">儲存變更</UButton>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div class="flex items-start gap-3">
+            <span class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+              <UIcon name="i-heroicons-lock-closed" class="w-5 h-5 text-indigo-500" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-800">定期更新密碼</p>
+              <p class="text-xs text-gray-400 mt-0.5">建議每 3 個月更新一次密碼</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <span class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+              <UIcon name="i-heroicons-shield-check" class="w-5 h-5 text-green-500" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-800">啟用雙重驗證</p>
+              <p class="text-xs text-gray-400 mt-0.5">提升帳號安全性，防止被盜用</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <span class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+              <UIcon name="i-heroicons-user" class="w-5 h-5 text-amber-500" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-800">不與他人共用帳號</p>
+              <p class="text-xs text-gray-400 mt-0.5">保護您的個人資訊與交易安全</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -74,16 +175,6 @@
 definePageMeta({ middleware: 'auth', layout: 'member' })
 
 useHead({ title: '會員資料' })
-
-const FALLBACK_AVATAR = 'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-mall'
-const PRESET_AVATARS = [
-  'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-1',
-  'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-2',
-  'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-3',
-  'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-4',
-  'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-5',
-  'https://api.dicebear.com/7.x/identicon/svg?seed=tengan-6',
-]
 
 const memberStore = useMemberStore()
 const authStore = useAuthStore()
@@ -99,6 +190,9 @@ const uploadError = ref('')
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const form = reactive({ nickname: '', avatarUrl: '' })
+const original = reactive({ nickname: '', avatarUrl: '' })
+
+const isDirty = computed(() => form.nickname !== original.nickname || form.avatarUrl !== original.avatarUrl)
 
 function triggerFileSelect() {
   fileInputRef.value?.click()
@@ -134,6 +228,8 @@ onMounted(async () => {
   if (memberStore.profile) {
     form.nickname = memberStore.profile.nickname
     form.avatarUrl = memberStore.profile.avatarUrl || ''
+    original.nickname = form.nickname
+    original.avatarUrl = form.avatarUrl
   }
   loading.value = false
 })
@@ -144,6 +240,8 @@ async function handleSave() {
   saving.value = true
   try {
     await memberStore.updateProfile(form.nickname, form.avatarUrl)
+    original.nickname = form.nickname
+    original.avatarUrl = form.avatarUrl
     saved.value = true
   } catch (e: any) {
     error.value = e.data?.message || e.statusMessage || '儲存失敗，請稍後再試'

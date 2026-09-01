@@ -1,6 +1,6 @@
 <template>
   <aside class="w-56 shrink-0">
-    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-6">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-6">
       <!-- 頭像與暱稱 -->
       <div class="flex items-center gap-3">
         <img
@@ -53,33 +53,45 @@
           </div>
         </div>
 
-        <div class="space-y-0.5">
-          <NuxtLink
-            to="/order/list"
-            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition"
-            :class="isActive('/order') ? 'bg-red-50 text-red-500 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
-          >
-            <UIcon name="i-heroicons-clipboard-document-list" class="w-[18px] h-[18px] shrink-0" />
+        <div class="border-t border-gray-100 pt-5">
+          <p class="text-xs font-medium text-gray-400 tracking-wide px-2.5 mb-1.5">
             我的訂單
-          </NuxtLink>
+          </p>
+          <div class="space-y-0.5">
+            <NuxtLink
+              to="/order/list"
+              class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition"
+              :class="isActive('/order') ? 'bg-red-50 text-red-500 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+            >
+              <UIcon name="i-heroicons-clipboard-document-list" class="w-[18px] h-[18px] shrink-0" />
+              我的訂單
+            </NuxtLink>
+          </div>
+        </div>
 
-          <NuxtLink
-            to="/member/points"
-            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition"
-            :class="isActive('/member/points') ? 'bg-red-50 text-red-500 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
-          >
-            <UIcon name="i-heroicons-wallet" class="w-[18px] h-[18px] shrink-0" />
-            我的點數
-          </NuxtLink>
+        <div class="border-t border-gray-100 pt-5">
+          <p class="text-xs font-medium text-gray-400 tracking-wide px-2.5 mb-1.5">
+            我的優惠
+          </p>
+          <div class="space-y-0.5">
+            <NuxtLink
+              to="/member/points"
+              class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition"
+              :class="isActive('/member/points') ? 'bg-red-50 text-red-500 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+            >
+              <UIcon name="i-heroicons-wallet" class="w-[18px] h-[18px] shrink-0" />
+              我的點數
+            </NuxtLink>
 
-          <NuxtLink
-            to="/member/subscription"
-            class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition"
-            :class="isActive('/member/subscription') ? 'bg-red-50 text-red-500 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
-          >
-            <UIcon name="i-heroicons-star" class="w-[18px] h-[18px] shrink-0" />
-            訂閱會員
-          </NuxtLink>
+            <NuxtLink
+              to="/member/subscription"
+              class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition"
+              :class="isActive('/member/subscription') ? 'bg-red-50 text-red-500 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+            >
+              <UIcon name="i-heroicons-star" class="w-[18px] h-[18px] shrink-0" />
+              訂閱會員
+            </NuxtLink>
+          </div>
         </div>
       </nav>
     </div>
