@@ -23,8 +23,10 @@ public class RabbitConfig {
 
     private static final String MEMBER_EVENT_EXCHANGE = "member-event-exchange";
     private static final String ROUTING_KEY_REGISTERED = "member.registered";
+    private static final String ROUTING_KEY_CONTACT_CHANGED = "member.contact_changed";
 
     public static final String REGISTERED_QUEUE = "member.registered.queue";
+    public static final String CONTACT_CHANGED_QUEUE = "member.contact_changed.queue";
 
     @Bean
     public TopicExchange memberEventExchange() {
@@ -39,6 +41,17 @@ public class RabbitConfig {
     @Bean
     public Binding memberRegisteredBinding(Queue memberRegisteredQueue, TopicExchange memberEventExchange) {
         return BindingBuilder.bind(memberRegisteredQueue).to(memberEventExchange).with(ROUTING_KEY_REGISTERED);
+    }
+
+    @Bean
+    public Queue memberContactChangedQueue() {
+        return new Queue(CONTACT_CHANGED_QUEUE, true);
+    }
+
+    @Bean
+    public Binding memberContactChangedBinding(Queue memberContactChangedQueue, TopicExchange memberEventExchange) {
+        return BindingBuilder.bind(memberContactChangedQueue).to(memberEventExchange)
+                .with(ROUTING_KEY_CONTACT_CHANGED);
     }
 
     @Bean

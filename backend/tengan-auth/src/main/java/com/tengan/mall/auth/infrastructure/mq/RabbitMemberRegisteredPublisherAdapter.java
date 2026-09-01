@@ -14,10 +14,10 @@ public class RabbitMemberRegisteredPublisherAdapter implements MemberRegisteredE
     }
 
     @Override
-    public void publish(Long accountId, String phone, String email) {
+    public void publish(Long accountId, String phone, String email, String nickname, String avatarUrl) {
         rabbitTemplate.convertAndSend(
                 RabbitConfig.MEMBER_EVENT_EXCHANGE,
                 RabbitConfig.MEMBER_REGISTERED_ROUTING_KEY,
-                new MemberRegisteredEvent(accountId, phone, email));
+                new MemberRegisteredEvent(accountId, phone, email, nickname, avatarUrl));
     }
 }

@@ -8,7 +8,15 @@
  * 排除清單：這些端點 401 是正常的業務語意（未登入/登入失敗/自我檢查），不是「session 中途過期」，
  * 不該觸發跳轉，否則登入頁本身、fetchMe() 的初始檢查都會被誤判成「登入已逾期」。
  */
-const EXEMPT_PATHS = ['/api/auth/login', '/api/auth/logout', '/api/auth/register', '/api/auth/sms-send', '/api/auth/me']
+const EXEMPT_PATHS = [
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/register',
+  '/api/auth/me',
+  '/api/auth/password',
+  '/api/auth/oauth2/google', // 涵蓋 /google（登入）跟 /google-link（會員中心連結），兩者401都是業務語意
+  '/api/auth/contact', // 改電話/Email：密碼填錯回401是業務語意，不是session過期
+]
 
 export default defineNuxtPlugin(() => {
   globalThis.$fetch = $fetch.create({

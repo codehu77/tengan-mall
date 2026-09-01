@@ -4,6 +4,7 @@ interface UserInfo {
   userId: number
   phone: string | null
   email: string | null
+  googleLinked: boolean
 }
 
 /**
@@ -20,10 +21,13 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchMe() {
     const requestFetch = useRequestFetch()
     try {
-      const data = await requestFetch<{ accountId: number; phone: string | null; email: string | null }>(
-        '/api/auth/me',
-      )
-      user.value = { userId: data.accountId, phone: data.phone, email: data.email }
+      const data = await requestFetch<{
+        accountId: number
+        phone: string | null
+        email: string | null
+        googleLinked: boolean
+      }>('/api/auth/me')
+      user.value = { userId: data.accountId, phone: data.phone, email: data.email, googleLinked: data.googleLinked }
     } catch {
       user.value = null
     }

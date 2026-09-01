@@ -14,7 +14,7 @@ export function useAuth() {
         method: 'POST',
         body: { identifier, password, rememberMe },
       })
-      authStore.setUser({ userId: data.accountId, phone: null, email: null })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false })
       await authStore.fetchMe()
       await useMemberStore().fetchProfile()
       await usePointsStore().loadCurrentTier()
@@ -74,7 +74,7 @@ export function useAuth() {
         method: 'POST',
         body: { registrationToken, password },
       })
-      authStore.setUser({ userId: data.accountId, phone: null, email: null })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false })
       await authStore.fetchMe()
       await useMemberStore().fetchProfile()
       await usePointsStore().loadCurrentTier()
@@ -126,7 +126,7 @@ export function useAuth() {
         method: 'POST',
         body: { resetToken, newPassword },
       })
-      authStore.setUser({ userId: data.accountId, phone: null, email: null })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false })
       await authStore.fetchMe()
       await useMemberStore().fetchProfile()
       await usePointsStore().loadCurrentTier()
@@ -142,6 +142,127 @@ export function useAuth() {
     }
   }
 
+  /** Google 登入完成即 auto-login，後端已設好 cookie，這裡只需要補齊前端狀態。 */
+  async function loginWithGoogle(idToken: string) {
+    loading.value = true
+    error.value = ''
+    try {
+      const data = await $fetch<{ accountId: number }>('/api/auth/oauth2/google', {
+        method: 'POST',
+        body: { idToken },
+      })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false })
+      await authStore.fetchMe()
+      await useMemberStore().fetchProfile()
+      await usePointsStore().loadCurrentTier()
+      const newCartCount = await useCart().mergeCart()
+      useCartStore().setCount(newCartCount)
+      await navigateTo('/')
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || 'Google 登入失敗，請稍後再試'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /** 已登入狀態下在會員中心自助連結 Google 帳號，成功後刷新 authStore 讓 googleLinked 更新。 */
+  async function linkGoogle(idToken: string) {
+    loading.value = true
+    error.value = ''
+    try {
+      await $fetch('/api/auth/oauth2/google-link', { method: 'POST', body: { idToken } })
+      await authStore.fetchMe()
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || '連結 Google 帳號失敗，請稍後再試'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /** 改電話 Step 1：純 OAuth 帳號沒有密碼，currentPassword 傳空字串即可（後端會跳過驗證）。 */
+  async function startChangePhone(newPhone: string, currentPassword: string) {
+    error.value = ''
+    if (!newPhone) {
+      error.value = '請輸入新的手機號碼'
+      return false
+    }
+    try {
+      const data = await $fetch<{ code: string }>('/api/auth/contact/phone-start', {
+        method: 'POST',
+        body: { newPhone, currentPassword },
+      })
+      otpCode.value = data.code
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || '驗證碼發送失敗'
+      return false
+    }
+  }
+
+  /** 改電話 Step 2：驗證通過即生效，成功後刷新 authStore 讓顯示值更新。 */
+  async function verifyChangePhone(newPhone: string, code: string) {
+    error.value = ''
+    if (!code) {
+      error.value = '請輸入驗證碼'
+      return false
+    }
+    loading.value = true
+    try {
+      await $fetch('/api/auth/contact/phone-verify', { method: 'POST', body: { newPhone, code } })
+      await authStore.fetchMe()
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || '驗證碼錯誤或已過期'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /** 改 Email Step 1，邏輯跟 startChangePhone 對稱。 */
+  async function startChangeEmail(newEmail: string, currentPassword: string) {
+    error.value = ''
+    if (!newEmail) {
+      error.value = '請輸入新的 Email'
+      return false
+    }
+    try {
+      const data = await $fetch<{ code: string }>('/api/auth/contact/email-start', {
+        method: 'POST',
+        body: { newEmail, currentPassword },
+      })
+      otpCode.value = data.code
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || '驗證碼發送失敗'
+      return false
+    }
+  }
+
+  /** 改 Email Step 2，邏輯跟 verifyChangePhone 對稱。 */
+  async function verifyChangeEmail(newEmail: string, code: string) {
+    error.value = ''
+    if (!code) {
+      error.value = '請輸入驗證碼'
+      return false
+    }
+    loading.value = true
+    try {
+      await $fetch('/api/auth/contact/email-verify', { method: 'POST', body: { newEmail, code } })
+      await authStore.fetchMe()
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || '驗證碼錯誤或已過期'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     login,
     startRegister,
@@ -150,6 +271,12 @@ export function useAuth() {
     forgotPassword,
     verifyForgotPassword,
     resetPassword,
+    loginWithGoogle,
+    linkGoogle,
+    startChangePhone,
+    verifyChangePhone,
+    startChangeEmail,
+    verifyChangeEmail,
     otpCode,
     loading,
     error,

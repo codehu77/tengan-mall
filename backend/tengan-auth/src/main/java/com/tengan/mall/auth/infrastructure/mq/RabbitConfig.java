@@ -11,6 +11,7 @@ public class RabbitConfig {
 
     public static final String MEMBER_EVENT_EXCHANGE = "member-event-exchange";
     public static final String MEMBER_REGISTERED_ROUTING_KEY = "member.registered";
+    public static final String MEMBER_CONTACT_CHANGED_ROUTING_KEY = "member.contact_changed";
 
     /**
      * tengan-member 還沒建好，這個 exchange 目前沒有任何 queue 綁定——訊息會被丟棄，這是

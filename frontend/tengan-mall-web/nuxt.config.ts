@@ -57,6 +57,9 @@ export default defineNuxtConfig({
     refreshCookieName: 'mall_refresh_token',
     public: {
       apiBase: 'http://localhost:88',
+      // Client ID 不是機密，前端本來就會把它送進頁面 JS。Nuxt runtimeConfig 本來就會自動用
+      // NUXT_PUBLIC_GOOGLE_CLIENT_ID 環境變數覆蓋這個預設值，不用自己讀 process.env。
+      googleClientId: '293677465630-rcoba1j2ltrl9d5apllvfqealb4lbp9p.apps.googleusercontent.com',
     },
   },
 })

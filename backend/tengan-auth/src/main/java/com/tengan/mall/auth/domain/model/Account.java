@@ -11,8 +11,8 @@ package com.tengan.mall.auth.domain.model;
 public class Account {
 
     private AccountId id;
-    private final Phone phone;
-    private final Email email;
+    private Phone phone;
+    private Email email;
     private String passwordHash;
     private AccountStatus status;
 
@@ -30,6 +30,16 @@ public class Account {
             throw new IllegalArgumentException("Account 必須至少有 phone 或 email 其中一個");
         }
         return new Account(null, phone, email, passwordHash, AccountStatus.ACTIVE);
+    }
+
+    /**
+     * OAuth 註冊用（Phase 13），刻意不驗證 phone/email 至少一個有值——這類帳號的存在依據是
+     * account_oauth_binding（跨聚合根，Account 自己驗證不到），呼叫端要在同一個交易裡緊接著
+     * 寫入一筆 binding，才算真正滿足「phone 或 email 或 oauth_binding 三選一」的完整不變量。
+     * email 可能是 null（使用者拒絕給 Google email 權限的情境）。
+     */
+    public static Account createFromOAuth(Phone phone, Email email) {
+        return new Account(null, phone, email, null, AccountStatus.ACTIVE);
     }
 
     public static Account reconstitute(AccountId id, Phone phone, Email email, String passwordHash,
@@ -58,6 +68,14 @@ public class Account {
 
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
+    }
+
+    public void changePhone(Phone newPhone) {
+        this.phone = newPhone;
+    }
+
+    public void changeEmail(Email newEmail) {
+        this.email = newEmail;
     }
 
     public AccountId getId() {

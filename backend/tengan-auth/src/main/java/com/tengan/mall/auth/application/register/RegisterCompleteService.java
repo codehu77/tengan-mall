@@ -1,9 +1,9 @@
 package com.tengan.mall.auth.application.register;
 
-import com.tengan.mall.auth.application.port.AccessTokenIssuerPort;
 import com.tengan.mall.auth.application.port.MemberRegisteredEventPublisherPort;
-import com.tengan.mall.auth.application.port.RefreshTokenStorePort;
 import com.tengan.mall.auth.application.port.VerificationTokenStorePort;
+import com.tengan.mall.auth.application.session.IssueSessionService;
+import com.tengan.mall.auth.application.session.SessionTokens;
 import com.tengan.mall.auth.domain.exception.IdentifierAlreadyExistsException;
 import com.tengan.mall.auth.domain.exception.InvalidOrExpiredVerificationTokenException;
 import com.tengan.mall.auth.domain.model.Account;
@@ -26,19 +26,17 @@ public class RegisterCompleteService implements RegisterCompleteUseCase {
     private final PasswordEncoder passwordEncoder;
     private final VerificationTokenStorePort verificationTokenStorePort;
     private final MemberRegisteredEventPublisherPort memberRegisteredEventPublisherPort;
-    private final AccessTokenIssuerPort accessTokenIssuerPort;
-    private final RefreshTokenStorePort refreshTokenStorePort;
+    private final IssueSessionService issueSessionService;
 
     public RegisterCompleteService(AccountRepository accountRepository, PasswordEncoder passwordEncoder,
             VerificationTokenStorePort verificationTokenStorePort,
             MemberRegisteredEventPublisherPort memberRegisteredEventPublisherPort,
-            AccessTokenIssuerPort accessTokenIssuerPort, RefreshTokenStorePort refreshTokenStorePort) {
+            IssueSessionService issueSessionService) {
         this.accountRepository = accountRepository;
         this.passwordEncoder = passwordEncoder;
         this.verificationTokenStorePort = verificationTokenStorePort;
         this.memberRegisteredEventPublisherPort = memberRegisteredEventPublisherPort;
-        this.accessTokenIssuerPort = accessTokenIssuerPort;
-        this.refreshTokenStorePort = refreshTokenStorePort;
+        this.issueSessionService = issueSessionService;
     }
 
     @Override
@@ -61,12 +59,11 @@ public class RegisterCompleteService implements RegisterCompleteUseCase {
         Long accountId = saved.getId().value();
 
         memberRegisteredEventPublisherPort.publish(accountId, isEmail ? null : identifier,
-                isEmail ? identifier : null);
+                isEmail ? identifier : null, null, null);
 
-        String accessToken = accessTokenIssuerPort.issue(saved.getId());
-        String refreshToken = refreshTokenStorePort.issue(accountId, true);
-        long ttlSeconds = refreshTokenStorePort.ttlSecondsFor(true);
+        SessionTokens tokens = issueSessionService.issue(saved, true);
 
-        return new RegisterCompleteResult(accountId, accessToken, refreshToken, ttlSeconds);
+        return new RegisterCompleteResult(accountId, tokens.accessToken(), tokens.refreshToken(),
+                tokens.refreshTokenTtlSeconds());
     }
 }

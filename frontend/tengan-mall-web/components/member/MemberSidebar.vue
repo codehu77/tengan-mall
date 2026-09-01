@@ -42,6 +42,14 @@
               <UIcon name="i-heroicons-map-pin" class="w-[18px] h-[18px] shrink-0" />
               地址簿
             </NuxtLink>
+            <NuxtLink
+              to="/member/security"
+              class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition"
+              :class="isActive('/member/security') ? 'bg-red-50 text-red-500 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+            >
+              <UIcon name="i-heroicons-shield-check" class="w-[18px] h-[18px] shrink-0" />
+              帳號安全
+            </NuxtLink>
           </div>
         </div>
 

@@ -41,3 +41,7 @@ management:
     web:
       exposure:
         include: health
+
+google:
+  oauth:
+    client-id: ${GOOGLE_OAUTH_CLIENT_ID:293677465630-rcoba1j2ltrl9d5apllvfqealb4lbp9p.apps.googleusercontent.com}

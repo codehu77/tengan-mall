@@ -50,6 +50,6 @@ public class CustomerAuthController {
     public MeResponse me(@AuthenticationPrincipal Jwt userJwt) {
         Long accountId = Long.valueOf(userJwt.getSubject());
         var result = getMeUseCase.getMe(new GetMeQuery(accountId));
-        return new MeResponse(result.accountId(), result.phone(), result.email());
+        return new MeResponse(result.accountId(), result.phone(), result.email(), result.googleLinked());
     }
 }

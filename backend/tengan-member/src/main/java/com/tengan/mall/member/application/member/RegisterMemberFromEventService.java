@@ -22,7 +22,8 @@ public class RegisterMemberFromEventService implements RegisterMemberFromEventUs
         if (memberRepository.existsById(command.memberId())) {
             return;
         }
-        Member member = Member.create(command.memberId(), command.phone(), command.email());
+        Member member = Member.create(command.memberId(), command.phone(), command.email(), command.nickname(),
+                command.avatarUrl());
         memberRepository.save(member);
     }
 }

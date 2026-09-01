@@ -1,8 +1,9 @@
 package com.tengan.mall.auth.application.password;
 
-import com.tengan.mall.auth.application.port.AccessTokenIssuerPort;
 import com.tengan.mall.auth.application.port.RefreshTokenStorePort;
 import com.tengan.mall.auth.application.port.VerificationTokenStorePort;
+import com.tengan.mall.auth.application.session.IssueSessionService;
+import com.tengan.mall.auth.application.session.SessionTokens;
 import com.tengan.mall.auth.domain.exception.AccountNotFoundException;
 import com.tengan.mall.auth.domain.exception.InvalidOrExpiredVerificationTokenException;
 import com.tengan.mall.auth.domain.model.Account;
@@ -15,7 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 消費 resetToken、改密碼、撤銷該帳號所有現存 refresh token（強制其他裝置登出）、
- * auto-login（視同 rememberMe=true，跟註冊完成同一套語意）。
+ * auto-login（視同 rememberMe=true，跟註冊完成同一套語意）。auto-login 走 IssueSessionService，
+ * 因此也會檢查 account.isActive()——修正舊版遺漏的「重設密碼繞過停權」缺口。
  */
 @Service
 public class ResetPasswordService implements ResetPasswordUseCase {
@@ -24,16 +26,16 @@ public class ResetPasswordService implements ResetPasswordUseCase {
     private final PasswordEncoder passwordEncoder;
     private final VerificationTokenStorePort verificationTokenStorePort;
     private final RefreshTokenStorePort refreshTokenStorePort;
-    private final AccessTokenIssuerPort accessTokenIssuerPort;
+    private final IssueSessionService issueSessionService;
 
     public ResetPasswordService(AccountRepository accountRepository, PasswordEncoder passwordEncoder,
             VerificationTokenStorePort verificationTokenStorePort, RefreshTokenStorePort refreshTokenStorePort,
-            AccessTokenIssuerPort accessTokenIssuerPort) {
+            IssueSessionService issueSessionService) {
         this.accountRepository = accountRepository;
         this.passwordEncoder = passwordEncoder;
         this.verificationTokenStorePort = verificationTokenStorePort;
         this.refreshTokenStorePort = refreshTokenStorePort;
-        this.accessTokenIssuerPort = accessTokenIssuerPort;
+        this.issueSessionService = issueSessionService;
     }
 
     @Override
@@ -50,10 +52,9 @@ public class ResetPasswordService implements ResetPasswordUseCase {
 
         refreshTokenStorePort.revokeAllForAccount(accountId);
 
-        String accessToken = accessTokenIssuerPort.issue(account.getId());
-        String refreshToken = refreshTokenStorePort.issue(accountId, true);
-        long ttlSeconds = refreshTokenStorePort.ttlSecondsFor(true);
+        SessionTokens tokens = issueSessionService.issue(account, true);
 
-        return new ResetPasswordResult(accountId, accessToken, refreshToken, ttlSeconds);
+        return new ResetPasswordResult(accountId, tokens.accessToken(), tokens.refreshToken(),
+                tokens.refreshTokenTtlSeconds());
     }
 }

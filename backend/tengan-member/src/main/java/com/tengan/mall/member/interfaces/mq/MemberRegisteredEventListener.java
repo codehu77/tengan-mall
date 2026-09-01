@@ -18,7 +18,7 @@ public class MemberRegisteredEventListener {
 
     @RabbitListener(queues = RabbitConfig.REGISTERED_QUEUE)
     public void onRegistered(MemberRegisteredEvent event) {
-        registerMemberFromEventUseCase
-                .register(new RegisterMemberFromEventCommand(event.memberId(), event.phone(), event.email()));
+        registerMemberFromEventUseCase.register(new RegisterMemberFromEventCommand(event.memberId(), event.phone(),
+                event.email(), event.nickname(), event.avatarUrl()));
     }
 }
