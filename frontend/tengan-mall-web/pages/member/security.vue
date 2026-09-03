@@ -21,8 +21,25 @@
         <div v-else ref="googleButtonRef" />
       </div>
 
+      <div class="bg-white rounded-xl border border-gray-100 p-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <svg class="w-8 h-8 shrink-0" viewBox="0 0 24 24">
+            <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+          <div>
+            <p class="font-medium text-gray-800">Facebook</p>
+            <p class="text-sm text-gray-400">{{ authStore.user?.facebookLinked ? '已連結' : '尚未連結' }}</p>
+          </div>
+        </div>
+
+        <UBadge v-if="authStore.user?.facebookLinked" color="green" variant="soft">已連結</UBadge>
+        <UButton v-else color="blue" variant="soft" size="sm" :loading="facebookLinking" @click="handleLinkFacebook">
+          連結
+        </UButton>
+      </div>
+
       <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
-      <p v-if="linked" class="text-sm text-green-600">Google 帳號連結成功</p>
+      <p v-if="linked" class="text-sm text-green-600">{{ linked }}</p>
     </div>
   </div>
 </template>
@@ -33,9 +50,10 @@ definePageMeta({ middleware: 'auth', layout: 'member' })
 useHead({ title: '帳號安全' })
 
 const authStore = useAuthStore()
-const { linkGoogle, error } = useAuth()
+const { linkGoogle, linkFacebook, error } = useAuth()
 const googleButtonRef = ref<HTMLElement | null>(null)
-const linked = ref(false)
+const linked = ref('')
+const facebookLinking = ref(false)
 
 onMounted(async () => {
   if (!authStore.user) {
@@ -45,10 +63,24 @@ onMounted(async () => {
   try {
     await useGoogleIdentity().renderButton(googleButtonRef.value, async (idToken) => {
       const ok = await linkGoogle(idToken)
-      linked.value = ok
+      linked.value = ok ? 'Google 帳號連結成功' : ''
     })
   } catch {
     // GIS script 載入失敗不擋整頁
   }
 })
+
+async function handleLinkFacebook() {
+  facebookLinking.value = true
+  try {
+    await useFacebookIdentity().login(async (accessToken) => {
+      const ok = await linkFacebook(accessToken)
+      linked.value = ok ? 'Facebook 帳號連結成功' : ''
+    })
+  } catch {
+    // Facebook SDK 載入失敗不擋整頁
+  } finally {
+    facebookLinking.value = false
+  }
+}
 </script>

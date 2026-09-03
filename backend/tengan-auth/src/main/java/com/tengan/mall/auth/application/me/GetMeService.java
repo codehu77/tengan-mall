@@ -26,9 +26,11 @@ public class GetMeService implements GetMeUseCase {
                 .orElseThrow(() -> new NoSuchElementException("account not found: " + query.accountId()));
         boolean googleLinked = accountOauthBindingRepository
                 .existsByAccountIdAndProvider(query.accountId(), OAuthProvider.GOOGLE);
+        boolean facebookLinked = accountOauthBindingRepository
+                .existsByAccountIdAndProvider(query.accountId(), OAuthProvider.FACEBOOK);
         return new GetMeResult(account.getId().value(),
                 account.getPhone() != null ? account.getPhone().value() : null,
                 account.getEmail() != null ? account.getEmail().value() : null,
-                googleLinked);
+                googleLinked, facebookLinked);
     }
 }
