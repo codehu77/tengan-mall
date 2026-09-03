@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.tengan.mall.auth.application.port.OAuthProviderVerifier;
 import com.tengan.mall.auth.application.port.OAuthUserInfo;
 import com.tengan.mall.auth.domain.exception.InvalidOAuthTokenException;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -15,13 +18,27 @@ import org.springframework.web.client.RestClientException;
  * （{@code {app-id}|{app-secret}}）呼叫 {@code /debug_token} 確認這顆 token 是「本應用程式」核發
  * （對齊 {@link GoogleOAuthConfig} 的 aud claim 檢查，避免拿別的 Facebook App 核發的 token
  * 冒用登入），再用該 token 本身呼叫 {@code /me} 取正規化後要用的個人資料。
+ *
+ * <p>Graph API 有個歷史包袱：回應本體是正常 JSON，但 {@code Content-Type} 卻是
+ * {@code text/javascript}（JSONP 時代留下的預設值），Spring 預設的 Jackson converter 只認
+ * {@code application/json}，直接用會丟 HttpMessageNotReadableException，所以這裡額外註冊一個
+ * 也接受 {@code text/javascript} 的 Jackson converter。
  */
 @Component
 public class FacebookOAuthProviderVerifier implements OAuthProviderVerifier {
 
     private final String appId;
     private final String appAccessToken;
-    private final RestClient restClient = RestClient.create("https://graph.facebook.com/v26.0");
+    private final RestClient restClient = RestClient.builder()
+            .baseUrl("https://graph.facebook.com/v26.0")
+            .messageConverters(converters -> converters.add(0, jacksonConverterAcceptingTextJavascript()))
+            .build();
+
+    private static MappingJackson2HttpMessageConverter jacksonConverterAcceptingTextJavascript() {
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        converter.setSupportedMediaTypes(List.of(MediaType.APPLICATION_JSON, MediaType.valueOf("text/javascript")));
+        return converter;
+    }
 
     public FacebookOAuthProviderVerifier(@Value("${facebook.oauth.app-id}") String appId,
             @Value("${facebook.oauth.app-secret}") String appSecret) {
