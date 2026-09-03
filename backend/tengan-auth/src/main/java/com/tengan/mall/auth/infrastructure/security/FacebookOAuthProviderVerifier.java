@@ -21,7 +21,7 @@ public class FacebookOAuthProviderVerifier implements OAuthProviderVerifier {
 
     private final String appId;
     private final String appAccessToken;
-    private final RestClient restClient = RestClient.create("https://graph.facebook.com");
+    private final RestClient restClient = RestClient.create("https://graph.facebook.com/v26.0");
 
     public FacebookOAuthProviderVerifier(@Value("${facebook.oauth.app-id}") String appId,
             @Value("${facebook.oauth.app-secret}") String appSecret) {

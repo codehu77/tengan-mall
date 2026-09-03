@@ -60,11 +60,10 @@ export default defineNuxtConfig({
       // Client ID 不是機密，前端本來就會把它送進頁面 JS。Nuxt runtimeConfig 本來就會自動用
       // NUXT_PUBLIC_GOOGLE_CLIENT_ID 環境變數覆蓋這個預設值，不用自己讀 process.env。
       googleClientId: '293677465630-rcoba1j2ltrl9d5apllvfqealb4lbp9p.apps.googleusercontent.com',
-      // Facebook App ID 跟 Google Client ID 一樣不是機密，但這個還沒申請，先留空字串——沒設定時
-      // useFacebookIdentity 會把空字串傳給 FB.init，Facebook 登入按鈕點了會固定失敗，不影響其他
-      // 功能。申請好後用 NUXT_PUBLIC_FACEBOOK_APP_ID 環境變數覆蓋（真正的機密 App Secret 只會出現
-      // 在後端 FACEBOOK_OAUTH_APP_SECRET，不會進到這個 public runtimeConfig）。
-      facebookAppId: '',
+      // Facebook App ID 跟 Google Client ID 一樣不是機密。真正的機密 App Secret 只會出現在後端
+      // FACEBOOK_OAUTH_APP_SECRET，不會進到這個 public runtimeConfig。要換 App 時用
+      // NUXT_PUBLIC_FACEBOOK_APP_ID 環境變數覆蓋這個預設值。
+      facebookAppId: '961854950273183',
     },
   },
 })

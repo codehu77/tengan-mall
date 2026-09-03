@@ -16,7 +16,7 @@ function loadFacebookScript(appId: string): Promise<void> {
 
   scriptLoadingPromise = new Promise((resolve, reject) => {
     window.fbAsyncInit = () => {
-      window.FB!.init({ appId, cookie: false, xfbml: false, version: 'v21.0' })
+      window.FB!.init({ appId, cookie: false, xfbml: false, version: 'v26.0' })
       resolve()
     }
     const script = document.createElement('script')

@@ -46,10 +46,10 @@ google:
   oauth:
     client-id: ${GOOGLE_OAUTH_CLIENT_ID:293677465630-rcoba1j2ltrl9d5apllvfqealb4lbp9p.apps.googleusercontent.com}
 
-# app-secret 是真正的機密，刻意不給預設值（跟上面 Google client-id 不同，Google client-id 前端本來
-# 就會送進頁面 JS 不算機密）；本機開發沒設這兩個 env var 時 Facebook 登入會固定驗證失敗，不影響
-# 其他功能開機。
+# app-id 跟上面 Google client-id 一樣不是機密（前端本來就會送進頁面 JS），可以給預設值。
+# app-secret 是真正的機密，刻意不給預設值——本機開發要在 IntelliJ 的 tengan-auth Run Configuration
+# 加 FACEBOOK_OAUTH_APP_SECRET 這個 env var，沒設時 Facebook 登入會固定驗證失敗，不影響其他功能開機。
 facebook:
   oauth:
-    app-id: ${FACEBOOK_OAUTH_APP_ID:}
+    app-id: ${FACEBOOK_OAUTH_APP_ID:961854950273183}
     app-secret: ${FACEBOOK_OAUTH_APP_SECRET:}
