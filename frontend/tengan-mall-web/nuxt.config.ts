@@ -47,6 +47,7 @@ export default defineNuxtConfig({
     '/member/**': { ssr: false },
     '/login':    { ssr: false },
     '/register': { ssr: false },
+    '/auth/**': { ssr: false },
     '/seckill/**': { ssr: false },
     '/api/public/**': { proxy: 'http://localhost:88/api/public/**' },
   },
@@ -55,6 +56,12 @@ export default defineNuxtConfig({
   runtimeConfig: {
     cookieName: 'mall_token',
     refreshCookieName: 'mall_refresh_token',
+    // LINE Login 沒有 JS SDK，授權 URL 是 server/api/auth/oauth2/line-start.get.ts 在 server 端組的
+    // （見 line 登入設計：state/nonce 要靠 HttpOnly cookie 做 CSRF/重放防護，前端頁面 JS 不用也不該
+    // 直接拿到 channel id/redirect uri），所以這兩個刻意不放進下面的 public，只有 server 端讀得到。
+    // channel id 不是機密，redirect uri 也不是，只是移到 server-only 是這次架構自然的結果。
+    lineChannelId: '2011433941',
+    lineRedirectUri: 'http://localhost:3000/auth/line/callback',
     public: {
       apiBase: 'http://localhost:88',
       // Client ID 不是機密，前端本來就會把它送進頁面 JS。Nuxt runtimeConfig 本來就會自動用

@@ -82,7 +82,7 @@
           <button
             type="button"
             class="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-lg bg-[#06C755] hover:bg-[#05b34c] transition text-sm font-medium text-white"
-            @click="showComingSoon"
+            @click="handleLineLogin"
           >
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="white">
               <path d="M12 2C6.48 2 2 6.02 2 11c0 3.07 1.56 5.8 3.99 7.57L5 22l3.56-1.87C9.6 20.62 10.78 21 12 21c5.52 0 10-4.02 10-9s-4.48-9-10-9zm.88 12.12l-2.27-2.43-4.42 2.43 4.87-5.17 2.33 2.43 4.36-2.43-4.87 5.17z"/>
@@ -146,13 +146,17 @@ onMounted(async () => {
   }
 })
 
-function showComingSoon() {
-  toast.add({
-    title: '即將推出',
-    description: '社群登入將於下一輪規劃實作（LINE）',
-    color: 'blue',
-    timeout: 3000,
-  })
+async function handleLineLogin() {
+  try {
+    await useLineIdentity().login('login')
+  } catch {
+    toast.add({
+      title: 'LINE 登入無法使用',
+      description: '請稍後再試，或改用帳號密碼登入',
+      color: 'red',
+      timeout: 3000,
+    })
+  }
 }
 
 async function handleFacebookLogin() {

@@ -6,6 +6,7 @@ interface UserInfo {
   email: string | null
   googleLinked: boolean
   facebookLinked: boolean
+  lineLinked: boolean
 }
 
 /**
@@ -28,6 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
         email: string | null
         googleLinked: boolean
         facebookLinked: boolean
+        lineLinked: boolean
       }>('/api/auth/me')
       user.value = {
         userId: data.accountId,
@@ -35,6 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
         email: data.email,
         googleLinked: data.googleLinked,
         facebookLinked: data.facebookLinked,
+        lineLinked: data.lineLinked,
       }
     } catch {
       user.value = null

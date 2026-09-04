@@ -38,6 +38,23 @@
         </UButton>
       </div>
 
+      <div class="bg-white rounded-xl border border-gray-100 p-5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <svg class="w-8 h-8 shrink-0" viewBox="0 0 24 24" fill="#06C755">
+            <path d="M12 2C6.48 2 2 6.02 2 11c0 3.07 1.56 5.8 3.99 7.57L5 22l3.56-1.87C9.6 20.62 10.78 21 12 21c5.52 0 10-4.02 10-9s-4.48-9-10-9zm.88 12.12l-2.27-2.43-4.42 2.43 4.87-5.17 2.33 2.43 4.36-2.43-4.87 5.17z"/>
+          </svg>
+          <div>
+            <p class="font-medium text-gray-800">LINE</p>
+            <p class="text-sm text-gray-400">{{ authStore.user?.lineLinked ? '已連結' : '尚未連結' }}</p>
+          </div>
+        </div>
+
+        <UBadge v-if="authStore.user?.lineLinked" color="green" variant="soft">已連結</UBadge>
+        <UButton v-else color="green" variant="soft" size="sm" @click="handleLinkLine">
+          連結
+        </UButton>
+      </div>
+
       <p v-if="error" class="text-sm text-red-500">{{ error }}</p>
       <p v-if="linked" class="text-sm text-green-600">{{ linked }}</p>
     </div>
@@ -82,5 +99,10 @@ async function handleLinkFacebook() {
   } finally {
     facebookLinking.value = false
   }
+}
+
+/** LINE 是整頁導轉，點下去瀏覽器就離開這個頁面，不需要 loading 狀態；結果在 pages/auth/line/callback.vue 處理完後導回這裡。 */
+async function handleLinkLine() {
+  await useLineIdentity().login('link')
 }
 </script>

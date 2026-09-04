@@ -53,3 +53,14 @@ facebook:
   oauth:
     app-id: ${FACEBOOK_OAUTH_APP_ID:961854950273183}
     app-secret: ${FACEBOOK_OAUTH_APP_SECRET:}
+
+# channel-id 跟 Google client-id/Facebook app-id 一樣不是機密。channel-secret 是真正的機密，
+# 刻意不給預設值——本機開發要在 IntelliJ 的 tengan-auth Run Configuration 加 LINE_OAUTH_CHANNEL_SECRET
+# 這個 env var，沒設時 LINE 登入會固定驗證失敗，不影響其他功能開機。redirect-uri 要跟 LINE Developers
+# Console 頻道設定的 Callback URL 白名單完全一致，也要跟前端 Nuxt server-only runtimeConfig 的
+# lineRedirectUri 完全一致。
+line:
+  oauth:
+    channel-id: ${LINE_OAUTH_CHANNEL_ID:2011433941}
+    channel-secret: ${LINE_OAUTH_CHANNEL_SECRET:}
+    redirect-uri: ${LINE_OAUTH_REDIRECT_URI:http://localhost:3000/auth/line/callback}

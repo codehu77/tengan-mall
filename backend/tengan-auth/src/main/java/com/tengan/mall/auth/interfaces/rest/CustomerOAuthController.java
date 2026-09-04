@@ -4,8 +4,11 @@ import com.tengan.mall.auth.application.oauth.LinkFacebookAccountCommand;
 import com.tengan.mall.auth.application.oauth.LinkFacebookAccountUseCase;
 import com.tengan.mall.auth.application.oauth.LinkGoogleAccountCommand;
 import com.tengan.mall.auth.application.oauth.LinkGoogleAccountUseCase;
+import com.tengan.mall.auth.application.oauth.LinkLineAccountCommand;
+import com.tengan.mall.auth.application.oauth.LinkLineAccountUseCase;
 import com.tengan.mall.auth.interfaces.rest.dto.LinkFacebookAccountRequest;
 import com.tengan.mall.auth.interfaces.rest.dto.LinkGoogleAccountRequest;
+import com.tengan.mall.auth.interfaces.rest.dto.LinkLineAccountRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,11 +25,13 @@ public class CustomerOAuthController {
 
     private final LinkGoogleAccountUseCase linkGoogleAccountUseCase;
     private final LinkFacebookAccountUseCase linkFacebookAccountUseCase;
+    private final LinkLineAccountUseCase linkLineAccountUseCase;
 
     public CustomerOAuthController(LinkGoogleAccountUseCase linkGoogleAccountUseCase,
-            LinkFacebookAccountUseCase linkFacebookAccountUseCase) {
+            LinkFacebookAccountUseCase linkFacebookAccountUseCase, LinkLineAccountUseCase linkLineAccountUseCase) {
         this.linkGoogleAccountUseCase = linkGoogleAccountUseCase;
         this.linkFacebookAccountUseCase = linkFacebookAccountUseCase;
+        this.linkLineAccountUseCase = linkLineAccountUseCase;
     }
 
     @PostMapping("/google/link")
@@ -42,6 +47,14 @@ public class CustomerOAuthController {
             @Valid @RequestBody LinkFacebookAccountRequest request) {
         Long accountId = Long.valueOf(userJwt.getSubject());
         linkFacebookAccountUseCase.link(new LinkFacebookAccountCommand(accountId, request.accessToken()));
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/line/link")
+    public ResponseEntity<Void> linkLine(@AuthenticationPrincipal Jwt userJwt,
+            @Valid @RequestBody LinkLineAccountRequest request) {
+        Long accountId = Long.valueOf(userJwt.getSubject());
+        linkLineAccountUseCase.link(new LinkLineAccountCommand(accountId, request.code(), request.nonce()));
         return ResponseEntity.noContent().build();
     }
 }

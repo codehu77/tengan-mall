@@ -7,5 +7,6 @@ export default defineEventHandler(async (event) => {
     email: string | null
     googleLinked: boolean
     facebookLinked: boolean
+    lineLinked: boolean
   }>('/api/customer/auth/me', { headers: { Authorization: `Bearer ${accessToken}` } })
 })

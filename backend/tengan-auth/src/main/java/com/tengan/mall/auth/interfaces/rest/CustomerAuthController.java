@@ -51,6 +51,6 @@ public class CustomerAuthController {
         Long accountId = Long.valueOf(userJwt.getSubject());
         var result = getMeUseCase.getMe(new GetMeQuery(accountId));
         return new MeResponse(result.accountId(), result.phone(), result.email(), result.googleLinked(),
-                result.facebookLinked());
+                result.facebookLinked(), result.lineLinked());
     }
 }

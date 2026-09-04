@@ -14,7 +14,7 @@ export function useAuth() {
         method: 'POST',
         body: { identifier, password, rememberMe },
       })
-      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false, lineLinked: false })
       await authStore.fetchMe()
       await useMemberStore().fetchProfile()
       await usePointsStore().loadCurrentTier()
@@ -74,7 +74,7 @@ export function useAuth() {
         method: 'POST',
         body: { registrationToken, password },
       })
-      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false, lineLinked: false })
       await authStore.fetchMe()
       await useMemberStore().fetchProfile()
       await usePointsStore().loadCurrentTier()
@@ -126,7 +126,7 @@ export function useAuth() {
         method: 'POST',
         body: { resetToken, newPassword },
       })
-      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false, lineLinked: false })
       await authStore.fetchMe()
       await useMemberStore().fetchProfile()
       await usePointsStore().loadCurrentTier()
@@ -151,7 +151,7 @@ export function useAuth() {
         method: 'POST',
         body: { idToken },
       })
-      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false, lineLinked: false })
       await authStore.fetchMe()
       await useMemberStore().fetchProfile()
       await usePointsStore().loadCurrentTier()
@@ -192,7 +192,7 @@ export function useAuth() {
         method: 'POST',
         body: { accessToken },
       })
-      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false, lineLinked: false })
       await authStore.fetchMe()
       await useMemberStore().fetchProfile()
       await usePointsStore().loadCurrentTier()
@@ -218,6 +218,50 @@ export function useAuth() {
       return true
     } catch (e: any) {
       error.value = e.data?.message || e.statusMessage || '連結 Facebook 帳號失敗，請稍後再試'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * LINE 登入完成即 auto-login，邏輯跟 loginWithFacebook 對稱，只是多帶一個 `state`——真正的
+   * state/nonce CSRF 比對在後端 BFF（line.post.ts）做，這裡只是把回跳頁拿到的值原封轉送過去。
+   */
+  async function loginWithLine(code: string, state: string) {
+    loading.value = true
+    error.value = ''
+    try {
+      const data = await $fetch<{ accountId: number }>('/api/auth/oauth2/line', {
+        method: 'POST',
+        body: { code, state },
+      })
+      authStore.setUser({ userId: data.accountId, phone: null, email: null, googleLinked: false, facebookLinked: false, lineLinked: false })
+      await authStore.fetchMe()
+      await useMemberStore().fetchProfile()
+      await usePointsStore().loadCurrentTier()
+      const newCartCount = await useCart().mergeCart()
+      useCartStore().setCount(newCartCount)
+      await navigateTo('/')
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || 'LINE 登入失敗，請稍後再試'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /** 已登入狀態下在會員中心自助連結 LINE 帳號，邏輯跟 linkFacebook 對稱。 */
+  async function linkLine(code: string, state: string) {
+    loading.value = true
+    error.value = ''
+    try {
+      await $fetch('/api/auth/oauth2/line-link', { method: 'POST', body: { code, state } })
+      await authStore.fetchMe()
+      return true
+    } catch (e: any) {
+      error.value = e.data?.message || e.statusMessage || '連結 LINE 帳號失敗，請稍後再試'
       return false
     } finally {
       loading.value = false
@@ -316,6 +360,8 @@ export function useAuth() {
     linkGoogle,
     loginWithFacebook,
     linkFacebook,
+    loginWithLine,
+    linkLine,
     startChangePhone,
     verifyChangePhone,
     startChangeEmail,
