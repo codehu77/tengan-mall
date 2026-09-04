@@ -41,6 +41,7 @@ export function useGoogleIdentity() {
       theme: 'outline',
       size: 'large',
       width: el.clientWidth || 300,
+      logo_alignment: 'left',
     })
   }
 

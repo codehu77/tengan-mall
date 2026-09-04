@@ -12,7 +12,7 @@ declare global {
           }): void
           renderButton(
             parent: HTMLElement,
-            options?: { theme?: string; size?: string; width?: number | string },
+            options?: { theme?: string; size?: string; width?: number | string; logo_alignment?: string },
           ): void
         }
       }
