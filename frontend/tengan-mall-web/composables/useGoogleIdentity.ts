@@ -28,7 +28,16 @@ function loadGoogleScript(): Promise<void> {
 export function useGoogleIdentity() {
   const config = useRuntimeConfig()
 
-  async function renderButton(el: HTMLElement, onCredential: (idToken: string) => void) {
+  /**
+   * text 只能吃 GIS 白名單裡的幾個固定字串（品牌規範限制，無法自訂任意文字）：
+   * 'signin_with' 登入頁用（使用 Google 帳戶登入），'continue_with' 給帳號連結情境用
+   * （透過 Google 繼續），語意比「登入」更貼近「連結既有帳號」。
+   */
+  async function renderButton(
+    el: HTMLElement,
+    onCredential: (idToken: string) => void,
+    text: 'signin_with' | 'signup_with' | 'continue_with' | 'signin' = 'signin_with',
+  ) {
     await loadGoogleScript()
     if (!window.google?.accounts?.id) {
       throw new Error('Google Identity Services 尚未就緒')
@@ -42,6 +51,7 @@ export function useGoogleIdentity() {
       size: 'large',
       width: el.clientWidth || 300,
       logo_alignment: 'left',
+      text,
     })
   }
 

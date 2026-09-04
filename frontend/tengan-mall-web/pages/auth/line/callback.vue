@@ -36,7 +36,7 @@ onMounted(async () => {
   if (mode === 'link') {
     const ok = await linkLine(code, state)
     toast.add({
-      title: ok ? 'LINE 帳號連結成功' : '連結 LINE 帳號失敗',
+      title: ok ? 'LINE 帳號綁定成功' : '綁定 LINE 帳號失敗',
       description: ok ? undefined : '請稍後再試',
       color: ok ? 'green' : 'red',
       timeout: 3000,
