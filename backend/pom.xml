@@ -117,6 +117,7 @@
     <module>tengan-wallet</module>
     <module>tengan-seckill</module>
     <module>tengan-media</module>
+    <module>tengan-devtools</module>
   </modules>
 
 </project>

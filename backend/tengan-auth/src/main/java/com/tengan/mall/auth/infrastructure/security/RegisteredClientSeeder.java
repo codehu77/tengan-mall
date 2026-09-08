@@ -47,7 +47,9 @@ import org.springframework.stereotype.Component;
  * 任何服務，跟 tengan-wallet 同一種情況），所以不用新增它自己的 client，只需要幫會呼叫它的
  * tengan-admin（Banner CRUD + 後台素材上傳）補 media.read/media.write。使用者事後要求「刪除商品要
  * 連帶清掉 MinIO 圖片」，第一次讓 tengan-product 主動呼叫別的服務，新增 tengan-product 自己的 client
- * （只給 media.write，不需要 media.read——它只刪不查）。</p>
+ * （只給 media.write，不需要 media.read——它只刪不查）。使用者要拿 MOMO 商品頁抓 demo 資料，新增
+ * `tengan-devtools` 這個一次性本機小工具的 client（見 backend/tengan-devtools）：只給
+ * product.read（分類/品牌/屬性下拉選單）、product.write（建立 SPU）、media.write（上傳圖片）。</p>
  */
 @Component
 public class RegisteredClientSeeder implements ApplicationRunner {
@@ -59,6 +61,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private static final String PAYMENT_CLIENT_ID = "tengan-payment";
     private static final String SECKILL_CLIENT_ID = "tengan-seckill";
     private static final String PRODUCT_CLIENT_ID = "tengan-product";
+    private static final String DEVTOOLS_CLIENT_ID = "tengan-devtools";
 
     private final RegisteredClientRepository registeredClientRepository;
     private final PasswordEncoder passwordEncoder;
@@ -69,6 +72,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
     private final String paymentClientSecret;
     private final String seckillClientSecret;
     private final String productClientSecret;
+    private final String devtoolsClientSecret;
 
     public RegisteredClientSeeder(RegisteredClientRepository registeredClientRepository,
             PasswordEncoder passwordEncoder,
@@ -78,7 +82,8 @@ public class RegisteredClientSeeder implements ApplicationRunner {
             @Value("${tengan.oauth2.order-client-secret:tengan-order-secret}") String orderClientSecret,
             @Value("${tengan.oauth2.payment-client-secret:tengan-payment-secret}") String paymentClientSecret,
             @Value("${tengan.oauth2.seckill-client-secret:tengan-seckill-secret}") String seckillClientSecret,
-            @Value("${tengan.oauth2.product-client-secret:tengan-product-secret}") String productClientSecret) {
+            @Value("${tengan.oauth2.product-client-secret:tengan-product-secret}") String productClientSecret,
+            @Value("${tengan.oauth2.devtools-client-secret:tengan-devtools-secret}") String devtoolsClientSecret) {
         this.registeredClientRepository = registeredClientRepository;
         this.passwordEncoder = passwordEncoder;
         this.adminClientSecret = adminClientSecret;
@@ -88,6 +93,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
         this.paymentClientSecret = paymentClientSecret;
         this.seckillClientSecret = seckillClientSecret;
         this.productClientSecret = productClientSecret;
+        this.devtoolsClientSecret = devtoolsClientSecret;
     }
 
     @Override
@@ -98,6 +104,7 @@ public class RegisteredClientSeeder implements ApplicationRunner {
                 "wallet.write", "seckill.read", "seckill.write", "media.read", "media.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
         seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
+        seedIfAbsent(DEVTOOLS_CLIENT_ID, devtoolsClientSecret, "product.read", "product.write", "media.write");
         seedIfAbsent(ORDER_CLIENT_ID, orderClientSecret, "cart.read", "cart.write", "product.read",
                 "inventory.write", "coupon.read", "coupon.write", "wallet.read", "wallet.write", "seckill.read",
                 "seckill.write");

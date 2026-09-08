@@ -1,0 +1,37 @@
+server:
+  port: 9140
+
+spring:
+  application:
+    name: tengan-mall-devtools
+  security:
+    oauth2:
+      client:
+        registration:
+          tengan-product:
+            client-id: tengan-devtools
+            client-secret: ${DEVTOOLS_CLIENT_SECRET:tengan-devtools-secret}
+            authorization-grant-type: client_credentials
+            client-authentication-method: client_secret_basic
+            scope: product.read,product.write
+          tengan-media:
+            client-id: tengan-devtools
+            client-secret: ${DEVTOOLS_CLIENT_SECRET:tengan-devtools-secret}
+            authorization-grant-type: client_credentials
+            client-authentication-method: client_secret_basic
+            scope: media.write
+        provider:
+          tengan-product:
+            token-uri: ${TENGAN_AUTH_TOKEN_URI:http://localhost:9010/oauth2/service/token}
+          tengan-media:
+            token-uri: ${TENGAN_AUTH_TOKEN_URI:http://localhost:9010/oauth2/service/token}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+tengan:
+  product:
+    base-url: ${TENGAN_PRODUCT_BASE_URL:http://localhost:9030}
+  media:
+    base-url: ${TENGAN_MEDIA_BASE_URL:http://localhost:9130}

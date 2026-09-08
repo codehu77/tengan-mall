@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>tengan-devtools · MOMO 商品匯入</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft JhengHei", system-ui, sans-serif; margin: 0; padding: 24px; background: #f4f5f7; color: #222; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .hint { color: #777; font-size: 13px; margin-bottom: 20px; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .steps { display: flex; gap: 8px; margin-bottom: 20px; }
+  .step { padding: 6px 14px; border-radius: 999px; background: #e5e7eb; color: #666; font-size: 13px; }
+  .step.active { background: #2563eb; color: #fff; }
+  label { display: block; font-size: 13px; color: #444; margin: 12px 0 4px; }
+  input[type=text], input[type=url], input[type=number], select, textarea {
+    width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+  }
+  textarea { min-height: 80px; }
+  button { cursor: pointer; border: none; border-radius: 4px; padding: 9px 18px; font-size: 14px; background: #2563eb; color: #fff; }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+  button.secondary { background: #e5e7eb; color: #333; }
+  .row { display: flex; gap: 24px; }
+  .row > div { flex: 1; }
+  .thumb-grid { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; }
+  .thumb { border: 2px solid transparent; border-radius: 4px; padding: 4px; text-align: center; width: 120px; }
+  .thumb.excluded { opacity: .35; }
+  .thumb img { width: 100%; height: 90px; object-fit: contain; background: #fafafa; }
+  .thumb label { margin: 4px 0 0; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  th, td { border-bottom: 1px solid #eee; padding: 6px 8px; font-size: 13px; text-align: left; vertical-align: middle; }
+  th { color: #666; font-weight: 600; }
+  .sku-img { width: 48px; height: 48px; object-fit: contain; background: #fafafa; border: 1px solid #eee; }
+  .cat-chain select { margin-bottom: 8px; }
+  .error { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; padding: 10px 14px; border-radius: 4px; margin: 12px 0; white-space: pre-wrap; }
+  .success { background: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 14px; border-radius: 4px; }
+  .muted { color: #888; font-size: 12px; }
+  .actions { display: flex; justify-content: space-between; margin-top: 20px; }
+  .spec-hints { font-size: 12px; color: #666; }
+  .spec-hints span { display: inline-block; background: #f3f4f6; border-radius: 3px; padding: 2px 6px; margin: 2px; }
+</style>
+</head>
+<body>
+
+<h1>tengan-devtools · MOMO 商品匯入</h1>
+<div class="hint">內部一次性小工具：貼 MOMO 商品網址抓 demo 資料，分類/品牌/規格屬性一律手動選現有的。</div>
+
+<div class="steps">
+  <div class="step" id="step-indicator-1">1. 抓取</div>
+  <div class="step" id="step-indicator-2">2. 分類與屬性</div>
+  <div class="step" id="step-indicator-3">3. 預覽送出</div>
+</div>
+
+<div id="app"></div>
+
+<script>
+const state = {
+  scrape: null,
+  spuImages: [],       // [{url, included}]
+  featureImages: [],   // [{url, included}]
+  featureText: '',
+  name: '',
+  skuRows: [],          // [{included, name, price, imageUrl}]
+  categories: [],
+  brands: [],
+  categoryId: null,
+  brandId: null,
+  baseAttrs: [],
+  saleAttrs: [],
+  baseAttrValues: {},   // attrId -> value
+  selectedSaleAttrId: null,
+  skuAttrValues: {},    // rowIndex -> value string
+};
+
+function escapeHtml(s) {
+  return (s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch (e) { /* not JSON */ }
+  if (!res.ok) {
+    throw new Error((json && json.message) ? json.message : (text || ('HTTP ' + res.status)));
+  }
+  return json;
+}
+
+function setActiveStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('step-indicator-' + i).classList.toggle('active', i === n);
+  });
+}
+
+const app = document.getElementById('app');
+
+function renderStep1() {
+  setActiveStep(1);
+  app.innerHTML = `
+    <div class="card">
+      <label>MOMO 商品網址</label>
+      <input type="url" id="momo-url" placeholder="https://www.momoshop.com.tw/product/xxxxxxxx" value="${escapeHtml(state.lastUrl || '')}">
+      <div class="actions">
+        <span></span>
+        <button id="btn-scrape">抓取</button>
+      </div>
+      <div id="scrape-status"></div>
+    </div>
+    <div id="scrape-preview"></div>
+  `;
+  document.getElementById('btn-scrape').addEventListener('click', onScrape);
+}
+
+async function onScrape() {
+  const url = document.getElementById('momo-url').value.trim();
+  const statusEl = document.getElementById('scrape-status');
+  if (!url) { statusEl.innerHTML = '<div class="error">請先貼網址</div>'; return; }
+  state.lastUrl = url;
+  statusEl.innerHTML = '<div class="muted">抓取中，實際開瀏覽器渲染 MOMO 頁面，可能要 10~20 秒…</div>';
+  document.getElementById('btn-scrape').disabled = true;
+  try {
+    const result = await api('POST', '/api/scrape', { url });
+    state.scrape = result;
+    state.name = result.name || '';
+    state.featureText = result.featureText || '';
+    state.spuImages = (result.spuImages || []).map(u => ({ url: u, included: true }));
+    state.featureImages = (result.featureImages || []).map(u => ({ url: u, included: true }));
+    state.skuRows = (result.skus || []).map(s => ({
+      included: true, name: s.name || '', price: s.price ?? '', imageUrl: s.mainImage || '',
+    }));
+    statusEl.innerHTML = '';
+    renderScrapePreview();
+  } catch (e) {
+    statusEl.innerHTML = `<div class="error">抓取失敗：${escapeHtml(e.message)}</div>`;
+  } finally {
+    document.getElementById('btn-scrape').disabled = false;
+  }
+}
+
+function renderScrapePreview() {
+  const specHintsHtml = (state.scrape.specHints || [])
+    .map(h => `<span>${escapeHtml(h.name)}：${escapeHtml(h.value)}</span>`).join('');
+
+  document.getElementById('scrape-preview').innerHTML = `
+    <div class="card">
+      <label>商品名稱</label>
+      <input type="text" id="spu-name" value="${escapeHtml(state.name)}">
+
+      <label>MOMO 規格提示（僅供參考，不會自動套用）</label>
+      <div class="spec-hints">${specHintsHtml || '<span class="muted">無</span>'}</div>
+
+      <label>SPU 圖片（取消勾選＝不匯入）</label>
+      <div class="thumb-grid" id="spu-image-grid"></div>
+
+      <label>商品特色文字</label>
+      <textarea id="feature-text">${escapeHtml(state.featureText)}</textarea>
+
+      <label>商品特色圖片（取消勾選＝不匯入）</label>
+      <div class="thumb-grid" id="feature-image-grid"></div>
+
+      <label>SKU（顏色/規格）</label>
+      <table id="sku-table">
+        <thead><tr><th></th><th>圖片</th><th>名稱</th><th>價格</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="actions">
+        <button class="secondary" id="btn-back-1">重新抓取</button>
+        <button id="btn-to-step2">下一步：選分類/品牌/屬性</button>
+      </div>
+    </div>
+  `;
+
+  renderThumbGrid('spu-image-grid', state.spuImages);
+  renderThumbGrid('feature-image-grid', state.featureImages);
+  renderSkuTable();
+
+  document.getElementById('spu-name').addEventListener('input', e => state.name = e.target.value);
+  document.getElementById('feature-text').addEventListener('input', e => state.featureText = e.target.value);
+  document.getElementById('btn-back-1').addEventListener('click', renderStep1);
+  document.getElementById('btn-to-step2').addEventListener('click', onNextToStep2);
+}
+
+function renderThumbGrid(containerId, images) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = images.map((img, i) => `
+    <div class="thumb ${img.included ? '' : 'excluded'}" data-idx="${i}">
+      <img src="${escapeHtml(img.url)}" loading="lazy">
+      <label><input type="checkbox" ${img.included ? 'checked' : ''} data-role="include"> 匯入</label>
+    </div>
+  `).join('');
+  el.querySelectorAll('.thumb').forEach(thumbEl => {
+    const idx = Number(thumbEl.dataset.idx);
+    thumbEl.querySelector('[data-role=include]').addEventListener('change', e => {
+      images[idx].included = e.target.checked;
+      thumbEl.classList.toggle('excluded', !e.target.checked);
+    });
+  });
+}
+
+function renderSkuTable() {
+  const tbody = document.querySelector('#sku-table tbody');
+  tbody.innerHTML = state.skuRows.map((row, i) => `
+    <tr data-idx="${i}">
+      <td><input type="checkbox" data-role="include" ${row.included ? 'checked' : ''}></td>
+      <td>${row.imageUrl ? `<img class="sku-img" src="${escapeHtml(row.imageUrl)}">` : ''}</td>
+      <td><input type="text" data-role="name" value="${escapeHtml(row.name)}"></td>
+      <td><input type="number" step="1" data-role="price" value="${escapeHtml(String(row.price))}"></td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('tr').forEach(tr => {
+    const idx = Number(tr.dataset.idx);
+    tr.querySelector('[data-role=include]').addEventListener('change', e => state.skuRows[idx].included = e.target.checked);
+    tr.querySelector('[data-role=name]').addEventListener('input', e => state.skuRows[idx].name = e.target.value);
+    tr.querySelector('[data-role=price]').addEventListener('input', e => state.skuRows[idx].price = e.target.value);
+  });
+}
+
+async function onNextToStep2() {
+  if (state.skuRows.filter(r => r.included).length === 0) {
+    alert('至少要保留一個 SKU');
+    return;
+  }
+  try {
+    const [categories, brands] = await Promise.all([
+      api('GET', '/api/categories'),
+      api('GET', '/api/brands'),
+    ]);
+    state.categories = categories.items || [];
+    state.brands = brands.items || [];
+    state.categoryId = null;
+    state.baseAttrs = [];
+    state.saleAttrs = [];
+    renderStep2();
+  } catch (e) {
+    alert('讀取分類/品牌失敗：' + e.message);
+  }
+}
+
+function renderStep2() {
+  setActiveStep(2);
+  app.innerHTML = `
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>分類（選到底層）</label>
+          <div class="cat-chain" id="cat-chain"></div>
+        </div>
+        <div>
+          <label>品牌</label>
+          <select id="brand-select">
+            <option value="">-- 選擇品牌 --</option>
+            ${state.brands.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div id="attrs-section"></div>
+      <div class="actions">
+        <button class="secondary" id="btn-back-2">上一步</button>
+        <button id="btn-to-step3" disabled>下一步：預覽送出</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('brand-select').addEventListener('change', e => {
+    state.brandId = e.target.value ? Number(e.target.value) : null;
+    updateStep2NextEnabled();
+  });
+  document.getElementById('btn-back-2').addEventListener('click', renderScrapePreview);
+  document.getElementById('btn-to-step3').addEventListener('click', onNextToStep3);
+  renderCategoryChain();
+}
+
+function renderCategoryChain() {
+  const chain = document.getElementById('cat-chain');
+  chain.innerHTML = '';
+  state.categoryId = null;
+  document.getElementById('attrs-section').innerHTML = '';
+  appendCategoryLevel(chain, state.categories);
+}
+
+function appendCategoryLevel(chain, nodes) {
+  const select = document.createElement('select');
+  select.innerHTML = '<option value="">-- 選擇 --</option>' +
+    nodes.map(n => `<option value="${n.id}">${escapeHtml(n.name)}</option>`).join('');
+  select.addEventListener('change', () => {
+    // 清掉這一層之後所有已經渲染的下一層選單
+    while (chain.children[Array.from(chain.children).indexOf(select) + 1]) {
+      chain.removeChild(chain.lastChild);
+    }
+    state.categoryId = null;
+    document.getElementById('attrs-section').innerHTML = '';
+    updateStep2NextEnabled();
+
+    const id = select.value;
+    if (!id) return;
+    const node = nodes.find(n => String(n.id) === id);
+    if (node.children && node.children.length > 0) {
+      appendCategoryLevel(chain, node.children);
+    } else {
+      state.categoryId = Number(id);
+      loadAttrsForCategory(state.categoryId);
+    }
+  });
+  chain.appendChild(select);
+}
+
+async function loadAttrsForCategory(categoryId) {
+  const section = document.getElementById('attrs-section');
+  section.innerHTML = '<div class="muted">載入規格屬性中…</div>';
+  try {
+    const [baseAttrs, saleAttrs] = await Promise.all([
+      api('GET', `/api/categories/${categoryId}/base-attrs`),
+      api('GET', `/api/categories/${categoryId}/sale-attrs`),
+    ]);
+    state.baseAttrs = baseAttrs.items || [];
+    state.saleAttrs = saleAttrs.items || [];
+    state.baseAttrValues = {};
+    state.selectedSaleAttrId = null;
+    state.skuAttrValues = {};
+    state.skuRows.filter(r => r.included).forEach((r, i) => state.skuAttrValues[i] = r.name);
+    renderAttrsSection();
+    updateStep2NextEnabled();
+  } catch (e) {
+    section.innerHTML = `<div class="error">載入規格屬性失敗：${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderAttrsSection() {
+  const section = document.getElementById('attrs-section');
+  const includedSkus = state.skuRows.map((r, i) => ({ ...r, idx: i })).filter(r => r.included);
+
+  section.innerHTML = `
+    <label>規格屬性（Base Attr，選填）</label>
+    ${state.baseAttrs.length === 0 ? '<div class="muted">這個分類沒有規格屬性</div>' : ''}
+    ${state.baseAttrs.map(a => `
+      <div style="margin-bottom:6px;">
+        <span class="muted">${escapeHtml(a.name)}</span>
+        <input type="text" data-base-attr="${a.id}" placeholder="填 ${escapeHtml(a.name)} 的值">
+      </div>
+    `).join('')}
+
+    <label>銷售屬性（Sale Attr）—— 用來代表 MOMO 抓到的「顏色/規格」這個變化維度</label>
+    <select id="sale-attr-select">
+      <option value="">-- 不套用銷售屬性 --</option>
+      ${state.saleAttrs.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}
+    </select>
+
+    <table style="margin-top:10px;">
+      <thead><tr><th>SKU</th><th>對應的銷售屬性值（可編輯）</th></tr></thead>
+      <tbody>
+        ${includedSkus.map(r => `
+          <tr>
+            <td>${escapeHtml(r.name)}（$${escapeHtml(String(r.price))}）</td>
+            <td><input type="text" data-sku-attr-idx="${r.idx}" value="${escapeHtml(state.skuAttrValues[r.idx] ?? r.name)}"></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  section.querySelectorAll('[data-base-attr]').forEach(input => {
+    input.addEventListener('input', e => {
+      state.baseAttrValues[e.target.dataset.baseAttr] = e.target.value;
+    });
+  });
+  document.getElementById('sale-attr-select').addEventListener('change', e => {
+    state.selectedSaleAttrId = e.target.value ? Number(e.target.value) : null;
+  });
+  section.querySelectorAll('[data-sku-attr-idx]').forEach(input => {
+    input.addEventListener('input', e => {
+      state.skuAttrValues[e.target.dataset.skuAttrIdx] = e.target.value;
+    });
+  });
+}
+
+function updateStep2NextEnabled() {
+  const btn = document.getElementById('btn-to-step3');
+  if (!btn) return;
+  btn.disabled = !(state.categoryId && state.brandId);
+}
+
+function onNextToStep3() {
+  renderStep3();
+}
+
+function buildImportRequest() {
+  const includedSpuImages = state.spuImages.filter(i => i.included).map(i => i.url);
+  const includedFeatureImages = state.featureImages.filter(i => i.included).map(i => i.url);
+  const baseAttrValues = Object.entries(state.baseAttrValues)
+    .filter(([, v]) => v && v.trim() !== '')
+    .map(([attrId, value]) => ({ attrId: Number(attrId), value }));
+
+  const skus = state.skuRows.map((row, idx) => ({ ...row, idx })).filter(r => r.included).map(r => {
+    const saleAttrValues = state.selectedSaleAttrId
+      ? [{ attrId: state.selectedSaleAttrId, value: state.skuAttrValues[r.idx] ?? r.name }]
+      : [];
+    return {
+      name: r.name,
+      price: Number(r.price),
+      imageUrl: r.imageUrl || null,
+      saleAttrValues,
+      purchaseLimitPerUser: null,
+    };
+  });
+
+  return {
+    categoryId: state.categoryId,
+    brandId: state.brandId,
+    name: state.name,
+    featureText: state.featureText || null,
+    spuImageUrls: includedSpuImages,
+    featureImageUrls: includedFeatureImages,
+    baseAttrValues,
+    skus,
+  };
+}
+
+function renderStep3() {
+  setActiveStep(3);
+  const req = buildImportRequest();
+  app.innerHTML = `
+    <div class="card">
+      <label>即將送出的資料</label>
+      <pre style="white-space:pre-wrap; font-size:12px; background:#f8f9fa; padding:12px; border-radius:4px;">${escapeHtml(JSON.stringify(req, null, 2))}</pre>
+      <div id="import-status"></div>
+      <div class="actions">
+        <button class="secondary" id="btn-back-3">上一步</button>
+        <button id="btn-submit">確認匯入</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('btn-back-3').addEventListener('click', renderStep2);
+  document.getElementById('btn-submit').addEventListener('click', async () => {
+    const statusEl = document.getElementById('import-status');
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    statusEl.innerHTML = '<div class="muted">上傳圖片＋建立商品中…</div>';
+    try {
+      const result = await api('POST', '/api/import', req);
+      statusEl.innerHTML = `<div class="success">建立成功！新的 SPU id = ${result.spuId}</div>`;
+    } catch (e) {
+      statusEl.innerHTML = `<div class="error">匯入失敗：${escapeHtml(e.message)}</div>`;
+      btn.disabled = false;
+    }
+  });
+}
+
+renderStep1();
+</script>
+</body>
+</html>
