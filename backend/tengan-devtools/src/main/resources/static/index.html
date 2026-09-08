@@ -68,8 +68,8 @@ const state = {
   baseAttrs: [],
   saleAttrs: [],
   baseAttrValues: {},   // attrId -> value
-  selectedSaleAttrId: null,
-  skuAttrValues: {},    // rowIndex -> value string
+  selectedSaleAttrIds: [],  // 可複選，例如同時套用「顏色」+「容量」
+  skuAttrValues: {},        // rowIndex -> { attrId: value }
 };
 
 function escapeHtml(s) {
@@ -320,9 +320,9 @@ async function loadAttrsForCategory(categoryId) {
     state.baseAttrs = baseAttrs.items || [];
     state.saleAttrs = saleAttrs.items || [];
     state.baseAttrValues = {};
-    state.selectedSaleAttrId = null;
+    state.selectedSaleAttrIds = [];
     state.skuAttrValues = {};
-    state.skuRows.filter(r => r.included).forEach((r, i) => state.skuAttrValues[i] = r.name);
+    state.skuRows.forEach((r, idx) => { state.skuAttrValues[idx] = {}; });
     renderAttrsSection();
     updateStep2NextEnabled();
   } catch (e) {
@@ -330,9 +330,41 @@ async function loadAttrsForCategory(categoryId) {
   }
 }
 
+/** 勾選/取消一個銷售屬性。第一次勾選某個屬性時，如果目前只有它一個被選，就用 SKU 原本抓到的名稱
+ * 幫忙預填（通常就是顏色），其餘維度（例如容量）留白讓使用者自己填——不要用猜的去拆組合字串。 */
+function toggleSaleAttr(attrId, checked) {
+  if (checked) {
+    if (!state.selectedSaleAttrIds.includes(attrId)) {
+      state.selectedSaleAttrIds.push(attrId);
+      const isOnlySelected = state.selectedSaleAttrIds.length === 1;
+      state.skuRows.forEach((r, idx) => {
+        if (!state.skuAttrValues[idx]) state.skuAttrValues[idx] = {};
+        if (state.skuAttrValues[idx][attrId] === undefined) {
+          state.skuAttrValues[idx][attrId] = isOnlySelected ? r.name : '';
+        }
+      });
+    }
+  } else {
+    state.selectedSaleAttrIds = state.selectedSaleAttrIds.filter(id => id !== attrId);
+  }
+  renderAttrsSection();
+}
+
+/** 把某個 SKU 目前填的所有銷售屬性值接起來，塞進 SKU 名稱——例如「顏色」填漫遊紫、「容量」填 256G，
+ * 按下去名稱就變成「漫遊紫 256G」。名稱欄位本身還是可以手動再調整，不會被之後的輸入覆蓋。 */
+function combineSkuName(idx) {
+  const values = state.skuAttrValues[idx] || {};
+  const combined = state.selectedSaleAttrIds.map(id => values[id]).filter(v => v && v.trim() !== '').join(' ');
+  if (combined) {
+    state.skuRows[idx].name = combined;
+    renderAttrsSection();
+  }
+}
+
 function renderAttrsSection() {
   const section = document.getElementById('attrs-section');
   const includedSkus = state.skuRows.map((r, i) => ({ ...r, idx: i })).filter(r => r.included);
+  const selectedAttrs = state.saleAttrs.filter(a => state.selectedSaleAttrIds.includes(a.id));
 
   section.innerHTML = `
     <label>規格屬性（Base Attr，選填）</label>
@@ -344,19 +376,35 @@ function renderAttrsSection() {
       </div>
     `).join('')}
 
-    <label>銷售屬性（Sale Attr）—— 用來代表 MOMO 抓到的「顏色/規格」這個變化維度</label>
-    <select id="sale-attr-select">
-      <option value="">-- 不套用銷售屬性 --</option>
-      ${state.saleAttrs.map(a => `<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}
-    </select>
+    <label>銷售屬性（Sale Attr）—— 可複選，例如同時勾「顏色」+「容量」，一個 SKU 就能同時對應兩個維度</label>
+    <div>
+      ${state.saleAttrs.length === 0 ? '<span class="muted">這個分類沒有銷售屬性</span>' : ''}
+      ${state.saleAttrs.map(a => `
+        <label style="display:inline-block; margin: 0 14px 6px 0; font-weight:normal;">
+          <input type="checkbox" data-sale-attr-toggle="${a.id}" ${state.selectedSaleAttrIds.includes(a.id) ? 'checked' : ''}>
+          ${escapeHtml(a.name)}
+        </label>
+      `).join('')}
+    </div>
 
     <table style="margin-top:10px;">
-      <thead><tr><th>SKU</th><th>對應的銷售屬性值（可編輯）</th></tr></thead>
+      <thead>
+        <tr>
+          <th>SKU 名稱</th><th>價格</th>
+          ${selectedAttrs.map(a => `<th>${escapeHtml(a.name)}</th>`).join('')}
+          ${selectedAttrs.length > 1 ? '<th></th>' : ''}
+        </tr>
+      </thead>
       <tbody>
         ${includedSkus.map(r => `
           <tr>
-            <td>${escapeHtml(r.name)}（$${escapeHtml(String(r.price))}）</td>
-            <td><input type="text" data-sku-attr-idx="${r.idx}" value="${escapeHtml(state.skuAttrValues[r.idx] ?? r.name)}"></td>
+            <td><input type="text" data-sku-name-idx="${r.idx}" value="${escapeHtml(r.name)}"></td>
+            <td>$${escapeHtml(String(r.price))}</td>
+            ${selectedAttrs.map(a => `
+              <td><input type="text" data-sku-attr-idx="${r.idx}" data-sku-attr-id="${a.id}"
+                value="${escapeHtml((state.skuAttrValues[r.idx] && state.skuAttrValues[r.idx][a.id]) ?? '')}"></td>
+            `).join('')}
+            ${selectedAttrs.length > 1 ? `<td><button type="button" class="secondary" data-combine-idx="${r.idx}">組合成名稱</button></td>` : ''}
           </tr>
         `).join('')}
       </tbody>
@@ -368,13 +416,26 @@ function renderAttrsSection() {
       state.baseAttrValues[e.target.dataset.baseAttr] = e.target.value;
     });
   });
-  document.getElementById('sale-attr-select').addEventListener('change', e => {
-    state.selectedSaleAttrId = e.target.value ? Number(e.target.value) : null;
+  section.querySelectorAll('[data-sale-attr-toggle]').forEach(checkbox => {
+    checkbox.addEventListener('change', e => {
+      toggleSaleAttr(Number(e.target.dataset.saleAttrToggle), e.target.checked);
+    });
+  });
+  section.querySelectorAll('[data-sku-name-idx]').forEach(input => {
+    input.addEventListener('input', e => {
+      state.skuRows[e.target.dataset.skuNameIdx].name = e.target.value;
+    });
   });
   section.querySelectorAll('[data-sku-attr-idx]').forEach(input => {
     input.addEventListener('input', e => {
-      state.skuAttrValues[e.target.dataset.skuAttrIdx] = e.target.value;
+      const idx = e.target.dataset.skuAttrIdx;
+      const attrId = e.target.dataset.skuAttrId;
+      if (!state.skuAttrValues[idx]) state.skuAttrValues[idx] = {};
+      state.skuAttrValues[idx][attrId] = e.target.value;
     });
+  });
+  section.querySelectorAll('[data-combine-idx]').forEach(button => {
+    button.addEventListener('click', e => combineSkuName(Number(e.target.dataset.combineIdx)));
   });
 }
 
@@ -396,9 +457,10 @@ function buildImportRequest() {
     .map(([attrId, value]) => ({ attrId: Number(attrId), value }));
 
   const skus = state.skuRows.map((row, idx) => ({ ...row, idx })).filter(r => r.included).map(r => {
-    const saleAttrValues = state.selectedSaleAttrId
-      ? [{ attrId: state.selectedSaleAttrId, value: state.skuAttrValues[r.idx] ?? r.name }]
-      : [];
+    const values = state.skuAttrValues[r.idx] || {};
+    const saleAttrValues = Object.entries(values)
+      .filter(([, v]) => v && String(v).trim() !== '')
+      .map(([attrId, value]) => ({ attrId: Number(attrId), value }));
     return {
       name: r.name,
       price: Number(r.price),
