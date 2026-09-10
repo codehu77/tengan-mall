@@ -151,7 +151,6 @@
                 >
                   {{ opt }}
                   <span v-if="isOptionSoldOut(attr.attrName, opt)" class="text-xs">（已售完）</span>
-                  <span v-else-if="isOptionOutOfStock(attr.attrName, opt)" class="text-xs">（缺貨）</span>
                 </button>
               </div>
             </div>
