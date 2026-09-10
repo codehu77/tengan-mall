@@ -14,10 +14,11 @@
 
       <!-- 主區塊：圖片 + 資訊並排 -->
       <div class="bg-white rounded-lg p-8">
-        <div class="grid gap-10" style="grid-template-columns: 2fr 3fr">
+        <div class="grid gap-10" style="grid-template-columns: minmax(0, 4fr) minmax(0, 5fr)">
 
-          <!-- 圖片區 -->
-          <div class="space-y-3">
+          <!-- 圖片區：grid-template-columns 用 minmax(0, …) 避免欄位被縮圖列的內容自然寬度撐大，
+               不然就算內層有 overflow-x-auto，grid track 預設 min-width:auto 還是會用內容寬度頂開版面。 -->
+          <div class="w-full min-w-0 space-y-3">
             <div class="w-full aspect-square rounded-lg overflow-hidden bg-gray-50 border border-gray-100">
               <img
                 :src="images[activeImg]"
@@ -25,7 +26,42 @@
                 class="w-full h-full object-cover"
               />
             </div>
-            <div class="flex gap-2">
+            <div v-if="images.length > 1" class="flex items-center gap-1">
+              <button
+                type="button"
+                class="shrink-0 w-6 h-20 flex items-center justify-center rounded border border-gray-200 hover:bg-gray-100 transition disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                :disabled="!thumbCanScrollLeft"
+                @click="scrollThumbs(-1)"
+              >
+                <UIcon name="i-heroicons-chevron-left" class="w-4 h-4 text-gray-500" />
+              </button>
+              <div
+                ref="thumbTrack"
+                class="flex-1 min-w-0 overflow-x-auto no-scrollbar"
+                @scroll="updateThumbScrollState"
+              >
+                <div class="flex gap-2 w-max">
+                  <button
+                    v-for="(img, i) in images"
+                    :key="i"
+                    class="w-20 h-20 rounded border-2 overflow-hidden transition shrink-0"
+                    :class="activeImg === i ? 'border-red-500' : 'border-gray-200 hover:border-gray-400'"
+                    @click="activeImg = i"
+                  >
+                    <img :src="img" class="w-full h-full object-cover" />
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 w-6 h-20 flex items-center justify-center rounded border border-gray-200 hover:bg-gray-100 transition disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                :disabled="!thumbCanScrollRight"
+                @click="scrollThumbs(1)"
+              >
+                <UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+            <div v-else class="flex gap-2">
               <button
                 v-for="(img, i) in images"
                 :key="i"
@@ -217,6 +253,38 @@ useHead({ title: computed(() => spu.value?.name || '商品詳情') })
 const activeImg = ref(0)
 const qty = ref(1)
 
+// 縮圖列橫向捲動（取代原本會撐爆版面的 flex 換行）：外層固定寬度，張數多就左右切換而非把版面擠歪
+const thumbTrack = ref<HTMLElement | null>(null)
+const thumbCanScrollLeft = ref(false)
+const thumbCanScrollRight = ref(false)
+
+function updateThumbScrollState() {
+  const el = thumbTrack.value
+  if (!el) {
+    thumbCanScrollLeft.value = false
+    thumbCanScrollRight.value = false
+    return
+  }
+  thumbCanScrollLeft.value = el.scrollLeft > 1
+  thumbCanScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+}
+
+function scrollThumbs(direction: 1 | -1) {
+  const el = thumbTrack.value
+  if (!el) return
+  el.scrollBy({ left: direction * el.clientWidth, behavior: 'smooth' })
+}
+
+if (import.meta.client) {
+  onMounted(() => {
+    updateThumbScrollState()
+    window.addEventListener('resize', updateThumbScrollState)
+  })
+  onBeforeUnmount(() => {
+    window.removeEventListener('resize', updateThumbScrollState)
+  })
+}
+
 const skus = computed(() => spu.value?.skus ?? [])
 
 // 一次查回這個 SPU 底下所有 sku 的一般倉庫存（連同開賣時間/限購資訊），讓規格選項按鈕能像秒殺售完一樣
@@ -306,6 +374,13 @@ const images = computed(() => {
   if (!sku) return []
   const urls = [sku.mainImage, ...sku.images.map(i => i.imageUrl), ...(spu.value?.images.map(i => i.imageUrl) ?? [])]
   return Array.from(new Set(urls)).filter(Boolean)
+})
+
+// 切換規格導致圖片清單換一批時，縮圖列要跳回最前面重新量一次能不能捲動
+watch(images, async () => {
+  await nextTick()
+  if (thumbTrack.value) thumbTrack.value.scrollLeft = 0
+  updateThumbScrollState()
 })
 
 // 銷售屬性（顏色/容量...）的可選值，彙整同一顆 spu 底下所有 sku 出現過的組合
@@ -440,3 +515,13 @@ async function handleBuyNow() {
   navigateTo('/order/confirm')
 }
 </script>
+
+<style scoped>
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+</style>
