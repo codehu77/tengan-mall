@@ -9,6 +9,9 @@ import java.util.List;
 /** 使用者在畫面上編輯確認後送出的最終資料。分類/品牌/規格屬性都是使用者自己在下拉選單選的既有 ID，
  * 這支工具完全不會自動建立分類/品牌/屬性。 */
 public record ImportRequest(@NotNull Long categoryId, @NotNull Long brandId, @NotBlank String name,
-        String featureText, @NotEmpty List<String> spuImageUrls, List<String> featureImageUrls,
+        String featureText, @NotEmpty List<String> spuImageUrls,
+        /** 使用者在畫面上勾選的主圖來源網址（spuImageUrls 其中一張）；沒選或選到的網址不在清單裡，
+         * 就退回原本「取第一張」的行為。 */
+        String mainImageUrl, List<String> featureImageUrls,
         @Valid List<AttrValueInput> baseAttrValues, @Valid @NotEmpty List<SkuInput> skus) {
 }

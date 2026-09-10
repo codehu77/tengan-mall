@@ -35,7 +35,7 @@ public class ImportService {
 
     public Long importProduct(ImportRequest request) {
         List<String> spuImageUrls = reuploadAll(request.spuImageUrls());
-        String mainImage = spuImageUrls.isEmpty() ? null : spuImageUrls.get(0);
+        String mainImage = spuImageUrls.isEmpty() ? null : spuImageUrls.get(resolveMainImageIndex(request));
         List<SpuImage> spuImages = new ArrayList<>();
         for (int i = 0; i < spuImageUrls.size(); i++) {
             spuImages.add(new SpuImage(spuImageUrls.get(i), i));
@@ -52,6 +52,17 @@ public class ImportService {
                 request.name(), description, mainImage, null, false, null, attrValues, spuImages, skus);
 
         return productApiClient.createSpu(createSpuRequest).id();
+    }
+
+    /** 使用者勾的是重新上傳「前」的來源網址，reuploadAll 保留原本順序，所以來源清單裡的位置
+     * 直接對應重新上傳後清單的同一個位置。沒選、或選到的網址不在清單裡（理論上不會發生，
+     * 防呆而已），就退回原本「取第一張」的行為。 */
+    private int resolveMainImageIndex(ImportRequest request) {
+        if (request.mainImageUrl() == null) {
+            return 0;
+        }
+        int index = request.spuImageUrls().indexOf(request.mainImageUrl());
+        return index >= 0 ? index : 0;
     }
 
     private SkuDraft toSkuDraft(SkuInput input) {

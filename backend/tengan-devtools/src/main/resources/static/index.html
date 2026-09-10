@@ -57,6 +57,7 @@
 const state = {
   scrape: null,
   spuImages: [],       // [{url, included}]
+  mainImageUrl: null,  // spuImages 其中一張的 url，勾選匯入的圖才能被選為主圖
   featureImages: [],   // [{url, included}]
   featureText: '',
   name: '',
@@ -99,6 +100,29 @@ function setActiveStep(n) {
 
 const app = document.getElementById('app');
 
+/** 匯入成功後想抓下一個商品，不能只是回 step1——上一輪的分類/屬性/SKU 狀態都要清乾淨，
+ * 不然新商品會殘留上一個商品選過的分類或屬性值。 */
+function resetState() {
+  state.scrape = null;
+  state.spuImages = [];
+  state.mainImageUrl = null;
+  state.featureImages = [];
+  state.featureText = '';
+  state.name = '';
+  state.skuRows = [];
+  state.categories = [];
+  state.brands = [];
+  state.categoryId = null;
+  state.brandId = null;
+  state.baseAttrs = [];
+  state.saleAttrs = [];
+  state.baseAttrValues = {};
+  state.selectedSaleAttrIds = [];
+  state.skuAttrValues = {};
+  state.lastUrl = '';
+  renderStep1();
+}
+
 function renderStep1() {
   setActiveStep(1);
   app.innerHTML = `
@@ -129,6 +153,7 @@ async function onScrape() {
     state.name = result.name || '';
     state.featureText = result.featureText || '';
     state.spuImages = (result.spuImages || []).map(u => ({ url: u, included: true }));
+    state.mainImageUrl = state.spuImages.length > 0 ? state.spuImages[0].url : null;
     state.featureImages = (result.featureImages || []).map(u => ({ url: u, included: true }));
     state.skuRows = (result.skus || []).map(s => ({
       included: true, name: s.name || '', price: s.price ?? '', imageUrl: s.mainImage || '',
@@ -154,7 +179,7 @@ function renderScrapePreview() {
       <label>MOMO 規格提示（僅供參考，不會自動套用）</label>
       <div class="spec-hints">${specHintsHtml || '<span class="muted">無</span>'}</div>
 
-      <label>SPU 圖片（取消勾選＝不匯入）</label>
+      <label>SPU 圖片（取消勾選＝不匯入；勾「主圖」決定商品主要展示圖，預設第一張）</label>
       <div class="thumb-grid" id="spu-image-grid"></div>
 
       <label>商品特色文字</label>
@@ -176,7 +201,7 @@ function renderScrapePreview() {
     </div>
   `;
 
-  renderThumbGrid('spu-image-grid', state.spuImages);
+  renderSpuImageGrid();
   renderThumbGrid('feature-image-grid', state.featureImages);
   renderSkuTable();
 
@@ -184,6 +209,35 @@ function renderScrapePreview() {
   document.getElementById('feature-text').addEventListener('input', e => state.featureText = e.target.value);
   document.getElementById('btn-back-1').addEventListener('click', renderStep1);
   document.getElementById('btn-to-step2').addEventListener('click', onNextToStep2);
+}
+
+/** SPU 圖片跟商品特色圖片共用同一套「勾選匯入」邏輯，但 SPU 圖片還要多一個「設為主圖」單選——
+ * 兩者夠不一樣，另外寫一個專用的 render 函式，不硬塞進 renderThumbGrid 的共用邏輯裡。 */
+function renderSpuImageGrid() {
+  const el = document.getElementById('spu-image-grid');
+  el.innerHTML = state.spuImages.map((img, i) => `
+    <div class="thumb ${img.included ? '' : 'excluded'}" data-idx="${i}">
+      <img src="${escapeHtml(img.url)}" loading="lazy">
+      <label><input type="checkbox" ${img.included ? 'checked' : ''} data-role="include"> 匯入</label>
+      <label><input type="radio" name="spu-main-image" ${state.mainImageUrl === img.url ? 'checked' : ''} ${img.included ? '' : 'disabled'} data-role="main"> 主圖</label>
+    </div>
+  `).join('');
+  el.querySelectorAll('.thumb').forEach(thumbEl => {
+    const idx = Number(thumbEl.dataset.idx);
+    thumbEl.querySelector('[data-role=include]').addEventListener('change', e => {
+      const img = state.spuImages[idx];
+      img.included = e.target.checked;
+      // 取消勾選匯入的圖片不能繼續當主圖，改退回第一張還有勾選匯入的圖
+      if (!img.included && state.mainImageUrl === img.url) {
+        const fallback = state.spuImages.find(i => i.included);
+        state.mainImageUrl = fallback ? fallback.url : null;
+      }
+      renderSpuImageGrid();
+    });
+    thumbEl.querySelector('[data-role=main]').addEventListener('change', e => {
+      if (e.target.checked) state.mainImageUrl = state.spuImages[idx].url;
+    });
+  });
 }
 
 function renderThumbGrid(containerId, images) {
@@ -452,6 +506,8 @@ function onNextToStep3() {
 function buildImportRequest() {
   const includedSpuImages = state.spuImages.filter(i => i.included).map(i => i.url);
   const includedFeatureImages = state.featureImages.filter(i => i.included).map(i => i.url);
+  // 選到的主圖如果因為取消勾選而不在匯入清單裡了，退回目前清單的第一張
+  const mainImageUrl = includedSpuImages.includes(state.mainImageUrl) ? state.mainImageUrl : (includedSpuImages[0] || null);
   const baseAttrValues = Object.entries(state.baseAttrValues)
     .filter(([, v]) => v && v.trim() !== '')
     .map(([attrId, value]) => ({ attrId: Number(attrId), value }));
@@ -476,6 +532,7 @@ function buildImportRequest() {
     name: state.name,
     featureText: state.featureText || null,
     spuImageUrls: includedSpuImages,
+    mainImageUrl,
     featureImageUrls: includedFeatureImages,
     baseAttrValues,
     skus,
@@ -505,6 +562,8 @@ function renderStep3() {
     try {
       const result = await api('POST', '/api/import', req);
       statusEl.innerHTML = `<div class="success">建立成功！新的 SPU id = ${result.spuId}</div>`;
+      document.querySelector('.actions').innerHTML = `<span></span><button id="btn-reset">匯入下一個商品</button>`;
+      document.getElementById('btn-reset').addEventListener('click', resetState);
     } catch (e) {
       statusEl.innerHTML = `<div class="error">匯入失敗：${escapeHtml(e.message)}</div>`;
       btn.disabled = false;
