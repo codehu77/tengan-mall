@@ -10,7 +10,7 @@
       </nav>
     </div>
 
-    <div v-if="spu && currentSku" class="max-w-7xl mx-auto px-6 space-y-4 pb-12">
+    <div v-if="spu" class="max-w-7xl mx-auto px-6 space-y-4 pb-12">
 
       <!-- 主區塊：圖片 + 資訊並排 -->
       <div class="bg-white rounded-lg p-8">
@@ -22,7 +22,7 @@
             <div class="w-full aspect-square rounded-lg overflow-hidden bg-gray-50 border border-gray-100">
               <img
                 :src="images[activeImg]"
-                :alt="currentSku.name"
+                :alt="currentSku?.name ?? spu.name"
                 class="w-full h-full object-cover"
               />
             </div>
@@ -82,13 +82,16 @@
               {{ spu.name }}
             </h1>
 
-            <!-- 銷量 -->
-            <div class="flex items-center gap-6 text-base text-gray-400 pb-4 border-b border-gray-100">
+            <!-- 銷量：saleCount 是 sku 層級的資料，還沒選規格時沒有對象可顯示，直接隱藏 -->
+            <div v-if="currentSku" class="flex items-center gap-6 text-base text-gray-400 pb-4 border-b border-gray-100">
               <span>已售出 <b class="text-gray-600">{{ currentSku.saleCount.toLocaleString() }}</b> 件</span>
             </div>
 
-            <!-- 價格：即將開賣 > 有活躍秒殺(搶購價+倒數) > 一般優惠價，三者互斥 -->
-            <div v-if="isNotYetOnSale" class="bg-launch-soft rounded-lg px-5 py-4 space-y-2">
+            <!-- 價格：未選規格 > 即將開賣 > 有活躍秒殺(搶購價+倒數) > 一般優惠價，互斥 -->
+            <div v-if="!currentSku" class="bg-gray-50 rounded-lg px-5 py-4">
+              <p class="text-sm text-gray-400">請先選擇規格查看價格</p>
+            </div>
+            <div v-else-if="isNotYetOnSale" class="bg-launch-soft rounded-lg px-5 py-4 space-y-2">
               <div class="flex items-center gap-2">
                 <UBadge color="violet" variant="solid">即將開賣</UBadge>
                 <span class="text-xs text-gray-500 font-mono">{{ saleStartText }}（倒數 {{ saleHh }}:{{ saleMm }}:{{ saleSs }}）</span>
@@ -188,14 +191,14 @@
                 @click="handleAddToCart"
               >
                 <UIcon name="i-heroicons-shopping-cart" class="w-5 h-5" />
-                {{ isNotYetOnSale ? '即將開賣' : isOutOfStock ? '庫存不足' : '加入購物車' }}
+                {{ !currentSku ? '請選擇規格' : isNotYetOnSale ? '即將開賣' : isOutOfStock ? '庫存不足' : '加入購物車' }}
               </button>
               <button
                 class="flex-1 h-14 rounded bg-red-500 text-white font-medium text-base hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-500"
                 :disabled="isPurchaseDisabled"
                 @click="handleBuyNow"
               >
-                {{ isNotYetOnSale ? '即將開賣' : isOutOfStock ? '庫存不足' : '立即購買' }}
+                {{ !currentSku ? '請選擇規格' : isNotYetOnSale ? '即將開賣' : isOutOfStock ? '庫存不足' : '立即購買' }}
               </button>
             </div>
 
@@ -298,9 +301,9 @@ if (skus.value.length > 0) {
 const defaultSkuId = skus.value.length > 0
   ? skus.value.reduce((min, s) => (s.sort < min.sort ? s : min)).id
   : null
-const selectedSkuId = ref(defaultSkuId)
+const selectedSkuId = ref<number | null>(defaultSkuId)
 
-const currentSku = computed(() => skus.value.find(s => s.id === selectedSkuId.value) ?? skus.value[0])
+const currentSku = computed(() => skus.value.find(s => s.id === selectedSkuId.value) ?? null)
 
 // 目前這顆 sku 是不是活躍秒殺——只認 ACTIVE 場次，PUBLISHED（還沒開賣）的場次不算，
 // remaining=0（賣完/被設 0）也不算，活動結束後 useSeckill() 的資料自然不會再包含這個 skuId，
@@ -367,12 +370,14 @@ onMounted(() => {
   }
 })
 
-// spu 共通圖 + 目前這顆 sku 的專屬圖，切換 sku 時 activeImg 歸零，等同大圖/縮圖跳到對應 sku 的圖
+// 還沒選規格時只顯示 SPU 共通圖（含主圖）；選了規格後才混入該 sku 的專屬圖。
+// 切換 sku 時 activeImg 歸零，等同大圖/縮圖跳到對應 sku 的圖。
 const images = computed(() => {
   const sku = currentSku.value
-  if (!sku) return []
-  const urls = [sku.mainImage, ...sku.images.map(i => i.imageUrl), ...(spu.value?.images.map(i => i.imageUrl) ?? [])]
-  return Array.from(new Set(urls)).filter(Boolean)
+  const urls: (string | null | undefined)[] = sku
+    ? [sku.mainImage, ...sku.images.map(i => i.imageUrl), ...(spu.value?.images.map(i => i.imageUrl) ?? [])]
+    : [spu.value?.mainImage, ...(spu.value?.images.map(i => i.imageUrl) ?? [])]
+  return Array.from(new Set(urls)).filter((u): u is string => Boolean(u))
 })
 
 // 切換規格導致圖片清單換一批時，縮圖列要跳回最前面重新量一次能不能捲動
@@ -395,11 +400,13 @@ const attrOptions = computed(() => {
   return Array.from(map.entries()).map(([attrName, options]) => ({ attrName, options }))
 })
 
-const selectedAttrs = computed<Record<string, string>>(() => {
-  const result: Record<string, string> = {}
-  for (const av of currentSku.value?.saleAttrValues ?? []) result[av.attrName] = av.attrValue
-  return result
-})
+// 使用者目前點選的規格值，跟 currentSku 分開管理——沒選完整組合（例如兩個維度只選了一個）時
+// currentSku 會是 null，但已點的那個維度仍要維持反白選中，不能因為還沒完整選完就被清掉。
+// 初始值跟著預設選中的 sku 走，讓規格按鈕一進頁面就反映目前選到的那顆。
+const selectedAttrs = ref<Record<string, string>>(
+  Object.fromEntries((skus.value.find(s => s.id === defaultSkuId)?.saleAttrValues ?? [])
+    .map(av => [av.attrName, av.attrValue]))
+)
 
 // 選了某個屬性值（連同目前其餘已選屬性）會對應到哪顆 sku——選規格按鈕本身跟「是否售完反灰」共用同一套匹配邏輯
 function resolveSkuForAttrChange(attrName: string, value: string) {
@@ -423,11 +430,14 @@ function isOptionOutOfStock(attrName: string, value: string) {
   return !!match && soldOutStockSkuIds.value.has(match.id)
 }
 
-// 純前端狀態切換，不 router.replace——MOMO 那種「選規格不換網址」的體驗
+// 純前端狀態切換，不 router.replace——MOMO 那種「選規格不換網址」的體驗。多維度規格
+// （例如顏色+容量）允許先選一個維度而還沒完整命中 sku，match 為 undefined 時就先清空
+// selectedSkuId，等使用者把其餘維度也選完才會命中真正的 sku。
 function selectAttr(attrName: string, value: string) {
+  if (isOptionSoldOut(attrName, value)) return
   const match = resolveSkuForAttrChange(attrName, value)
-  if (!match || isOptionSoldOut(attrName, value)) return
-  selectedSkuId.value = match.id
+  selectedAttrs.value = { ...selectedAttrs.value, [attrName]: value }
+  selectedSkuId.value = match ? match.id : null
   activeImg.value = 0
 }
 
@@ -485,7 +495,7 @@ watch([qty, qtyMax], () => {
 const isOutOfStock = computed(() =>
   !activeSeckillSku.value && availableStock.value !== null && availableStock.value <= 0
 )
-const isPurchaseDisabled = computed(() => isOutOfStock.value || isNotYetOnSale.value)
+const isPurchaseDisabled = computed(() => !currentSku.value || isOutOfStock.value || isNotYetOnSale.value)
 
 async function handleAddToCart() {
   const sku = currentSku.value
