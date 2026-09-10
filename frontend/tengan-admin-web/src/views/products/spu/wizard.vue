@@ -533,32 +533,40 @@ onMounted(async () => {
             </template>
           </el-image>
         </div>
+        <div class="text-gray-400" style="font-size: 12px">
+          也可以直接在下方「共通圖片」勾選其中一張作為主圖，不用重複貼一次網址。
+        </div>
       </el-form-item>
       <el-form-item label="共通圖片">
         <div class="w-full">
-          <div
-            v-for="(img, imgIdx) in spuImages"
-            :key="imgIdx"
-            class="mb-2 flex items-center gap-2"
-          >
-            <ImageUrlInput v-model="img.imageUrl" category="product" placeholder="圖片網址" />
-            <el-input-number v-model="img.sort" :min="0" style="width: 110px" />
-            <el-image
-              v-if="img.imageUrl"
-              :src="img.imageUrl"
-              :preview-src-list="[img.imageUrl]"
-              preview-teleported
-              class="img-thumb"
-              fit="cover"
+          <el-radio-group v-model="form.mainImage" style="display: flex; flex-direction: column; align-items: stretch; width: 100%">
+            <div
+              v-for="(img, imgIdx) in spuImages"
+              :key="imgIdx"
+              class="mb-2 flex items-center gap-2"
             >
-              <template #error>
-                <div class="img-thumb-error">
-                  <el-icon><Picture /></el-icon>
-                </div>
-              </template>
-            </el-image>
-            <el-button link type="danger" @click="removeSpuImage(imgIdx)">移除</el-button>
-          </div>
+              <el-radio :value="img.imageUrl" :disabled="!img.imageUrl" class="shrink-0">
+                設為主圖
+              </el-radio>
+              <ImageUrlInput v-model="img.imageUrl" category="product" placeholder="圖片網址" />
+              <el-input-number v-model="img.sort" :min="0" style="width: 110px" />
+              <el-image
+                v-if="img.imageUrl"
+                :src="img.imageUrl"
+                :preview-src-list="[img.imageUrl]"
+                preview-teleported
+                class="img-thumb"
+                fit="cover"
+              >
+                <template #error>
+                  <div class="img-thumb-error">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+              <el-button link type="danger" @click="removeSpuImage(imgIdx)">移除</el-button>
+            </div>
+          </el-radio-group>
           <el-button link type="primary" @click="addSpuImage">新增圖片</el-button>
           <div class="text-gray-400" style="font-size: 12px">
             所有 SKU 共用的圖片（例如整體外觀/包裝/尺寸表），跟各 SKU 自己的圖片分開存。
