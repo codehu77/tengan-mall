@@ -25,8 +25,8 @@
 
       <!-- 商品資訊：名稱／價格／原價／次要資訊都固定高度，同一排 Card 底部才會對齊 -->
       <div class="flex flex-col flex-1 p-3">
-        <p class="text-sm text-body leading-[1.4] line-clamp-1 h-5 mb-1.5">
-          {{ product.skuName }}
+        <p ref="nameEl" class="text-sm text-body leading-[1.4] h-10 mb-1.5 overflow-hidden break-all" :title="product.skuName">
+          {{ displayName }}
         </p>
 
         <div class="h-5 flex items-baseline">
@@ -54,7 +54,65 @@
 <script setup lang="ts">
 import type { Product } from '~/mocks/products'
 
-defineProps<{
+const props = defineProps<{
   product: Product
 }>()
+
+// 商品名稱要把兩行都填滿（中英混排時單純用 line-clamp 常常因為英文單字不能斷行，
+// 硬把整個單字擠到第二行，導致第一行留一大截空白）——改成量測實際渲染高度，
+// 超過兩行時只把最後 3 個字元換成「...」，盡量維持兩行都是滿的。
+const nameEl = ref<HTMLElement | null>(null)
+const displayName = ref(props.product.skuName)
+
+function computeDisplayName() {
+  const el = nameEl.value
+  const full = props.product.skuName
+  if (!el) {
+    displayName.value = full
+    return
+  }
+
+  const clone = el.cloneNode() as HTMLElement
+  clone.style.position = 'absolute'
+  clone.style.visibility = 'hidden'
+  clone.style.pointerEvents = 'none'
+  clone.style.height = 'auto'
+  clone.style.width = `${el.clientWidth}px`
+  document.body.appendChild(clone)
+
+  const maxHeight = el.clientHeight
+  const fits = (text: string) => {
+    clone.textContent = text
+    return clone.scrollHeight <= maxHeight + 1
+  }
+
+  if (fits(full)) {
+    displayName.value = full
+  } else {
+    let lo = 0
+    let hi = full.length
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2)
+      if (fits(full.slice(0, mid))) lo = mid
+      else hi = mid - 1
+    }
+    displayName.value = full.slice(0, Math.max(0, lo - 3)) + '...'
+  }
+
+  document.body.removeChild(clone)
+}
+
+if (import.meta.client) {
+  onMounted(() => {
+    computeDisplayName()
+    window.addEventListener('resize', computeDisplayName)
+  })
+  onBeforeUnmount(() => {
+    window.removeEventListener('resize', computeDisplayName)
+  })
+}
+watch(() => props.product.skuName, async () => {
+  await nextTick()
+  computeDisplayName()
+})
 </script>
