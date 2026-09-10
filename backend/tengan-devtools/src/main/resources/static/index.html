@@ -49,6 +49,8 @@
   <div class="step" id="step-indicator-1">1. 抓取</div>
   <div class="step" id="step-indicator-2">2. 分類與屬性</div>
   <div class="step" id="step-indicator-3">3. 預覽送出</div>
+  <span style="flex:1"></span>
+  <button class="secondary" id="btn-cancel-import">取消，重新開始</button>
 </div>
 
 <div id="app"></div>
@@ -71,6 +73,7 @@ const state = {
   baseAttrValues: {},   // attrId -> value
   selectedSaleAttrIds: [],  // 可複選，例如同時套用「顏色」+「容量」
   skuAttrValues: {},        // rowIndex -> { attrId: value }
+  skuAttrManualEdits: {},   // rowIndex -> Set<attrId>，記錄哪些格子被使用者手動改過，自動拆值不能覆蓋
 };
 
 function escapeHtml(s) {
@@ -119,6 +122,7 @@ function resetState() {
   state.baseAttrValues = {};
   state.selectedSaleAttrIds = [];
   state.skuAttrValues = {};
+  state.skuAttrManualEdits = {};
   state.lastUrl = '';
   renderStep1();
 }
@@ -167,17 +171,19 @@ async function onScrape() {
   }
 }
 
-function renderScrapePreview() {
-  const specHintsHtml = (state.scrape.specHints || [])
-    .map(h => `<span>${escapeHtml(h.name)}：${escapeHtml(h.value)}</span>`).join('');
+function specHintsHtml() {
+  const hints = (state.scrape && state.scrape.specHints) || [];
+  return hints.map(h => `<span>${escapeHtml(h.name)}：${escapeHtml(h.value)}</span>`).join('') || '<span class="muted">無</span>';
+}
 
+function renderScrapePreview() {
   document.getElementById('scrape-preview').innerHTML = `
     <div class="card">
       <label>商品名稱</label>
       <input type="text" id="spu-name" value="${escapeHtml(state.name)}">
 
       <label>MOMO 規格提示（僅供參考，不會自動套用）</label>
-      <div class="spec-hints">${specHintsHtml || '<span class="muted">無</span>'}</div>
+      <div class="spec-hints">${specHintsHtml()}</div>
 
       <label>SPU 圖片（取消勾選＝不匯入；勾「主圖」決定商品主要展示圖，預設第一張）</label>
       <div class="thumb-grid" id="spu-image-grid"></div>
@@ -287,9 +293,9 @@ async function onNextToStep2() {
     ]);
     state.categories = categories.items || [];
     state.brands = brands.items || [];
-    state.categoryId = null;
-    state.baseAttrs = [];
-    state.saleAttrs = [];
+    // 不在這裡重置 categoryId/baseAttrs/saleAttrs——如果是從 Step1「上一步」繞回來再點
+    // 「下一步」，之前選好的分類/屬性都還在 state 裡，要交給 renderCategoryChain() 判斷
+    // 是要還原還是重新選。真的要清空重來的時機只有 resetState()（匯入下一個商品）。
     renderStep2();
   } catch (e) {
     alert('讀取分類/品牌失敗：' + e.message);
@@ -300,6 +306,12 @@ function renderStep2() {
   setActiveStep(2);
   app.innerHTML = `
     <div class="card">
+      <label>商品名稱（來自 Step1，僅供參考）</label>
+      <div class="muted" style="margin-bottom:8px;">${escapeHtml(state.name)}</div>
+
+      <label>MOMO 規格提示（僅供參考，不會自動套用）</label>
+      <div class="spec-hints" style="margin-bottom:8px;">${specHintsHtml()}</div>
+
       <div class="row">
         <div>
           <label>分類（選到底層）</label>
@@ -309,7 +321,7 @@ function renderStep2() {
           <label>品牌</label>
           <select id="brand-select">
             <option value="">-- 選擇品牌 --</option>
-            ${state.brands.map(b => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('')}
+            ${state.brands.map(b => `<option value="${b.id}" ${state.brandId === b.id ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -324,20 +336,58 @@ function renderStep2() {
     state.brandId = e.target.value ? Number(e.target.value) : null;
     updateStep2NextEnabled();
   });
-  document.getElementById('btn-back-2').addEventListener('click', renderScrapePreview);
+  // renderScrapePreview() 只負責把內容塞進 #scrape-preview，這個容器只存在於 Step1 的外殼裡；
+  // Step2 進來時已經把整個 app.innerHTML 換掉了，要先呼叫 renderStep1() 重建外殼才能再填內容，
+  // 不然 renderScrapePreview() 抓不到 #scrape-preview 會直接丟例外、畫面沒反應。
+  document.getElementById('btn-back-2').addEventListener('click', () => {
+    renderStep1();
+    renderScrapePreview();
+  });
   document.getElementById('btn-to-step3').addEventListener('click', onNextToStep3);
   renderCategoryChain();
+}
+
+/** 從根節點反查到目標葉節點的路徑（含根節點本身），找不到回傳 null。
+ * 用來在「上一步/下一步」繞回 Step2 時，把已經選過的分類鏈還原成畫面上的樣子——
+ * state 只記葉節點的 categoryId，沒有記每一層選了誰，所以要對已經拿到手的分類樹反查。 */
+function findCategoryPath(nodes, targetId) {
+  for (const node of nodes) {
+    if (node.id === targetId) return [node];
+    if (node.children && node.children.length > 0) {
+      const sub = findCategoryPath(node.children, targetId);
+      if (sub) return [node, ...sub];
+    }
+  }
+  return null;
 }
 
 function renderCategoryChain() {
   const chain = document.getElementById('cat-chain');
   chain.innerHTML = '';
-  state.categoryId = null;
-  document.getElementById('attrs-section').innerHTML = '';
-  appendCategoryLevel(chain, state.categories);
+  const attrsSection = document.getElementById('attrs-section');
+
+  if (state.categoryId === null) {
+    attrsSection.innerHTML = '';
+    appendCategoryLevel(chain, state.categories);
+    return;
+  }
+
+  // 繞回 Step2 且之前已經選過分類：屬性資料還在 state 裡，直接反查路徑還原下拉選單、
+  // 重繪屬性區塊就好，不能呼叫 loadAttrsForCategory()（那支會把已經填好的屬性值洗掉）。
+  const path = findCategoryPath(state.categories, state.categoryId);
+  if (!path) {
+    // 理論上不會發生（分類樹跟之前選的對不起來），保守起見退回重新選
+    state.categoryId = null;
+    attrsSection.innerHTML = '';
+    appendCategoryLevel(chain, state.categories);
+    return;
+  }
+  appendCategoryLevel(chain, state.categories, path);
+  renderAttrsSection();
+  updateStep2NextEnabled();
 }
 
-function appendCategoryLevel(chain, nodes) {
+function appendCategoryLevel(chain, nodes, restorePath) {
   const select = document.createElement('select');
   select.innerHTML = '<option value="">-- 選擇 --</option>' +
     nodes.map(n => `<option value="${n.id}">${escapeHtml(n.name)}</option>`).join('');
@@ -361,6 +411,15 @@ function appendCategoryLevel(chain, nodes) {
     }
   });
   chain.appendChild(select);
+
+  // 還原之前選過的路徑：這一層直接選好，並繼續往下一層畫，不用等使用者手動再選一次。
+  if (restorePath && restorePath.length > 0) {
+    const [currentNode, ...rest] = restorePath;
+    select.value = String(currentNode.id);
+    if (currentNode.children && currentNode.children.length > 0) {
+      appendCategoryLevel(chain, currentNode.children, rest);
+    }
+  }
 }
 
 async function loadAttrsForCategory(categoryId) {
@@ -376,6 +435,7 @@ async function loadAttrsForCategory(categoryId) {
     state.baseAttrValues = {};
     state.selectedSaleAttrIds = [];
     state.skuAttrValues = {};
+    state.skuAttrManualEdits = {};
     state.skuRows.forEach((r, idx) => { state.skuAttrValues[idx] = {}; });
     renderAttrsSection();
     updateStep2NextEnabled();
@@ -384,24 +444,43 @@ async function loadAttrsForCategory(categoryId) {
   }
 }
 
-/** 勾選/取消一個銷售屬性。第一次勾選某個屬性時，如果目前只有它一個被選，就用 SKU 原本抓到的名稱
- * 幫忙預填（通常就是顏色），其餘維度（例如容量）留白讓使用者自己填——不要用猜的去拆組合字串。 */
+/** 勾選/取消一個銷售屬性，勾完重新跑一次自動拆值。 */
 function toggleSaleAttr(attrId, checked) {
   if (checked) {
     if (!state.selectedSaleAttrIds.includes(attrId)) {
       state.selectedSaleAttrIds.push(attrId);
-      const isOnlySelected = state.selectedSaleAttrIds.length === 1;
-      state.skuRows.forEach((r, idx) => {
-        if (!state.skuAttrValues[idx]) state.skuAttrValues[idx] = {};
-        if (state.skuAttrValues[idx][attrId] === undefined) {
-          state.skuAttrValues[idx][attrId] = isOnlySelected ? r.name : '';
-        }
-      });
     }
   } else {
     state.selectedSaleAttrIds = state.selectedSaleAttrIds.filter(id => id !== attrId);
   }
+  autoFillSkuAttrValues();
   renderAttrsSection();
+}
+
+/** 依目前勾選的銷售屬性維度數，把 SKU 原始名稱自動拆進對應欄位：
+ * - 只勾一個維度：整段原始名稱塞進去（例如「漫遊紫 256G」全部當顏色）。
+ * - 勾兩個以上維度，且名稱用空白切開後的 token 數剛好等於維度數：依「勾選的先後順序」一個 token
+ *   對應一個維度——MOMO 的 SKU 命名習慣是「顏色 容量」，先勾顏色、再勾容量，第一段就會對到顏色、
+ *   第二段對到容量。token 數兜不起來（名稱沒空白、或維度更多）就不猜，留給使用者自己填。
+ * 每次重算都只覆蓋使用者自己還沒手動改過的格子（skuAttrManualEdits 記錄哪些格子被手動編輯過），
+ * 不會蓋掉使用者自己輸入的值；也因此「顏色」先前因為只選一個維度被塞整段名稱的值，等使用者
+ * 再勾第二個維度時會被這裡重新算過、自動修正成只留該維度對應的那一段。 */
+function autoFillSkuAttrValues() {
+  const attrIds = state.selectedSaleAttrIds;
+  state.skuRows.forEach((r, idx) => {
+    if (!state.skuAttrValues[idx]) state.skuAttrValues[idx] = {};
+    const manualEdits = state.skuAttrManualEdits[idx];
+    const values = state.skuAttrValues[idx];
+    const tokens = r.name.trim().split(/\s+/).filter(Boolean);
+    if (attrIds.length === 1) {
+      const attrId = attrIds[0];
+      if (!manualEdits || !manualEdits.has(attrId)) values[attrId] = r.name;
+    } else if (attrIds.length > 1 && tokens.length === attrIds.length) {
+      attrIds.forEach((attrId, i) => {
+        if (!manualEdits || !manualEdits.has(attrId)) values[attrId] = tokens[i];
+      });
+    }
+  });
 }
 
 /** 把某個 SKU 目前填的所有銷售屬性值接起來，塞進 SKU 名稱——例如「顏色」填漫遊紫、「容量」填 256G，
@@ -426,7 +505,7 @@ function renderAttrsSection() {
     ${state.baseAttrs.map(a => `
       <div style="margin-bottom:6px;">
         <span class="muted">${escapeHtml(a.name)}</span>
-        <input type="text" data-base-attr="${a.id}" placeholder="填 ${escapeHtml(a.name)} 的值">
+        <input type="text" data-base-attr="${a.id}" value="${escapeHtml(state.baseAttrValues[a.id] ?? '')}" placeholder="填 ${escapeHtml(a.name)} 的值">
       </div>
     `).join('')}
 
@@ -483,9 +562,12 @@ function renderAttrsSection() {
   section.querySelectorAll('[data-sku-attr-idx]').forEach(input => {
     input.addEventListener('input', e => {
       const idx = e.target.dataset.skuAttrIdx;
-      const attrId = e.target.dataset.skuAttrId;
+      const attrId = Number(e.target.dataset.skuAttrId);
       if (!state.skuAttrValues[idx]) state.skuAttrValues[idx] = {};
       state.skuAttrValues[idx][attrId] = e.target.value;
+      // 使用者自己手動改過這格，之後再勾/取消其他銷售屬性維度時，自動拆值不能再覆蓋這格
+      if (!state.skuAttrManualEdits[idx]) state.skuAttrManualEdits[idx] = new Set();
+      state.skuAttrManualEdits[idx].add(attrId);
     });
   });
   section.querySelectorAll('[data-combine-idx]').forEach(button => {
@@ -570,6 +652,14 @@ function renderStep3() {
     }
   });
 }
+
+// 「取消，重新開始」放在 steps 列外面（#app 之外），不會被任何一步的 render 函式重繪掉，
+// 所以只需要在頁面載入時綁一次事件，不管卡在哪一步都按得到、都能直接砍掉重練。
+document.getElementById('btn-cancel-import').addEventListener('click', () => {
+  if (confirm('確定要取消嗎？目前輸入的內容都會清空，重新回到第一步。')) {
+    resetState();
+  }
+});
 
 renderStep1();
 </script>
