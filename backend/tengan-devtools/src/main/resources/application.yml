@@ -20,10 +20,18 @@ spring:
             authorization-grant-type: client_credentials
             client-authentication-method: client_secret_basic
             scope: media.write
+          tengan-inventory:
+            client-id: tengan-devtools
+            client-secret: ${DEVTOOLS_CLIENT_SECRET:tengan-devtools-secret}
+            authorization-grant-type: client_credentials
+            client-authentication-method: client_secret_basic
+            scope: inventory.read,inventory.write
         provider:
           tengan-product:
             token-uri: ${TENGAN_AUTH_TOKEN_URI:http://localhost:9010/oauth2/service/token}
           tengan-media:
+            token-uri: ${TENGAN_AUTH_TOKEN_URI:http://localhost:9010/oauth2/service/token}
+          tengan-inventory:
             token-uri: ${TENGAN_AUTH_TOKEN_URI:http://localhost:9010/oauth2/service/token}
   servlet:
     multipart:
@@ -35,3 +43,11 @@ tengan:
     base-url: ${TENGAN_PRODUCT_BASE_URL:http://localhost:9030}
   media:
     base-url: ${TENGAN_MEDIA_BASE_URL:http://localhost:9130}
+  inventory:
+    base-url: ${TENGAN_INVENTORY_BASE_URL:http://localhost:9070}
+  admin:
+    base-url: ${TENGAN_ADMIN_BASE_URL:http://localhost:9020}
+    # 專屬 bot 管理員帳號（已在 tengan-admin 建立），只用來登入換 admin JWT 轉發
+    # X-Identity-Assertion，不對應任何真人，不需要任何選單角色/權限。
+    bot-username: ${DEVTOOLS_ADMIN_BOT_USERNAME:devtools-bot}
+    bot-password: ${DEVTOOLS_ADMIN_BOT_PASSWORD:devtools-bot}

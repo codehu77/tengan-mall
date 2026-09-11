@@ -1,5 +1,6 @@
 package com.tengan.mall.devtools.service;
 
+import com.tengan.mall.devtools.client.InventoryApiClient;
 import com.tengan.mall.devtools.client.MediaApiClient;
 import com.tengan.mall.devtools.client.ProductApiClient;
 import com.tengan.mall.devtools.client.dto.CreateSpuRequest;
@@ -8,6 +9,7 @@ import com.tengan.mall.devtools.client.dto.SkuImage;
 import com.tengan.mall.devtools.client.dto.SkuSaleAttrValue;
 import com.tengan.mall.devtools.client.dto.SpuBaseAttrValue;
 import com.tengan.mall.devtools.client.dto.SpuImage;
+import com.tengan.mall.devtools.client.dto.Warehouse;
 import com.tengan.mall.devtools.service.ImageDownloader.DownloadedImage;
 import com.tengan.mall.devtools.web.dto.AttrValueInput;
 import com.tengan.mall.devtools.web.dto.ImportRequest;
@@ -22,15 +24,21 @@ import org.springframework.web.util.HtmlUtils;
 @Service
 public class ImportService {
 
+    /** 使用者要求匯入時順便幫新 SKU 建庫存，預設存進第一個倉庫（目前只有一個倉庫，尚無「哪個是預設倉」
+     * 的欄位可查），數量固定 100 顆，之後要調整再回後台庫存管理頁手動改。 */
+    private static final int DEFAULT_INITIAL_STOCK = 100;
+
     private final ImageDownloader imageDownloader;
     private final MediaApiClient mediaApiClient;
     private final ProductApiClient productApiClient;
+    private final InventoryApiClient inventoryApiClient;
 
     public ImportService(ImageDownloader imageDownloader, MediaApiClient mediaApiClient,
-            ProductApiClient productApiClient) {
+            ProductApiClient productApiClient, InventoryApiClient inventoryApiClient) {
         this.imageDownloader = imageDownloader;
         this.mediaApiClient = mediaApiClient;
         this.productApiClient = productApiClient;
+        this.inventoryApiClient = inventoryApiClient;
     }
 
     public Long importProduct(ImportRequest request) {
@@ -51,7 +59,20 @@ public class ImportService {
         CreateSpuRequest createSpuRequest = new CreateSpuRequest(request.categoryId(), request.brandId(),
                 request.name(), description, mainImage, null, false, null, attrValues, spuImages, skus);
 
-        return productApiClient.createSpu(createSpuRequest).id();
+        Long spuId = productApiClient.createSpu(createSpuRequest).id();
+        seedInitialStock(spuId);
+        return spuId;
+    }
+
+    private void seedInitialStock(Long spuId) {
+        List<Warehouse> warehouses = inventoryApiClient.listWarehouses();
+        if (warehouses.isEmpty()) {
+            throw new IllegalStateException("tengan-inventory 目前沒有任何倉庫，無法建立初始庫存");
+        }
+        Long defaultWareId = warehouses.get(0).id();
+        for (var sku : productApiClient.getSpu(spuId).skus()) {
+            inventoryApiClient.createStock(defaultWareId, sku.id(), DEFAULT_INITIAL_STOCK);
+        }
     }
 
     /** 使用者勾的是重新上傳「前」的來源網址，reuploadAll 保留原本順序，所以來源清單裡的位置
