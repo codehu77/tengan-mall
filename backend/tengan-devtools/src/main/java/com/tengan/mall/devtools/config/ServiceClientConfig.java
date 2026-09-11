@@ -43,4 +43,16 @@ public class ServiceClientConfig {
     public RestClient mediaRestClient(@Value("${tengan.media.base-url}") String baseUrl) {
         return RestClient.builder().baseUrl(baseUrl).build();
     }
+
+    @Bean
+    public RestClient inventoryRestClient(@Value("${tengan.inventory.base-url}") String baseUrl) {
+        return RestClient.builder().baseUrl(baseUrl).build();
+    }
+
+    /** 不走 oauth2 client（client_credentials 沒有真人主體），純粹呼叫 tengan-admin 登入端點換 admin JWT，
+     * 見 AdminBotTokenProvider。 */
+    @Bean
+    public RestClient adminRestClient(@Value("${tengan.admin.base-url}") String baseUrl) {
+        return RestClient.builder().baseUrl(baseUrl).build();
+    }
 }

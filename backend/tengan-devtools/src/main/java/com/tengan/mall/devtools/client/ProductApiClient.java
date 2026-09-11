@@ -6,6 +6,7 @@ import com.tengan.mall.devtools.client.dto.CategoryTree;
 import com.tengan.mall.devtools.client.dto.CreateSpuRequest;
 import com.tengan.mall.devtools.client.dto.CreateSpuResponse;
 import com.tengan.mall.devtools.client.dto.SaleAttrList;
+import com.tengan.mall.devtools.client.dto.SpuSkuList;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -63,6 +64,15 @@ public class ProductApiClient {
                 .body(request)
                 .retrieve()
                 .body(CreateSpuResponse.class);
+    }
+
+    /** 建完 SPU 後拿實際落地的 SKU id 清單——CreateSpuResponse 只回 SPU id，SKU id 是 DB 自動產生的。 */
+    public SpuSkuList getSpu(Long id) {
+        return productRestClient.get()
+                .uri("/internal/products/spus/{id}", id)
+                .header(HttpHeaders.AUTHORIZATION, bearerToken())
+                .retrieve()
+                .body(SpuSkuList.class);
     }
 
     private String bearerToken() {

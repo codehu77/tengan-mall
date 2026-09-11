@@ -34,7 +34,9 @@ import org.springframework.stereotype.Component;
  * coupon（驗證+核銷+回滾）四個服務，scope 只給實際會用到的（cart.read/write、product.read、
  * inventory.write、coupon.read/write，沒有 inventory.read/coupon.write 用不到的 write/read 組合）。
  * 之後每加一個服務的 internal 端點，就幫需要呼叫它的 client 多加一組 scope，不用這次就把後台清單裡
- * 列的全部 scope 一次註冊完。Phase 8 新增 tengan-wallet 網域：`tengan-wallet` 本身不主動呼叫任何服務
+ * 列的全部 scope 一次註冊完。使用者要求 devtools 匯入時順便幫新 SKU 建庫存，`tengan-devtools` 再多
+ * inventory.read（列倉庫，找預設倉）+ inventory.write（建庫存列）。Phase 8 新增 tengan-wallet 網域：
+ * `tengan-wallet` 本身不主動呼叫任何服務
  * （純 Resource Server），所以不用新增它自己的 client，只需要幫會呼叫它的 tengan-order（下單 Saga 核銷
  * 點數/確認收貨 reserve/排程 earn/取消 revert）跟 tengan-admin（行銷管理頁）補 wallet.read/wallet.write。
  * Phase 9 新增 tengan-seckill 網域：`tengan-seckill` 會主動呼叫 tengan-inventory 的結算端點，所以
@@ -104,7 +106,8 @@ public class RegisteredClientSeeder implements ApplicationRunner {
                 "wallet.write", "seckill.read", "seckill.write", "media.read", "media.write");
         seedIfAbsent(SEARCH_CLIENT_ID, searchClientSecret, "product.read");
         seedIfAbsent(CART_CLIENT_ID, cartClientSecret, "product.read");
-        seedIfAbsent(DEVTOOLS_CLIENT_ID, devtoolsClientSecret, "product.read", "product.write", "media.write");
+        seedIfAbsent(DEVTOOLS_CLIENT_ID, devtoolsClientSecret, "product.read", "product.write", "media.write",
+                "inventory.read", "inventory.write");
         seedIfAbsent(ORDER_CLIENT_ID, orderClientSecret, "cart.read", "cart.write", "product.read",
                 "inventory.write", "coupon.read", "coupon.write", "wallet.read", "wallet.write", "seckill.read",
                 "seckill.write");
