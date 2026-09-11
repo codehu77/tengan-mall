@@ -2,6 +2,7 @@ package com.tengan.mall.coupon.interfaces.rest;
 
 import com.tengan.mall.coupon.domain.exception.CouponAlreadyConsumedException;
 import com.tengan.mall.coupon.domain.exception.CouponTemplateNotFoundException;
+import com.tengan.mall.coupon.domain.exception.CouponTemplateNotGrantableException;
 import com.tengan.mall.coupon.domain.exception.MemberCouponNotFoundException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -24,8 +25,8 @@ public class CouponExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
     }
 
-    @ExceptionHandler(CouponAlreadyConsumedException.class)
-    public ResponseEntity<Map<String, String>> handleConflict(CouponAlreadyConsumedException e) {
+    @ExceptionHandler({CouponAlreadyConsumedException.class, CouponTemplateNotGrantableException.class})
+    public ResponseEntity<Map<String, String>> handleConflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }
 }

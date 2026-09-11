@@ -124,7 +124,12 @@ function openGrantDialog(row: TemplateItem) {
             done();
             onSearch();
           })
-          .catch(() => closeLoading());
+          .catch((error: any) => {
+            message(error?.response?.data?.message ?? "核發失敗", {
+              type: "error"
+            });
+            closeLoading();
+          });
       });
     }
   });

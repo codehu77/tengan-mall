@@ -75,6 +75,11 @@ public class CouponTemplate {
                 && amount.compareTo(thresholdAmount) >= 0;
     }
 
+    /** 核發門檻比使用門檻寬鬆：允許在 effectiveStart 之前先核發（會員之後才能用），只擋下架跟已過期。 */
+    public boolean isGrantable(Instant now) {
+        return status == CouponStatus.ACTIVE && !now.isAfter(effectiveEnd);
+    }
+
     public BigDecimal calculateDiscount(BigDecimal amount) {
         return amount.compareTo(thresholdAmount) >= 0 ? discountAmount : BigDecimal.ZERO;
     }

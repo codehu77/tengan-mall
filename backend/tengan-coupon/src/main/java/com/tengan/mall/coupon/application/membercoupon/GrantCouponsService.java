@@ -1,11 +1,13 @@
 package com.tengan.mall.coupon.application.membercoupon;
 
 import com.tengan.mall.coupon.domain.exception.CouponTemplateNotFoundException;
+import com.tengan.mall.coupon.domain.exception.CouponTemplateNotGrantableException;
 import com.tengan.mall.coupon.domain.model.CouponOperLog;
 import com.tengan.mall.coupon.domain.model.MemberCoupon;
 import com.tengan.mall.coupon.domain.repository.CouponOperLogRepository;
 import com.tengan.mall.coupon.domain.repository.CouponTemplateRepository;
 import com.tengan.mall.coupon.domain.repository.MemberCouponRepository;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,9 @@ public class GrantCouponsService implements GrantCouponsUseCase {
     public GrantCouponsResult grant(GrantCouponsCommand command) {
         var template = couponTemplateRepository.findById(command.templateId())
                 .orElseThrow(() -> new CouponTemplateNotFoundException(command.templateId()));
+        if (!template.isGrantable(Instant.now())) {
+            throw new CouponTemplateNotGrantableException(command.templateId());
+        }
 
         List<Long> succeeded = new ArrayList<>();
         List<Long> skipped = new ArrayList<>();
