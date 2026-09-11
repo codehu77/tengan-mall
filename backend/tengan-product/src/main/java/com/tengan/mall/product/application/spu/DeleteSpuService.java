@@ -6,7 +6,6 @@ import com.tengan.mall.product.domain.exception.SpuOnShelfException;
 import com.tengan.mall.product.domain.model.Spu;
 import com.tengan.mall.product.domain.model.SpuStatus;
 import com.tengan.mall.product.domain.repository.SpuRepository;
-import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,20 +51,9 @@ public class DeleteSpuService implements DeleteSpuUseCase {
         // best-effort：清 MinIO 圖片失敗不影響 SPU 本身已經刪除成功，記 log 讓人工介入即可
         // （跟 CloseOrderIfUnpaidService 的補償失敗處理是同一種已知限制等級）。
         try {
-            mediaPort.deleteImages(collectImageUrls(spu));
+            mediaPort.deleteImages(SpuImageUrls.collect(spu));
         } catch (RuntimeException e) {
             log.error("刪除 SPU 後清理 tengan-media 圖片失敗，spuId={}，需要人工到 MinIO 手動清理", spu.getId(), e);
         }
-    }
-
-    private List<String> collectImageUrls(Spu spu) {
-        List<String> urls = new ArrayList<>();
-        urls.add(spu.getMainImage());
-        spu.getImages().forEach(image -> urls.add(image.imageUrl()));
-        spu.getSkus().forEach(sku -> {
-            urls.add(sku.getMainImage());
-            sku.getImages().forEach(image -> urls.add(image.imageUrl()));
-        });
-        return urls;
     }
 }
