@@ -243,7 +243,7 @@ import type { SkuStockInfo } from '~/composables/useInventory'
 const route = useRoute()
 const toast = useToast()
 const cartStore = useCartStore()
-const { addToCart } = useCart()
+const { addToCart, fetchCartItems, fetchCartCount, toggleAllChecked, toggleChecked } = useCart()
 const { fetchSkuStocks } = useInventory()
 
 const spuId = Number(route.params.spuId)
@@ -513,14 +513,26 @@ async function handleAddToCart() {
   })
 }
 
+/**
+ * 結帳確認頁（/order/confirm）完全是讀購物車「已勾選」項目，沒有獨立於購物車之外的下單路徑——
+ * 所以「立即購買」要做到只結這一顆 SKU，唯一辦法是把購物車的勾選狀態暫時收斂成只勾這一顆
+ * （比照一般電商的「立即購買」慣例），而不是真的繞過購物車。使用者先前在購物車頁打勾的其他
+ * 商品會被取消勾選，這是這個做法已知、刻意接受的副作用。
+ */
 async function handleBuyNow() {
   const sku = currentSku.value
   if (!sku || isPurchaseDisabled.value) return
-  const newCount = await addToCart(
+  await addToCart(
     { skuId: sku.id, skuName: sku.name, price: sku.price, image: images.value[0] ?? sku.mainImage },
     qty.value
   )
-  cartStore.setCount(newCount)
+  const items = await fetchCartItems()
+  const target = items.find(i => i.skuId === sku.id)
+  await toggleAllChecked(false)
+  if (target) {
+    await toggleChecked(target.itemId, true)
+  }
+  cartStore.setCount(await fetchCartCount())
   navigateTo('/order/confirm')
 }
 </script>
