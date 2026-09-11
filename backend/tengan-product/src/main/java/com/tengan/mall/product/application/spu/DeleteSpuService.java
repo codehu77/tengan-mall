@@ -1,33 +1,29 @@
 package com.tengan.mall.product.application.spu;
 
-import com.tengan.mall.product.application.port.MediaPort;
 import com.tengan.mall.product.domain.exception.SpuNotFoundException;
 import com.tengan.mall.product.domain.exception.SpuOnShelfException;
 import com.tengan.mall.product.domain.model.Spu;
 import com.tengan.mall.product.domain.model.SpuStatus;
 import com.tengan.mall.product.domain.repository.SpuRepository;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DeleteSpuService implements DeleteSpuUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(DeleteSpuService.class);
-
     private final SpuRepository spuRepository;
     private final ProductSearchEventPublisherPort searchEventPublisher;
     private final ProductLaunchConfigEventPublisherPort launchConfigEventPublisher;
-    private final MediaPort mediaPort;
+    private final ProductMediaUsageEventPublisherPort mediaUsageEventPublisher;
 
     public DeleteSpuService(SpuRepository spuRepository, ProductSearchEventPublisherPort searchEventPublisher,
-            ProductLaunchConfigEventPublisherPort launchConfigEventPublisher, MediaPort mediaPort) {
+            ProductLaunchConfigEventPublisherPort launchConfigEventPublisher,
+            ProductMediaUsageEventPublisherPort mediaUsageEventPublisher) {
         this.spuRepository = spuRepository;
         this.searchEventPublisher = searchEventPublisher;
         this.launchConfigEventPublisher = launchConfigEventPublisher;
-        this.mediaPort = mediaPort;
+        this.mediaUsageEventPublisher = mediaUsageEventPublisher;
     }
 
     @Override
@@ -48,12 +44,8 @@ public class DeleteSpuService implements DeleteSpuUseCase {
         // 之前這裡漏了這一行，只發了 search 移除事件，沒發 launch-config 移除事件。
         launchConfigEventPublisher.publishRemoved(spu.getId(), skuIds);
 
-        // best-effort：清 MinIO 圖片失敗不影響 SPU 本身已經刪除成功，記 log 讓人工介入即可
-        // （跟 CloseOrderIfUnpaidService 的補償失敗處理是同一種已知限制等級）。
-        try {
-            mediaPort.deleteImages(SpuImageUrls.collect(spu));
-        } catch (RuntimeException e) {
-            log.error("刪除 SPU 後清理 tengan-media 圖片失敗，spuId={}，需要人工到 MinIO 手動清理", spu.getId(), e);
-        }
+        // 傳空 list 宣告「這個 owner 現在什麼都不用」，tengan-media 收到後把原本 CONFIRMED 的圖
+        // 全部打回 PENDING 交給 GC 回收（跟 UpdateSpuService 同一套 sync 機制，delete 只是空集合的特例）。
+        mediaUsageEventPublisher.publishSynced(spu.getId(), List.of());
     }
 }

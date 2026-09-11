@@ -52,6 +52,12 @@
       <groupId>com.tengan.mall</groupId>
       <artifactId>tengan-jwt-verification-starter</artifactId>
     </dependency>
+    <!-- 消費 tengan-product 發布的 product.media-usage.synced 事件——這是本服務第一次用到 RabbitMQ，
+         純消費端，不主動發任何事件 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-amqp</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>com.baomidou</groupId>

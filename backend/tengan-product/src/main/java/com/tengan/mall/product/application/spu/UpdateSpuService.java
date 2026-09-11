@@ -1,6 +1,5 @@
 package com.tengan.mall.product.application.spu;
 
-import com.tengan.mall.product.application.port.MediaPort;
 import com.tengan.mall.product.domain.exception.BrandNotFoundException;
 import com.tengan.mall.product.domain.exception.CategoryNotFoundException;
 import com.tengan.mall.product.domain.exception.CategoryNotLeafException;
@@ -12,20 +11,15 @@ import com.tengan.mall.product.domain.model.SpuStatus;
 import com.tengan.mall.product.domain.repository.BrandRepository;
 import com.tengan.mall.product.domain.repository.CategoryRepository;
 import com.tengan.mall.product.domain.repository.SpuRepository;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 整批替換語意：跟 Create 一樣一次收整份 skus/attrValues，Spu.replaceSkus()/replaceAttrValues() 整批換掉。 */
 @Service
 public class UpdateSpuService implements UpdateSpuUseCase {
-
-    private static final Logger log = LoggerFactory.getLogger(UpdateSpuService.class);
 
     private final SpuRepository spuRepository;
     private final CategoryRepository categoryRepository;
@@ -34,12 +28,13 @@ public class UpdateSpuService implements UpdateSpuUseCase {
     private final SpuSearchDocumentAssembler searchDocumentAssembler;
     private final ProductSearchEventPublisherPort searchEventPublisher;
     private final ProductLaunchConfigEventPublisherPort launchConfigEventPublisher;
-    private final MediaPort mediaPort;
+    private final ProductMediaUsageEventPublisherPort mediaUsageEventPublisher;
 
     public UpdateSpuService(SpuRepository spuRepository, CategoryRepository categoryRepository,
             BrandRepository brandRepository, SpuCompositionAssembler assembler,
             SpuSearchDocumentAssembler searchDocumentAssembler, ProductSearchEventPublisherPort searchEventPublisher,
-            ProductLaunchConfigEventPublisherPort launchConfigEventPublisher, MediaPort mediaPort) {
+            ProductLaunchConfigEventPublisherPort launchConfigEventPublisher,
+            ProductMediaUsageEventPublisherPort mediaUsageEventPublisher) {
         this.spuRepository = spuRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
@@ -47,7 +42,7 @@ public class UpdateSpuService implements UpdateSpuUseCase {
         this.searchDocumentAssembler = searchDocumentAssembler;
         this.searchEventPublisher = searchEventPublisher;
         this.launchConfigEventPublisher = launchConfigEventPublisher;
-        this.mediaPort = mediaPort;
+        this.mediaUsageEventPublisher = mediaUsageEventPublisher;
     }
 
     @Override
@@ -74,9 +69,6 @@ public class UpdateSpuService implements UpdateSpuUseCase {
         List<Sku> existingSkus = spu.getSkus();
         List<Long> previousSkuIds = existingSkus.stream().map(Sku::getId).toList();
         boolean wasOnShelf = spu.getStatus() == SpuStatus.ON_SHELF;
-        // 換圖孤兒檔案清理：在任何欄位被覆蓋之前，先拍一張「這次編輯前」引用了哪些圖片網址的快照，
-        // 存檔後再跟「編輯後」引用的網址集合取差集，才知道有哪些圖被換掉了。
-        Set<String> imagesBeforeUpdate = new HashSet<>(SpuImageUrls.collect(spu));
 
         spu.updateBasicInfo(command.categoryId(), command.brandId(), command.name(), command.description(),
                 command.mainImage());
@@ -87,18 +79,9 @@ public class UpdateSpuService implements UpdateSpuUseCase {
 
         spuRepository.save(spu);
 
-        // best-effort：換掉的舊圖清不掉不影響 SPU 本身已經存檔成功，記 log 讓人工介入即可
-        // （跟 DeleteSpuService 清圖失敗是同一種已知限制等級）。
-        Set<String> imagesAfterUpdate = new HashSet<>(SpuImageUrls.collect(spu));
-        List<String> removedImageUrls = imagesBeforeUpdate.stream()
-                .filter(url -> url != null && !imagesAfterUpdate.contains(url)).toList();
-        if (!removedImageUrls.isEmpty()) {
-            try {
-                mediaPort.deleteImages(removedImageUrls);
-            } catch (RuntimeException e) {
-                log.error("編輯 SPU 後清理被換掉的 tengan-media 圖片失敗，spuId={}，需要人工到 MinIO 手動清理", spu.getId(), e);
-            }
-        }
+        // 宣告這次存檔後最終引用的完整圖片集合——tengan-media 自己算差集，把不在這份清單裡、
+        // 之前 CONFIRMED 的舊圖打回 PENDING 交給 GC 回收，這裡不用自己比對再挑著呼叫刪除。
+        mediaUsageEventPublisher.publishSynced(spu.getId(), SpuImageUrls.collect(spu));
 
         // 存檔後 spu.getSkus() 裡每顆 sku 都已經有最終 id（保留的規格是原本的 id，新規格是
         // Sku.assignId() 剛指派的），跟 previousSkuIds 取差集才是這次真正被移除的 skuId。

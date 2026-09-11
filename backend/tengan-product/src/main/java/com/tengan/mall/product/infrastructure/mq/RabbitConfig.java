@@ -35,6 +35,10 @@ public class RabbitConfig {
     public static final String ROUTING_KEY_LAUNCH_CONFIG_UPSERTED = "product.launch-config.upserted";
     public static final String ROUTING_KEY_LAUNCH_CONFIG_REMOVED = "product.launch-config.removed";
 
+    /** tengan-media 消費，見 ProductMediaUsageEventPublisherPort 的說明。 */
+    public static final String PRODUCT_MEDIA_USAGE_EXCHANGE = "product-media-usage-exchange";
+    public static final String ROUTING_KEY_MEDIA_USAGE_SYNCED = "product.media-usage.synced";
+
     private static final String ORDER_EVENT_EXCHANGE = "order-event-exchange";
     private static final String ROUTING_KEY_ORDER_COMPLETED = "order.completed";
     public static final String ORDER_COMPLETED_QUEUE = "product.order.completed.queue";
@@ -48,6 +52,12 @@ public class RabbitConfig {
     @Bean
     public TopicExchange productLaunchConfigExchange() {
         return new TopicExchange(PRODUCT_LAUNCH_CONFIG_EXCHANGE);
+    }
+
+    /** 只宣告 exchange，不管有沒有 queue 綁定——queue/binding 由消費端（tengan-media）自己宣告。 */
+    @Bean
+    public TopicExchange productMediaUsageExchange() {
+        return new TopicExchange(PRODUCT_MEDIA_USAGE_EXCHANGE);
     }
 
     @Bean

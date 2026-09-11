@@ -20,15 +20,18 @@ public class CreateSpuService implements CreateSpuUseCase {
     private final BrandRepository brandRepository;
     private final SpuCompositionAssembler assembler;
     private final ProductLaunchConfigEventPublisherPort launchConfigEventPublisher;
+    private final ProductMediaUsageEventPublisherPort mediaUsageEventPublisher;
 
     public CreateSpuService(SpuRepository spuRepository, CategoryRepository categoryRepository,
             BrandRepository brandRepository, SpuCompositionAssembler assembler,
-            ProductLaunchConfigEventPublisherPort launchConfigEventPublisher) {
+            ProductLaunchConfigEventPublisherPort launchConfigEventPublisher,
+            ProductMediaUsageEventPublisherPort mediaUsageEventPublisher) {
         this.spuRepository = spuRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
         this.assembler = assembler;
         this.launchConfigEventPublisher = launchConfigEventPublisher;
+        this.mediaUsageEventPublisher = mediaUsageEventPublisher;
     }
 
     @Override
@@ -52,6 +55,9 @@ public class CreateSpuService implements CreateSpuUseCase {
 
         Spu saved = spuRepository.save(spu);
         publishLaunchConfig(saved);
+        // 建立當下就把精靈上傳過的圖片一併確認為使用中——沒被這裡帶到的（使用者上傳後放棄精靈）
+        // 永遠停在 PENDING，交給 tengan-media 的 GC 排程回收。
+        mediaUsageEventPublisher.publishSynced(saved.getId(), SpuImageUrls.collect(saved));
         return new CreateSpuResult(saved.getId());
     }
 

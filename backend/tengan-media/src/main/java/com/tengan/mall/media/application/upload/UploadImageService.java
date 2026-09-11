@@ -4,6 +4,8 @@ import com.tengan.mall.media.application.port.FileStoragePort;
 import com.tengan.mall.media.domain.exception.FileTooLargeException;
 import com.tengan.mall.media.domain.exception.UnsupportedCategoryException;
 import com.tengan.mall.media.domain.exception.UnsupportedFileTypeException;
+import com.tengan.mall.media.domain.model.MediaAsset;
+import com.tengan.mall.media.domain.repository.MediaAssetRepository;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 
@@ -22,10 +24,21 @@ public class UploadImageService implements UploadImageUseCase {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
     private static final long MAX_BYTES = 2L * 1024 * 1024;
 
-    private final FileStoragePort fileStoragePort;
+    /**
+     * 生命週期追蹤（media_asset）目前只有 "product"（tengan-product 的 SPU/SKU）有對應的 sync
+     * 事件會把 PENDING 轉成 CONFIRMED——avatar/banner/brand/admin-avatar 還沒有呼叫端會做這個
+     * 確認動作，若無條件幫所有 category 都建追蹤列，這些從未被確認過的圖會在寬限期過後被
+     * MediaAssetCleanupScheduler 誤判成孤兒清掉。之後要擴充哪個 category，同時要把它的存檔
+     * 路徑接上 sync 事件，兩件事必須一起做。
+     */
+    private static final Set<String> LIFECYCLE_TRACKED_CATEGORIES = Set.of("product");
 
-    public UploadImageService(FileStoragePort fileStoragePort) {
+    private final FileStoragePort fileStoragePort;
+    private final MediaAssetRepository mediaAssetRepository;
+
+    public UploadImageService(FileStoragePort fileStoragePort, MediaAssetRepository mediaAssetRepository) {
         this.fileStoragePort = fileStoragePort;
+        this.mediaAssetRepository = mediaAssetRepository;
     }
 
     @Override
@@ -41,7 +54,10 @@ public class UploadImageService implements UploadImageUseCase {
         }
 
         String prefix = command.ownerId() != null ? command.category() + "/" + command.ownerId() : command.category();
-        String url = fileStoragePort.store(command.content(), command.originalFilename(), prefix);
-        return new UploadImageResult(url);
+        var stored = fileStoragePort.store(command.content(), command.originalFilename(), prefix);
+        if (LIFECYCLE_TRACKED_CATEGORIES.contains(command.category())) {
+            mediaAssetRepository.save(MediaAsset.uploaded(stored.objectKey(), stored.url()));
+        }
+        return new UploadImageResult(stored.url());
     }
 }

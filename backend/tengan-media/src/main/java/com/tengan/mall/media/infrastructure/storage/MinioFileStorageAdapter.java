@@ -23,7 +23,7 @@ public class MinioFileStorageAdapter implements FileStoragePort {
     }
 
     @Override
-    public String store(byte[] content, String originalFilename, String category) {
+    public StoredObject store(byte[] content, String originalFilename, String category) {
         String ext = StringUtils.getFilenameExtension(originalFilename);
         String objectKey = category + "/" + UUID.randomUUID() + (StringUtils.hasText(ext) ? "." + ext : "");
         String contentType = contentTypeOf(ext);
@@ -39,7 +39,8 @@ public class MinioFileStorageAdapter implements FileStoragePort {
         } catch (Exception e) {
             throw new IllegalStateException("寫入 MinIO 失敗: " + objectKey, e);
         }
-        return properties.getEndpoint() + "/" + properties.getBucket() + "/" + objectKey;
+        String url = properties.getEndpoint() + "/" + properties.getBucket() + "/" + objectKey;
+        return new StoredObject(objectKey, url);
     }
 
     @Override
