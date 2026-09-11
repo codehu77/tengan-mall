@@ -39,9 +39,10 @@ public class OrderRepositoryImpl implements OrderRepository {
                 .toList();
         return Optional.of(Order.reconstitute(po.getId(), po.getOrderSn(), po.getMemberId(), po.getStatus(),
                 po.getCancelReason(), po.getTotalAmount(), po.getDiscountAmount(), po.getPayAmount(),
-                po.getPaymentMethod(), po.getCouponId(), po.getPointsUsed(), po.getPointsDiscountAmount(),
-                po.getReceiverName(), po.getReceiverPhone(), po.getCity(), po.getDistrict(), po.getPostalCode(),
-                po.getStreet(), po.getRemark(), toInstant(po.getReceiptTime()), toInstant(po.getCreatedAt()), items));
+                po.getShippingFee(), po.getPaymentMethod(), po.getCouponId(), po.getPointsUsed(),
+                po.getPointsDiscountAmount(), po.getReceiverName(), po.getReceiverPhone(), po.getCity(),
+                po.getDistrict(), po.getPostalCode(), po.getStreet(), po.getRemark(),
+                toInstant(po.getReceiptTime()), toInstant(po.getCreatedAt()), items));
     }
 
     @Override
@@ -54,6 +55,7 @@ public class OrderRepositoryImpl implements OrderRepository {
         po.setTotalAmount(order.getTotalAmount());
         po.setDiscountAmount(order.getDiscountAmount());
         po.setPayAmount(order.getPayAmount());
+        po.setShippingFee(order.getShippingFee());
         po.setPaymentMethod(order.getPaymentMethod());
         po.setCouponId(order.getCouponId());
         po.setPointsUsed(order.getPointsUsed());

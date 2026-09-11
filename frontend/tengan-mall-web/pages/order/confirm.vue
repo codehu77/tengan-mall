@@ -168,6 +168,14 @@
                 </div>
               </div>
 
+              <!-- 運費 -->
+              <div class="flex justify-between items-center text-base text-gray-700">
+                <span>運費</span>
+                <span class="font-semibold">
+                  {{ (confirmResult?.shippingFee ?? 0) > 0 ? `NT$ ${(confirmResult?.shippingFee ?? 0).toLocaleString()}` : '免運' }}
+                </span>
+              </div>
+
             </div>
 
             <div class="border-t border-gray-200 mt-4 pt-4 flex justify-between items-center">
@@ -363,7 +371,8 @@ async function applyPoints() {
 
 const payableAmount = computed(() => {
   const total = confirmResult.value?.totalAmount ?? 0
-  return total - (selectedCoupon.value?.discountAmount ?? 0) - pointsDiscountAmount.value
+  const shippingFee = confirmResult.value?.shippingFee ?? 0
+  return total - (selectedCoupon.value?.discountAmount ?? 0) - pointsDiscountAmount.value + shippingFee
 })
 
 const canSubmit = computed(() =>

@@ -18,6 +18,12 @@ export interface OrderConfirmResult {
   orderToken: string
   items: ConfirmedOrderItem[]
   totalAmount: number
+  shippingFee: number
+}
+
+export interface FreightRule {
+  freeShippingThreshold: number
+  shippingFee: number
 }
 
 export interface ReceiverInfoPayload {
@@ -74,6 +80,7 @@ export interface OrderDetail {
   totalAmount: number
   discountAmount: number
   payAmount: number
+  shippingFee: number
   paymentMethod: PaymentMethod
   couponId: number | null
   pointsUsed: number | null

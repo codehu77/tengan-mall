@@ -1,11 +1,14 @@
 package com.tengan.mall.admin.interfaces.rest;
 
+import com.tengan.mall.admin.application.port.FreightRuleItem;
 import com.tengan.mall.admin.application.port.OrderPort;
 import com.tengan.mall.admin.interfaces.rest.dto.CancelOrderRequest;
+import com.tengan.mall.admin.interfaces.rest.dto.FreightRuleResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.ListOrdersResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.OrderDetailResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.OrderItemResponse;
 import com.tengan.mall.admin.interfaces.rest.dto.OrderSummaryResponse;
+import com.tengan.mall.admin.interfaces.rest.dto.UpdateFreightRuleRequest;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import org.springframework.http.ResponseEntity;
@@ -53,7 +56,7 @@ public class OrderController {
                         i.count(), i.subtotal()))
                 .toList();
         return new OrderDetailResponse(d.id(), d.orderSn(), d.memberId(), d.status(), d.cancelReason(),
-                d.totalAmount(), d.discountAmount(), d.payAmount(), d.paymentMethod(), d.couponId(),
+                d.totalAmount(), d.discountAmount(), d.payAmount(), d.shippingFee(), d.paymentMethod(), d.couponId(),
                 d.receiverName(), d.receiverPhone(), d.city(), d.district(), d.postalCode(), d.street(), d.remark(),
                 d.receiptTime(), d.createdAt(), items);
     }
@@ -70,6 +73,22 @@ public class OrderController {
     public ResponseEntity<Void> cancel(@AuthenticationPrincipal Jwt operatorJwt, @PathVariable String orderSn,
             @Valid @RequestBody CancelOrderRequest request) {
         orderPort.cancelOrder(orderSn, request.reason(), operatorJwt.getTokenValue());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/freight-rule")
+    @PreAuthorize("hasAuthority('order:freight:read')")
+    public FreightRuleResponse getFreightRule() {
+        var r = orderPort.getFreightRule();
+        return new FreightRuleResponse(r.freeShippingThreshold(), r.shippingFee());
+    }
+
+    @PutMapping("/freight-rule")
+    @PreAuthorize("hasAuthority('order:freight:write')")
+    public ResponseEntity<Void> updateFreightRule(@AuthenticationPrincipal Jwt operatorJwt,
+            @Valid @RequestBody UpdateFreightRuleRequest request) {
+        orderPort.updateFreightRule(new FreightRuleItem(request.freeShippingThreshold(), request.shippingFee()),
+                operatorJwt.getTokenValue());
         return ResponseEntity.noContent().build();
     }
 }

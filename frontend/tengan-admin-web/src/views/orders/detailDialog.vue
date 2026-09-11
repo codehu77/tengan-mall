@@ -48,6 +48,7 @@ function formatTime(iso?: string) {
     <el-descriptions title="金額" :column="3" border class="mt-4">
       <el-descriptions-item label="小計">NT$ {{ detail.totalAmount }}</el-descriptions-item>
       <el-descriptions-item label="折扣">NT$ {{ detail.discountAmount }}</el-descriptions-item>
+      <el-descriptions-item label="運費">NT$ {{ detail.shippingFee }}</el-descriptions-item>
       <el-descriptions-item label="應付">NT$ {{ detail.payAmount }}</el-descriptions-item>
     </el-descriptions>
 

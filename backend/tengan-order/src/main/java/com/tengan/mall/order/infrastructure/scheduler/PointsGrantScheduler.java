@@ -47,7 +47,8 @@ public class PointsGrantScheduler {
         var candidates = orderQueryPort.findPendingPointsCredit(cutoff, BATCH_LIMIT);
         for (var candidate : candidates) {
             try {
-                walletPort.earn(candidate.memberId(), candidate.orderSn(), candidate.payAmount());
+                walletPort.earn(candidate.memberId(), candidate.orderSn(),
+                        candidate.payAmount().subtract(candidate.shippingFee()));
                 orderRepository.markPointsCredited(candidate.orderSn());
             } catch (RuntimeException e) {
                 log.error("點數入帳失敗，orderSn={}，等下一輪排程重試", candidate.orderSn(), e);

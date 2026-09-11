@@ -1,5 +1,6 @@
 package com.tengan.mall.admin.infrastructure.order;
 
+import com.tengan.mall.admin.application.port.FreightRuleItem;
 import com.tengan.mall.admin.application.port.OrderDetail;
 import com.tengan.mall.admin.application.port.OrderPageResult;
 import com.tengan.mall.admin.application.port.OrderPort;
@@ -90,6 +91,26 @@ public class OrderAdapter implements OrderPort {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
                 .header("X-Identity-Assertion", "Bearer " + operatorToken)
                 .body(new AdminCancelOrderPayload(reason))
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    @Override
+    public FreightRuleItem getFreightRule() {
+        return orderRestClient.get()
+                .uri("/internal/orders/freight-rule")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .retrieve()
+                .body(FreightRuleItem.class);
+    }
+
+    @Override
+    public void updateFreightRule(FreightRuleItem item, String operatorToken) {
+        orderRestClient.put()
+                .uri("/internal/orders/freight-rule")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getAccessToken())
+                .header("X-Identity-Assertion", "Bearer " + operatorToken)
+                .body(item)
                 .retrieve()
                 .toBodilessEntity();
     }

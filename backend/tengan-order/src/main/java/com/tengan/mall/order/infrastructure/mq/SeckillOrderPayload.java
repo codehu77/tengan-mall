@@ -11,5 +11,5 @@ import java.util.List;
 public record SeckillOrderPayload(String orderSn, Long memberId, String paymentMethod, Long couponId,
         Integer pointsUsed, BigDecimal pointsDiscountAmount, String receiverName, String receiverPhone, String city,
         String district, String postalCode, String street, String remark, BigDecimal totalAmount,
-        BigDecimal discountAmount, BigDecimal payAmount, List<OrderItem> items) {
+        BigDecimal discountAmount, BigDecimal payAmount, BigDecimal shippingFee, List<OrderItem> items) {
 }

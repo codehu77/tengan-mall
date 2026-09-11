@@ -20,6 +20,7 @@ public class OrderPO {
     private BigDecimal totalAmount;
     private BigDecimal discountAmount;
     private BigDecimal payAmount;
+    private BigDecimal shippingFee;
     private String paymentMethod;
     private Long couponId;
     private Integer pointsUsed;
@@ -98,6 +99,14 @@ public class OrderPO {
 
     public void setPayAmount(BigDecimal payAmount) {
         this.payAmount = payAmount;
+    }
+
+    public BigDecimal getShippingFee() {
+        return shippingFee;
+    }
+
+    public void setShippingFee(BigDecimal shippingFee) {
+        this.shippingFee = shippingFee;
     }
 
     public String getPaymentMethod() {

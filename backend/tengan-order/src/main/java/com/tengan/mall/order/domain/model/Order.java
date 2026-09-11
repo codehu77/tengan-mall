@@ -20,6 +20,7 @@ public class Order {
     private final BigDecimal totalAmount;
     private final BigDecimal discountAmount;
     private final BigDecimal payAmount;
+    private final BigDecimal shippingFee;
     private final String paymentMethod;
     private final Long couponId;
     private final Integer pointsUsed;
@@ -36,10 +37,10 @@ public class Order {
     private final List<OrderItem> items;
 
     private Order(Long id, String orderSn, Long memberId, OrderStatus status, String cancelReason,
-            BigDecimal totalAmount, BigDecimal discountAmount, BigDecimal payAmount, String paymentMethod,
-            Long couponId, Integer pointsUsed, BigDecimal pointsDiscountAmount, String receiverName,
-            String receiverPhone, String city, String district, String postalCode, String street, String remark,
-            Instant receiptTime, Instant createdAt, List<OrderItem> items) {
+            BigDecimal totalAmount, BigDecimal discountAmount, BigDecimal payAmount, BigDecimal shippingFee,
+            String paymentMethod, Long couponId, Integer pointsUsed, BigDecimal pointsDiscountAmount,
+            String receiverName, String receiverPhone, String city, String district, String postalCode,
+            String street, String remark, Instant receiptTime, Instant createdAt, List<OrderItem> items) {
         this.id = id;
         this.orderSn = orderSn;
         this.memberId = memberId;
@@ -48,6 +49,7 @@ public class Order {
         this.totalAmount = totalAmount;
         this.discountAmount = discountAmount;
         this.payAmount = payAmount;
+        this.shippingFee = shippingFee;
         this.paymentMethod = paymentMethod;
         this.couponId = couponId;
         this.pointsUsed = pointsUsed;
@@ -67,20 +69,21 @@ public class Order {
     public static Order create(String orderSn, Long memberId, String paymentMethod, Long couponId,
             Integer pointsUsed, BigDecimal pointsDiscountAmount, String receiverName, String receiverPhone,
             String city, String district, String postalCode, String street, String remark, BigDecimal totalAmount,
-            BigDecimal discountAmount, BigDecimal payAmount, List<OrderItem> items) {
+            BigDecimal discountAmount, BigDecimal payAmount, BigDecimal shippingFee, List<OrderItem> items) {
         return new Order(null, orderSn, memberId, OrderStatus.PENDING_PAYMENT, null, totalAmount, discountAmount,
-                payAmount, paymentMethod, couponId, pointsUsed, pointsDiscountAmount, receiverName, receiverPhone,
-                city, district, postalCode, street, remark, null, Instant.now(), items);
+                payAmount, shippingFee, paymentMethod, couponId, pointsUsed, pointsDiscountAmount, receiverName,
+                receiverPhone, city, district, postalCode, street, remark, null, Instant.now(), items);
     }
 
     public static Order reconstitute(Long id, String orderSn, Long memberId, OrderStatus status,
             String cancelReason, BigDecimal totalAmount, BigDecimal discountAmount, BigDecimal payAmount,
-            String paymentMethod, Long couponId, Integer pointsUsed, BigDecimal pointsDiscountAmount,
-            String receiverName, String receiverPhone, String city, String district, String postalCode,
-            String street, String remark, Instant receiptTime, Instant createdAt, List<OrderItem> items) {
+            BigDecimal shippingFee, String paymentMethod, Long couponId, Integer pointsUsed,
+            BigDecimal pointsDiscountAmount, String receiverName, String receiverPhone, String city, String district,
+            String postalCode, String street, String remark, Instant receiptTime, Instant createdAt,
+            List<OrderItem> items) {
         return new Order(id, orderSn, memberId, status, cancelReason, totalAmount, discountAmount, payAmount,
-                paymentMethod, couponId, pointsUsed, pointsDiscountAmount, receiverName, receiverPhone, city,
-                district, postalCode, street, remark, receiptTime, createdAt, items);
+                shippingFee, paymentMethod, couponId, pointsUsed, pointsDiscountAmount, receiverName, receiverPhone,
+                city, district, postalCode, street, remark, receiptTime, createdAt, items);
     }
 
     public void assignId(Long id) {
@@ -120,6 +123,10 @@ public class Order {
 
     public BigDecimal getPayAmount() {
         return payAmount;
+    }
+
+    public BigDecimal getShippingFee() {
+        return shippingFee;
     }
 
     public String getPaymentMethod() {

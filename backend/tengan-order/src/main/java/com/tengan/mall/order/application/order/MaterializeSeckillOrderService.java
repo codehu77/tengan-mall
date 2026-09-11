@@ -49,7 +49,7 @@ public class MaterializeSeckillOrderService implements MaterializeSeckillOrderUs
                 command.couponId(), command.pointsUsed(), command.pointsDiscountAmount(), command.receiverName(),
                 command.receiverPhone(), command.city(), command.district(), command.postalCode(), command.street(),
                 command.remark(), command.totalAmount(), command.discountAmount(), command.payAmount(),
-                command.items());
+                command.shippingFee(), command.items());
         orderRepository.save(order);
 
         safely(() -> orderEventPort.publishOrderCreatedAndScheduleTimeout(command.orderSn()));

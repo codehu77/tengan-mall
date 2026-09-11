@@ -117,15 +117,15 @@
               </div>
               <div class="flex justify-between text-gray-400">
                 <span>運費</span>
-                <span>{{ checkedSubtotal >= 990 ? '免運' : 'NT$ 80' }}</span>
+                <span>{{ checkedSubtotal >= freightRule.freeShippingThreshold ? '免運' : `NT$ ${freightRule.shippingFee}` }}</span>
               </div>
               <div class="border-t border-gray-100 pt-2 flex justify-between font-medium text-base">
                 <span>合計</span>
                 <span class="text-red-600">NT$ {{ totalAmount.toLocaleString() }}</span>
               </div>
             </div>
-            <p v-if="checkedSubtotal > 0 && checkedSubtotal < 990" class="text-xs text-gray-400">
-              再購買 NT$ {{ (990 - checkedSubtotal).toLocaleString() }} 可享免運費
+            <p v-if="checkedSubtotal > 0 && checkedSubtotal < freightRule.freeShippingThreshold" class="text-xs text-gray-400">
+              再購買 NT$ {{ (freightRule.freeShippingThreshold - checkedSubtotal).toLocaleString() }} 可享免運費
             </p>
             <p v-if="hasCheckedStockIssue" class="text-xs text-red-500 text-right">
               勾選商品中有庫存不足的項目，請調整數量或取消勾選後再結算
@@ -158,6 +158,7 @@
 <script setup lang="ts">
 import type { CartItem } from '~/types/cart'
 import type { SkuStockInfo } from '~/composables/useInventory'
+import type { FreightRule } from '~/types/order'
 
 useHead({ title: '購物車' })
 
@@ -165,8 +166,11 @@ useHead({ title: '購物車' })
 const cartStore = useCartStore()
 const { fetchCartItems, removeFromCart, updateQty, toggleChecked, toggleAllChecked, removeCheckedItems } = useCart()
 const { fetchSkuStocks } = useInventory()
+const { fetchFreightRule } = useOrder()
 
 const items = ref<CartItem[]>(await fetchCartItems())
+// 免運門檻/運費由後台可即時調整，訪客也能看，不用登入才能查（見 GET /api/public/orders/freight-rule）。
+const freightRule = ref<FreightRule>(await fetchFreightRule())
 
 // 一般倉庫存（秒殺商品的名額語意是 item.seckillRemaining，不查這裡，見 stockShortage）——
 // 購物車頁本來完全沒接庫存校驗，「已無庫存的商品」是使用者實測抓到的真實缺口，這裡補上。
@@ -232,7 +236,8 @@ function unitPrice(item: CartItem) {
 const allChecked = computed(() => checkableItems.value.length > 0 && checkableItems.value.every(i => i.checked))
 const checkedCount = computed(() => items.value.filter(i => i.checked).reduce((sum, i) => sum + i.count, 0))
 const checkedSubtotal = computed(() => items.value.filter(i => i.checked).reduce((sum, i) => sum + unitPrice(i) * i.count, 0))
-const totalAmount = computed(() => checkedSubtotal.value + (checkedSubtotal.value > 0 && checkedSubtotal.value < 990 ? 80 : 0))
+const totalAmount = computed(() => checkedSubtotal.value
+  + (checkedSubtotal.value > 0 && checkedSubtotal.value < freightRule.value.freeShippingThreshold ? freightRule.value.shippingFee : 0))
 
 // 全選/全不選只作用在可勾選的項目上——後端 checked-all 端點是全域切換，沒有「排除無庫存」的概念，
 // 呼叫完之後要再跑一次 enforceStockCheckability 把被連帶勾選到的無庫存項目強制取消掉。

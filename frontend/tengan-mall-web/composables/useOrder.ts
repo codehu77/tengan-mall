@@ -1,6 +1,7 @@
 import type {
   CreateOrderPayload,
   CreateOrderResult,
+  FreightRule,
   OrderConfirmResult,
   OrderDetail,
   OrderProcessing,
@@ -41,6 +42,10 @@ export function useOrder() {
     return fetch('/api/coupons/available', { query: { amount } })
   }
 
+  async function fetchFreightRule(): Promise<FreightRule> {
+    return fetch('/api/orders/freight-rule')
+  }
+
   return {
     confirmOrder,
     createOrder,
@@ -49,5 +54,6 @@ export function useOrder() {
     cancelOrder,
     confirmReceipt,
     fetchAvailableCoupons,
+    fetchFreightRule,
   }
 }

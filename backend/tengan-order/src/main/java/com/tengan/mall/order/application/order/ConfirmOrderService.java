@@ -7,6 +7,7 @@ import com.tengan.mall.order.application.port.PricedSkuInfo;
 import com.tengan.mall.order.application.port.ProductPort;
 import com.tengan.mall.order.application.port.SeckillPort;
 import com.tengan.mall.order.domain.exception.EmptyCartException;
+import com.tengan.mall.order.domain.repository.FreightRuleRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -30,13 +31,15 @@ public class ConfirmOrderService implements ConfirmOrderUseCase {
     private final ProductPort productPort;
     private final SeckillPort seckillPort;
     private final OrderTokenPort orderTokenPort;
+    private final FreightRuleRepository freightRuleRepository;
 
     public ConfirmOrderService(CartPort cartPort, ProductPort productPort, SeckillPort seckillPort,
-            OrderTokenPort orderTokenPort) {
+            OrderTokenPort orderTokenPort, FreightRuleRepository freightRuleRepository) {
         this.cartPort = cartPort;
         this.productPort = productPort;
         this.seckillPort = seckillPort;
         this.orderTokenPort = orderTokenPort;
+        this.freightRuleRepository = freightRuleRepository;
     }
 
     @Override
@@ -62,8 +65,9 @@ public class ConfirmOrderService implements ConfirmOrderUseCase {
 
         BigDecimal totalAmount = items.stream().map(ConfirmedItemView::subtotal).reduce(BigDecimal.ZERO,
                 BigDecimal::add);
+        BigDecimal shippingFee = freightRuleRepository.get().computeFee(totalAmount);
 
         String orderToken = orderTokenPort.issue(memberId);
-        return new OrderConfirmResult(orderToken, items, totalAmount);
+        return new OrderConfirmResult(orderToken, items, totalAmount, shippingFee);
     }
 }

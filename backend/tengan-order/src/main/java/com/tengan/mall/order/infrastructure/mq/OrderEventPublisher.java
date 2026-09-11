@@ -41,7 +41,8 @@ public class OrderEventPublisher implements OrderEventPort {
                 order.getPaymentMethod(), order.getCouponId(), order.getPointsUsed(),
                 order.getPointsDiscountAmount(), order.getReceiverName(), order.getReceiverPhone(), order.getCity(),
                 order.getDistrict(), order.getPostalCode(), order.getStreet(), order.getRemark(),
-                order.getTotalAmount(), order.getDiscountAmount(), order.getPayAmount(), order.getItems());
+                order.getTotalAmount(), order.getDiscountAmount(), order.getPayAmount(), order.getShippingFee(),
+                order.getItems());
         rabbitTemplate.convertAndSend(RabbitConfig.ORDER_EVENT_EXCHANGE, RabbitConfig.ROUTING_KEY_SECKILL_ORDER,
                 payload);
     }

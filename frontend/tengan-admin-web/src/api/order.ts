@@ -47,6 +47,7 @@ export type OrderDetail = {
   totalAmount: number;
   discountAmount: number;
   payAmount: number;
+  shippingFee: number;
   paymentMethod: string;
   couponId?: number;
   receiverName: string;
@@ -73,4 +74,17 @@ export const cancelOrder = (orderSn: string, reason: string) => {
   return http.request<void>("put", `/api/admin/orders/${orderSn}/cancel`, {
     data: { reason }
   });
+};
+
+export type FreightRule = {
+  freeShippingThreshold: number;
+  shippingFee: number;
+};
+
+export const getFreightRule = () => {
+  return http.request<FreightRule>("get", "/api/admin/orders/freight-rule");
+};
+
+export const updateFreightRule = (rule: FreightRule) => {
+  return http.request<void>("put", "/api/admin/orders/freight-rule", { data: rule });
 };

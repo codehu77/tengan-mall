@@ -22,6 +22,7 @@ import com.tengan.mall.order.domain.exception.PurchaseLimitExceededException;
 import com.tengan.mall.order.domain.exception.SkuNotYetOnSaleException;
 import com.tengan.mall.order.domain.model.Order;
 import com.tengan.mall.order.domain.model.OrderItem;
+import com.tengan.mall.order.domain.repository.FreightRuleRepository;
 import com.tengan.mall.order.domain.repository.OrderRepository;
 import com.tengan.mall.snowflake.SnowflakeIdGenerator;
 import java.math.BigDecimal;
@@ -64,11 +65,13 @@ public class CreateOrderService implements CreateOrderUseCase {
     private final OrderRepository orderRepository;
     private final OrderEventPort orderEventPort;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
+    private final FreightRuleRepository freightRuleRepository;
 
     public CreateOrderService(OrderTokenPort orderTokenPort, CartPort cartPort, ProductPort productPort,
             CouponPort couponPort, WalletPort walletPort, InventoryPort inventoryPort, SeckillPort seckillPort,
             SeckillOrderPendingPort seckillOrderPendingPort, OrderRepository orderRepository,
-            OrderEventPort orderEventPort, SnowflakeIdGenerator snowflakeIdGenerator) {
+            OrderEventPort orderEventPort, SnowflakeIdGenerator snowflakeIdGenerator,
+            FreightRuleRepository freightRuleRepository) {
         this.orderTokenPort = orderTokenPort;
         this.cartPort = cartPort;
         this.productPort = productPort;
@@ -80,6 +83,7 @@ public class CreateOrderService implements CreateOrderUseCase {
         this.orderRepository = orderRepository;
         this.orderEventPort = orderEventPort;
         this.snowflakeIdGenerator = snowflakeIdGenerator;
+        this.freightRuleRepository = freightRuleRepository;
     }
 
     @Override
@@ -111,6 +115,7 @@ public class CreateOrderService implements CreateOrderUseCase {
         }).toList();
         BigDecimal totalAmount = orderItems.stream().map(OrderItem::subtotal).reduce(BigDecimal.ZERO,
                 BigDecimal::add);
+        BigDecimal shippingFee = freightRuleRepository.get().computeFee(totalAmount);
 
         // 3. 若帶 couponId，向 tengan-coupon 驗證+算折扣（服務對服務，不信任前端送來的折扣值）
         BigDecimal discountAmount = BigDecimal.ZERO;
@@ -180,12 +185,12 @@ public class CreateOrderService implements CreateOrderUseCase {
                 compensations.push(() -> walletPort.revert(memberId, orderSn));
             }
 
-            payAmount = totalAmount.subtract(discountAmount).subtract(pointsDiscountAmount);
+            payAmount = totalAmount.subtract(discountAmount).subtract(pointsDiscountAmount).add(shippingFee);
             ReceiverInfo receiver = command.receiverInfo();
             Order order = Order.create(orderSn, command.memberId(), command.paymentMethod(), command.couponId(),
                     command.pointsUsed(), pointsDiscountAmount, receiver.receiverName(), receiver.receiverPhone(),
                     receiver.city(), receiver.district(), receiver.postalCode(), receiver.street(), command.remark(),
-                    totalAmount, discountAmount, payAmount, orderItems);
+                    totalAmount, discountAmount, payAmount, shippingFee, orderItems);
 
             if (activeSeckillBySkuId.isEmpty()) {
                 // 一般訂單：只有這裡碰資料庫，且只有這裡（OrderRepositoryImpl.save）標 @Transactional

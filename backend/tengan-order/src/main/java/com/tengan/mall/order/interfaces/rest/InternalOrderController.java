@@ -12,14 +12,19 @@ import com.tengan.mall.order.application.admin.ShipOrderUseCase;
 import com.tengan.mall.order.application.order.CloseOrderIfUnpaidUseCase;
 import com.tengan.mall.order.application.order.MarkOrderPaidUseCase;
 import com.tengan.mall.order.application.order.OrderItemView;
+import com.tengan.mall.order.application.rule.GetFreightRuleUseCase;
+import com.tengan.mall.order.application.rule.UpdateFreightRuleCommand;
+import com.tengan.mall.order.application.rule.UpdateFreightRuleUseCase;
 import com.tengan.mall.order.interfaces.rest.dto.AdminCancelOrderRequest;
 import com.tengan.mall.order.interfaces.rest.dto.DailyRevenuePointResponse;
+import com.tengan.mall.order.interfaces.rest.dto.FreightRuleResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderDetailResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderItemResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderListResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderStatsTodayResponse;
 import com.tengan.mall.order.interfaces.rest.dto.OrderSummaryResponse;
 import com.tengan.mall.order.interfaces.rest.dto.RevenueTrendResponse;
+import com.tengan.mall.order.interfaces.rest.dto.UpdateFreightRuleRequest;
 import com.tengan.mall.jwt.IdentityAssertionVerifier;
 import jakarta.validation.Valid;
 import java.time.Instant;
@@ -49,13 +54,16 @@ public class InternalOrderController {
     private final AdminCancelOrderUseCase adminCancelOrderUseCase;
     private final CloseOrderIfUnpaidUseCase closeOrderIfUnpaidUseCase;
     private final MarkOrderPaidUseCase markOrderPaidUseCase;
+    private final GetFreightRuleUseCase getFreightRuleUseCase;
+    private final UpdateFreightRuleUseCase updateFreightRuleUseCase;
     private final IdentityAssertionVerifier adminIdentityAssertionVerifier;
 
     public InternalOrderController(AdminListOrdersUseCase adminListOrdersUseCase,
             AdminGetOrderDetailUseCase adminGetOrderDetailUseCase, GetOrderStatsTodayUseCase getOrderStatsTodayUseCase,
             GetRevenueTrendUseCase getRevenueTrendUseCase, ShipOrderUseCase shipOrderUseCase,
             AdminCancelOrderUseCase adminCancelOrderUseCase, CloseOrderIfUnpaidUseCase closeOrderIfUnpaidUseCase,
-            MarkOrderPaidUseCase markOrderPaidUseCase,
+            MarkOrderPaidUseCase markOrderPaidUseCase, GetFreightRuleUseCase getFreightRuleUseCase,
+            UpdateFreightRuleUseCase updateFreightRuleUseCase,
             @Qualifier("adminIdentityAssertionVerifier") IdentityAssertionVerifier adminIdentityAssertionVerifier) {
         this.adminListOrdersUseCase = adminListOrdersUseCase;
         this.adminGetOrderDetailUseCase = adminGetOrderDetailUseCase;
@@ -65,6 +73,8 @@ public class InternalOrderController {
         this.adminCancelOrderUseCase = adminCancelOrderUseCase;
         this.closeOrderIfUnpaidUseCase = closeOrderIfUnpaidUseCase;
         this.markOrderPaidUseCase = markOrderPaidUseCase;
+        this.getFreightRuleUseCase = getFreightRuleUseCase;
+        this.updateFreightRuleUseCase = updateFreightRuleUseCase;
         this.adminIdentityAssertionVerifier = adminIdentityAssertionVerifier;
     }
 
@@ -87,7 +97,7 @@ public class InternalOrderController {
         var d = adminGetOrderDetailUseCase.get(orderSn);
         var items = toItemResponses(d.items());
         return new OrderDetailResponse(d.id(), d.orderSn(), d.memberId(), d.status(), d.cancelReason(),
-                d.totalAmount(), d.discountAmount(), d.payAmount(), d.paymentMethod(), d.couponId(),
+                d.totalAmount(), d.discountAmount(), d.payAmount(), d.shippingFee(), d.paymentMethod(), d.couponId(),
                 d.pointsUsed(), d.pointsDiscountAmount(), d.receiverName(), d.receiverPhone(), d.city(),
                 d.district(), d.postalCode(), d.street(), d.remark(), d.receiptTime(), d.createdAt(), items);
     }
@@ -139,6 +149,25 @@ public class InternalOrderController {
     @PreAuthorize("hasAuthority('SCOPE_order.write')")
     public ResponseEntity<Void> markPaid(@PathVariable String orderSn) {
         markOrderPaidUseCase.markPaid(orderSn);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 供 tengan-admin「運費設定」頁讀取目前門檻/運費。 */
+    @GetMapping("/freight-rule")
+    @PreAuthorize("hasAuthority('SCOPE_order.read')")
+    public FreightRuleResponse getFreightRule() {
+        var r = getFreightRuleUseCase.get();
+        return new FreightRuleResponse(r.freeShippingThreshold(), r.shippingFee());
+    }
+
+    /** 供 tengan-admin「運費設定」頁修改，改完立刻生效，不需要重啟服務。 */
+    @PutMapping("/freight-rule")
+    @PreAuthorize("hasAuthority('SCOPE_order.write')")
+    public ResponseEntity<Void> updateFreightRule(@RequestHeader("X-Identity-Assertion") String identityAssertion,
+            @Valid @RequestBody UpdateFreightRuleRequest request) {
+        operator(identityAssertion);
+        updateFreightRuleUseCase
+                .update(new UpdateFreightRuleCommand(request.freeShippingThreshold(), request.shippingFee()));
         return ResponseEntity.noContent().build();
     }
 

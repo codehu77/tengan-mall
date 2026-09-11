@@ -65,7 +65,7 @@ public class CustomerOrderController {
                 .map(i -> new ConfirmedItemResponse(i.skuId(), i.spuId(), i.name(), i.mainImage(), i.price(),
                         i.count(), i.subtotal()))
                 .toList();
-        return new OrderConfirmResponse(result.orderToken(), items, result.totalAmount());
+        return new OrderConfirmResponse(result.orderToken(), items, result.totalAmount(), result.shippingFee());
     }
 
     @PostMapping
@@ -96,7 +96,7 @@ public class CustomerOrderController {
     public OrderDetailResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable String orderSn) {
         var d = getMyOrderDetailUseCase.get(memberId(jwt), orderSn);
         return new OrderDetailResponse(d.id(), d.orderSn(), d.memberId(), d.status(), d.cancelReason(),
-                d.totalAmount(), d.discountAmount(), d.payAmount(), d.paymentMethod(), d.couponId(),
+                d.totalAmount(), d.discountAmount(), d.payAmount(), d.shippingFee(), d.paymentMethod(), d.couponId(),
                 d.pointsUsed(), d.pointsDiscountAmount(), d.receiverName(), d.receiverPhone(), d.city(),
                 d.district(), d.postalCode(), d.street(), d.remark(), d.receiptTime(), d.createdAt(),
                 toItemResponses(d.items()));

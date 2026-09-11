@@ -64,7 +64,7 @@ public class OrderQueryAdapter implements OrderQueryPort {
                 .toList();
         return Optional.of(new OrderDetailView(po.getId(), po.getOrderSn(), po.getMemberId(),
                 po.getStatus().getValue(), po.getCancelReason(), po.getTotalAmount(), po.getDiscountAmount(),
-                po.getPayAmount(), po.getPaymentMethod(), po.getCouponId(), po.getPointsUsed(),
+                po.getPayAmount(), po.getShippingFee(), po.getPaymentMethod(), po.getCouponId(), po.getPointsUsed(),
                 po.getPointsDiscountAmount(), po.getReceiverName(), po.getReceiverPhone(), po.getCity(),
                 po.getDistrict(), po.getPostalCode(), po.getStreet(), po.getRemark(),
                 toInstant(po.getReceiptTime()), toInstant(po.getCreatedAt()), items));
@@ -110,7 +110,8 @@ public class OrderQueryAdapter implements OrderQueryPort {
     public List<PointsGrantCandidate> findPendingPointsCredit(Instant cutoff, int limit) {
         LocalDateTime cutoffDateTime = cutoff.atZone(ZoneId.systemDefault()).toLocalDateTime();
         return orderMapper.findPendingPointsCredit(cutoffDateTime, limit).stream()
-                .map(po -> new PointsGrantCandidate(po.getOrderSn(), po.getMemberId(), po.getPayAmount()))
+                .map(po -> new PointsGrantCandidate(po.getOrderSn(), po.getMemberId(), po.getPayAmount(),
+                        po.getShippingFee()))
                 .toList();
     }
 

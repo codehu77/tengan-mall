@@ -23,6 +23,6 @@ public class SeckillOrderListener {
                 payload.memberId(), payload.paymentMethod(), payload.couponId(), payload.pointsUsed(),
                 payload.pointsDiscountAmount(), payload.receiverName(), payload.receiverPhone(), payload.city(),
                 payload.district(), payload.postalCode(), payload.street(), payload.remark(), payload.totalAmount(),
-                payload.discountAmount(), payload.payAmount(), payload.items()));
+                payload.discountAmount(), payload.payAmount(), payload.shippingFee(), payload.items()));
     }
 }

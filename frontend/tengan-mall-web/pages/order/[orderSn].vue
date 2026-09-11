@@ -135,6 +135,11 @@
                 <span class="font-semibold text-red-500">- NT$ {{ order.pointsDiscountAmount.toLocaleString() }}</span>
               </div>
 
+              <div class="flex justify-between items-center text-base text-gray-700">
+                <span>運費</span>
+                <span class="font-semibold">{{ order.shippingFee > 0 ? `NT$ ${order.shippingFee.toLocaleString()}` : '免運' }}</span>
+              </div>
+
             </div>
 
             <div class="border-t border-gray-200 mt-4 pt-4 flex justify-between items-center">

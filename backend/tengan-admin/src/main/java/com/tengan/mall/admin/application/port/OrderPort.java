@@ -17,4 +17,8 @@ public interface OrderPort {
     void shipOrder(String orderSn, String operatorToken);
 
     void cancelOrder(String orderSn, String reason, String operatorToken);
+
+    FreightRuleItem getFreightRule();
+
+    void updateFreightRule(FreightRuleItem item, String operatorToken);
 }

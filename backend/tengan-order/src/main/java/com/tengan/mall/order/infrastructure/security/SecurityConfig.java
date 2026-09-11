@@ -19,7 +19,7 @@ public class SecurityConfig {
     @Bean
     @Order(1)
     public SecurityFilterChain publicChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/actuator/**")
+        http.securityMatcher("/api/public/**", "/actuator/**")
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
