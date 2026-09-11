@@ -170,7 +170,10 @@ function handleEditorCreated(editor: IDomEditor) {
   editorRef.value = editor;
 }
 onBeforeUnmount(() => {
-  editorRef.value?.destroy();
+  const editor = editorRef.value;
+  if (editor == null) return;
+  editor.destroy();
+  editorRef.value = undefined;
 });
 
 const previewVisible = ref(false);
@@ -600,7 +603,9 @@ onMounted(async () => {
         </div>
       </el-form-item>
       <el-form-item label="描述">
-        <div style="width: 100%; border: 1px solid #dcdfe6">
+        <!-- 編輯模式下要等 onMounted 撈到既有描述才知道內容，若編輯器先建立、內容才整段換掉，
+             Slate 內部的非同步 DOM 對應還沒跑完，此時若很快點取消觸發 editor.destroy() 就會卡死。 -->
+        <div v-if="!loading" style="width: 100%; border: 1px solid #dcdfe6">
           <Toolbar
             :editor="editorRef"
             :defaultConfig="toolbarConfig"
