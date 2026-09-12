@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
  * <p>{@code Jackson2JsonMessageConverter} 預設用訊息裡的 {@code __TypeId__} header（發布端的完整
  * class name）反查目標型別，但 tengan-product 的事件類別在 tengan-search 這邊根本不存在，會直接
  * ClassNotFoundException。設成 {@code TypePrecedence.INFERRED} 讓它改用 {@code @RabbitListener}
- * 方法簽章宣告的參數型別，兩邊只靠 JSON 欄位名稱對齊，不共用型別（見 SkuUpsertPayload 註解）。</p>
+ * 方法簽章宣告的參數型別，兩邊只靠 JSON 欄位名稱對齊，不共用型別（見 SpuUpsertPayload 註解）。</p>
  */
 @Configuration
 public class RabbitConfig {

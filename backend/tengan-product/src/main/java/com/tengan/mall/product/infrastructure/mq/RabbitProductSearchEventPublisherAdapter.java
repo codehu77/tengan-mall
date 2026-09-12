@@ -1,7 +1,7 @@
 package com.tengan.mall.product.infrastructure.mq;
 
 import com.tengan.mall.product.application.spu.ProductSearchEventPublisherPort;
-import com.tengan.mall.product.application.spu.SkuSearchDocumentPayload;
+import com.tengan.mall.product.application.spu.SpuSearchDocumentPayload;
 import java.util.List;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -16,12 +16,9 @@ public class RabbitProductSearchEventPublisherAdapter implements ProductSearchEv
     }
 
     @Override
-    public void publishUpserted(List<SkuSearchDocumentPayload> skus) {
-        if (skus.isEmpty()) {
-            return;
-        }
+    public void publishUpserted(SpuSearchDocumentPayload spu) {
         rabbitTemplate.convertAndSend(RabbitConfig.PRODUCT_SEARCH_EXCHANGE, RabbitConfig.ROUTING_KEY_UPSERTED,
-                new ProductUpsertedEvent(skus));
+                new ProductUpsertedEvent(spu));
     }
 
     @Override

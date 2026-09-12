@@ -16,6 +16,8 @@ export interface Product {
   spuId?: number
   skuName: string
   price: number
+  /** 商品底下最高規格的價格，只在 > price 時才有意義；有值時卡片顯示「price 起」。 */
+  maxPrice?: number
   skuDefaultImg: string
   saleCount: number
   categoryId: number

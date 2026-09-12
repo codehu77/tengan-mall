@@ -1,7 +1,6 @@
 package com.tengan.mall.product.infrastructure.mq;
 
-import com.tengan.mall.product.application.spu.SkuSearchDocumentPayload;
-import java.util.List;
+import com.tengan.mall.product.application.spu.SpuSearchDocumentPayload;
 
-public record ProductUpsertedEvent(List<SkuSearchDocumentPayload> skus) {
+public record ProductUpsertedEvent(SpuSearchDocumentPayload spu) {
 }

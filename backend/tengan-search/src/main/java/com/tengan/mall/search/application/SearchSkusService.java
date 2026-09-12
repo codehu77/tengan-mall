@@ -1,16 +1,14 @@
 package com.tengan.mall.search.application;
 
-import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
 import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
 import co.elastic.clients.elasticsearch._types.aggregations.LongTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.FieldValueFactorModifier;
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch.core.search.FieldCollapse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +26,15 @@ import org.springframework.stereotype.Service;
  * 搜尋+聚合合併成一支查詢——Repository 介面對巢狀聚合支援有限，這裡直接用 ElasticsearchOperations
  * + NativeQuery 手動組 bool query + 聚合。catId 不管前端點第幾層分類，都用同一個邏輯比對
  * catalog1Id/catalog2Id/catalog3Id 三個欄位（bool should），對齊「不用應用層展開分類樹」的設計。
+ *
+ * <p>索引單位是 SPU（一份文件一個商品），不需要 field collapse 摺疊代表值——minPrice/maxPrice
+ * 是索引階段就算好的彙總欄位，一份文件本來就對應一個 SPU，hits.getTotalHits() 直接就是符合條件的
+ * SPU 數，不用再另外用 cardinality aggregation 算。</p>
+ *
+ * <p>屬性篩選分兩種：BASE 屬性是 SPU 層級（單層 nested，邏輯跟改版前一樣），SALE 屬性是規格層級，
+ * 掛在 skus 底下（nested-in-nested）——多個 SALE 條件必須合併進「同一個」nested(path="skus")
+ * 查詢裡一起判斷，不能各自包成獨立的 filter，否則會發生「顏色=A 的規格」跟「容量=B 的規格」各自
+ * 存在、卻被誤判成「同一顆規格同時是 A 顏色又是 B 容量」的組合。</p>
  */
 @Service
 public class SearchSkusService implements SearchSkusUseCase {
@@ -35,6 +42,7 @@ public class SearchSkusService implements SearchSkusUseCase {
     private static final int BRAND_AGG_SIZE = 30;
     private static final int ATTR_ID_AGG_SIZE = 30;
     private static final int ATTR_VALUE_AGG_SIZE = 30;
+    private static final String SALE_ATTR_PREFIX = "SALE-";
 
     private final ElasticsearchOperations elasticsearchOperations;
 
@@ -54,41 +62,34 @@ public class SearchSkusService implements SearchSkusUseCase {
         String sortKey = query.sort() == null ? SORT_DEFAULT : query.sort();
         Query esQuery = SORT_DEFAULT.equals(sortKey) ? withSaleCountBoost(baseQuery) : baseQuery;
 
-        // field collapse 依 spuId 分組，一顆 SPU 只回傳一筆代表 hit（列表卡片是商品層級，不是每個
-        // SKU 變體各自一張卡）——同一 SPU 底下所有 SKU 依照後台建立商品的慣例本來就同價（見
-        // backend_dev_plan 08-06 的 MOMO 討論），代表 hit 選哪一顆不影響顯示的價格，維持原本排序
-        // 邏輯（不含關鍵字時走相關度）即可，不用另外為了「選代表」而覆蓋使用者的排序選擇。
         NativeQuery nativeQuery = NativeQuery.builder()
                 .withQuery(esQuery)
                 .withPageable(PageRequest.of(Math.max(query.page() - 1, 0), query.pageSize(), buildSort(query)))
-                .withFieldCollapse(FieldCollapse.of(fc -> fc.field("spuId")))
                 .withAggregation("brand_agg", buildBrandAggregation())
-                .withAggregation("attr_agg", buildAttrAggregation())
-                .withAggregation("spu_total_agg", buildSpuTotalAggregation())
+                .withAggregation("base_attr_agg", buildBaseAttrAggregation())
+                .withAggregation("sale_attr_agg", buildSaleAttrAggregation())
                 .build();
 
-        SearchHits<SkuSearchDocument> hits = elasticsearchOperations.search(nativeQuery, SkuSearchDocument.class);
+        SearchHits<SpuSearchDocument> hits = elasticsearchOperations.search(nativeQuery, SpuSearchDocument.class);
 
-        List<SkuSearchItem> items = hits.getSearchHits().stream().map(this::toItem).toList();
+        List<SpuSearchItem> items = hits.getSearchHits().stream().map(this::toItem).toList();
         Map<String, Aggregate> aggs = extractAggregates(hits);
         SearchAggregations aggregations = toAggregations(aggs);
-        // collapse 後 hits.getTotalHits() 還是符合查詢條件的 SKU 文件數，不是 distinct SPU
-        // 數——分頁筆數要準確，總數必須另外用 cardinality aggregation 算，不能沿用舊的
-        // hits.getTotalHits()。
-        long total = extractSpuTotal(aggs, hits.getTotalHits());
 
-        return new SearchSkusResult(items, total, query.page(), query.pageSize(), aggregations);
-    }
-
-    private Aggregation buildSpuTotalAggregation() {
-        return Aggregation.of(a -> a.cardinality(c -> c.field("spuId")));
+        return new SearchSkusResult(items, hits.getTotalHits(), query.page(), query.pageSize(), aggregations);
     }
 
     private Query buildQuery(SearchSkusQuery query) {
         BoolQuery.Builder bool = new BoolQuery.Builder();
 
         if (query.keyword() != null && !query.keyword().isBlank()) {
-            bool.must(m -> m.multiMatch(mm -> mm.query(query.keyword()).fields("skuName", "spuName")));
+            // 商品名或任一規格名命中都算——spuName 是頂層欄位，skuName 掛在 nested 的 skus 底下，
+            // 兩邊各包一個 should，只要其中一邊命中就算符合。
+            bool.must(m -> m.bool(b -> b
+                    .should(s -> s.multiMatch(mm -> mm.query(query.keyword()).fields("spuName")))
+                    .should(s -> s.nested(n -> n.path("skus")
+                            .query(nq -> nq.multiMatch(mm -> mm.query(query.keyword()).fields("skus.skuName")))))
+                    .minimumShouldMatch("1")));
         }
 
         if (query.brandIds() != null && !query.brandIds().isEmpty()) {
@@ -105,15 +106,35 @@ public class SearchSkusService implements SearchSkusUseCase {
         }
 
         if (query.attrs() != null) {
+            List<Query> saleAttrConditions = new ArrayList<>();
             for (Map.Entry<String, List<String>> entry : query.attrs().entrySet()) {
                 if (entry.getValue() == null || entry.getValue().isEmpty()) {
                     continue;
                 }
+                String attrKey = entry.getKey();
                 List<FieldValue> values = entry.getValue().stream().map(FieldValue::of).toList();
-                bool.filter(f -> f.nested(n -> n.path("attrs")
-                        .query(nq -> nq.bool(nb -> nb
-                                .must(nm -> nm.term(t -> t.field("attrs.attrKey").value(entry.getKey())))
-                                .must(nm -> nm.terms(t -> t.field("attrs.attrValue").terms(tt -> tt.value(values))))))));
+                if (attrKey.startsWith(SALE_ATTR_PREFIX)) {
+                    saleAttrConditions.add(Query.of(q -> q.nested(n -> n.path("skus.saleAttrs")
+                            .query(nq -> nq.bool(nb -> nb
+                                    .must(nm -> nm.term(t -> t.field("skus.saleAttrs.attrKey").value(attrKey)))
+                                    .must(nm -> nm.terms(
+                                            t -> t.field("skus.saleAttrs.attrValue").terms(tt -> tt.value(values))))))
+                    )));
+                } else {
+                    bool.filter(f -> f.nested(n -> n.path("baseAttrs")
+                            .query(nq -> nq.bool(nb -> nb
+                                    .must(nm -> nm.term(t -> t.field("baseAttrs.attrKey").value(attrKey)))
+                                    .must(nm -> nm.terms(
+                                            t -> t.field("baseAttrs.attrValue").terms(tt -> tt.value(values))))))));
+                }
+            }
+            // 所有 SALE 條件包進「同一個」nested(path="skus")，內層再各自 nested(path="skus.saleAttrs")——
+            // 這樣 ES 才會在「同一顆規格」的範圍內同時檢查 must 的每一個條件，而不是分別在不同規格上各自成立。
+            if (!saleAttrConditions.isEmpty()) {
+                BoolQuery.Builder skusInnerBool = new BoolQuery.Builder();
+                saleAttrConditions.forEach(skusInnerBool::must);
+                BoolQuery innerBool = skusInnerBool.build();
+                bool.filter(f -> f.nested(n -> n.path("skus").query(nq -> nq.bool(innerBool))));
             }
         }
 
@@ -139,7 +160,8 @@ public class SearchSkusService implements SearchSkusUseCase {
     private Sort buildSort(SearchSkusQuery query) {
         String field = switch (query.sort() == null ? "default" : query.sort()) {
             case "sale" -> "saleCount";
-            case "price" -> "price";
+            // 排序依據跟卡片上顯示的數字保持一致——起價就是 minPrice，asc/desc 都排這個欄位。
+            case "price" -> "minPrice";
             default -> null;
         };
         if (field == null) {
@@ -155,28 +177,51 @@ public class SearchSkusService implements SearchSkusUseCase {
                 .aggregations("brand_name", Aggregation.of(a2 -> a2.terms(t2 -> t2.field("brandName").size(1)))));
     }
 
-    private Aggregation buildAttrAggregation() {
+    private Aggregation buildBaseAttrAggregation() {
+        Aggregation byValue = Aggregation.of(a -> a
+                .terms(t -> t.field("baseAttrs.attrValue").size(ATTR_VALUE_AGG_SIZE)));
+        Aggregation attrName = Aggregation.of(a -> a.terms(t -> t.field("baseAttrs.attrName").size(1)));
+        Aggregation byAttrKey = Aggregation.of(a -> a
+                .terms(t -> t.field("baseAttrs.attrKey").size(ATTR_ID_AGG_SIZE))
+                .aggregations("attr_name", attrName)
+                .aggregations("by_value", byValue));
         return Aggregation.of(a -> a
-                .nested(n -> n.path("attrs"))
-                .aggregations("by_attr_key", Aggregation.of(a2 -> a2
-                        .terms(t -> t.field("attrs.attrKey").size(ATTR_ID_AGG_SIZE))
-                        .aggregations("attr_name",
-                                Aggregation.of(a3 -> a3.terms(t3 -> t3.field("attrs.attrName").size(1))))
-                        .aggregations("by_value",
-                                Aggregation.of(a4 -> a4.terms(t4 -> t4.field("attrs.attrValue").size(ATTR_VALUE_AGG_SIZE)))))));
+                .nested(n -> n.path("baseAttrs"))
+                .aggregations("by_attr_key", byAttrKey));
     }
 
-    private SkuSearchItem toItem(SearchHit<SkuSearchDocument> hit) {
-        SkuSearchDocument d = hit.getContent();
-        // 列表卡片是 collapse 後的商品層級呈現，圖片用 SPU 主圖，不是代表 hit 剛好選中的那顆 SKU 的圖；
-        // spuMainImage 是後補欄位，舊資料重建索引前可能還沒有值，退回 sku 自己的圖當備援。
-        String image = (d.getSpuMainImage() != null && !d.getSpuMainImage().isBlank())
-                ? d.getSpuMainImage() : d.getMainImage();
-        return new SkuSearchItem(d.getSkuId(), d.getSpuId(), d.getSkuName(), d.getSpuName(), d.getPrice(), image,
-                d.getSaleCount() == null ? 0 : d.getSaleCount(), d.getBrandId(), d.getBrandName(), d.getCatalog1Id());
+    /**
+     * SALE 屬性掛在 nested 的 skus 底下、saleAttrs 又是 nested-in-nested，terms 聚合預設的
+     * docCount 是「符合條件的 nested sku/saleAttr 子文件數」——同一個 SPU 可能有兩顆規格都是黑色，
+     * 不處理的話「黑色 (2)」會誤導成兩件商品。用 reverse_nested（不指定 path，直接跳回根文件層級）
+     * 把計數還原成「符合條件的 SPU 數」。
+     */
+    private Aggregation buildSaleAttrAggregation() {
+        Aggregation spuCount = Aggregation.of(a -> a.reverseNested(rn -> rn));
+        Aggregation byValue = Aggregation.of(a -> a
+                .terms(t -> t.field("skus.saleAttrs.attrValue").size(ATTR_VALUE_AGG_SIZE))
+                .aggregations("spu_count", spuCount));
+        Aggregation attrName = Aggregation.of(a -> a.terms(t -> t.field("skus.saleAttrs.attrName").size(1)));
+        Aggregation byAttrKey = Aggregation.of(a -> a
+                .terms(t -> t.field("skus.saleAttrs.attrKey").size(ATTR_ID_AGG_SIZE))
+                .aggregations("attr_name", attrName)
+                .aggregations("by_value", byValue));
+        Aggregation toSaleAttrs = Aggregation.of(a -> a
+                .nested(n -> n.path("skus.saleAttrs"))
+                .aggregations("by_attr_key", byAttrKey));
+        return Aggregation.of(a -> a
+                .nested(n -> n.path("skus"))
+                .aggregations("to_sale_attrs", toSaleAttrs));
     }
 
-    private Map<String, Aggregate> extractAggregates(SearchHits<SkuSearchDocument> hits) {
+    private SpuSearchItem toItem(SearchHit<SpuSearchDocument> hit) {
+        SpuSearchDocument d = hit.getContent();
+        return new SpuSearchItem(d.getSpuId(), d.getSpuName(), d.getMinPrice(), d.getMaxPrice(), d.getSpuMainImage(),
+                d.getSaleCount() == null ? 0 : d.getSaleCount(), d.getBrandId(), d.getBrandName(),
+                d.getCatalog1Id());
+    }
+
+    private Map<String, Aggregate> extractAggregates(SearchHits<SpuSearchDocument> hits) {
         AggregationsContainer<?> container = hits.getAggregations();
         if (container instanceof ElasticsearchAggregations esAggs) {
             return esAggs.aggregations().stream()
@@ -184,11 +229,6 @@ public class SearchSkusService implements SearchSkusUseCase {
                             a -> a.aggregation().getAggregate()));
         }
         return Map.of();
-    }
-
-    private long extractSpuTotal(Map<String, Aggregate> aggs, long fallback) {
-        Aggregate agg = aggs.get("spu_total_agg");
-        return agg != null && agg.isCardinality() ? agg.cardinality().value() : fallback;
     }
 
     private SearchAggregations toAggregations(Map<String, Aggregate> aggs) {
@@ -202,25 +242,63 @@ public class SearchSkusService implements SearchSkusUseCase {
         }
 
         List<AttrAggItem> attrs = new ArrayList<>();
-        Aggregate attrAgg = aggs.get("attr_agg");
-        if (attrAgg != null && attrAgg.isNested()) {
-            Aggregate byAttrKey = attrAgg.nested().aggregations().get("by_attr_key");
-            if (byAttrKey != null && byAttrKey.isSterms()) {
-                for (StringTermsBucket bucket : byAttrKey.sterms().buckets().array()) {
-                    String attrName = firstStringKey(bucket.aggregations().get("attr_name"));
-                    List<AttrValueCount> values = new ArrayList<>();
-                    Aggregate byValue = bucket.aggregations().get("by_value");
-                    if (byValue != null && byValue.isSterms()) {
-                        for (StringTermsBucket vb : byValue.sterms().buckets().array()) {
-                            values.add(new AttrValueCount(vb.key().stringValue(), vb.docCount()));
-                        }
-                    }
-                    attrs.add(new AttrAggItem(bucket.key().stringValue(), attrName, values));
-                }
-            }
-        }
+        attrs.addAll(extractBaseAttrAggs(aggs.get("base_attr_agg")));
+        attrs.addAll(extractSaleAttrAggs(aggs.get("sale_attr_agg")));
 
         return new SearchAggregations(brands, attrs);
+    }
+
+    private List<AttrAggItem> extractBaseAttrAggs(Aggregate baseAttrAgg) {
+        List<AttrAggItem> result = new ArrayList<>();
+        if (baseAttrAgg == null || !baseAttrAgg.isNested()) {
+            return result;
+        }
+        Aggregate byAttrKey = baseAttrAgg.nested().aggregations().get("by_attr_key");
+        if (byAttrKey == null || !byAttrKey.isSterms()) {
+            return result;
+        }
+        for (StringTermsBucket bucket : byAttrKey.sterms().buckets().array()) {
+            String attrName = firstStringKey(bucket.aggregations().get("attr_name"));
+            List<AttrValueCount> values = new ArrayList<>();
+            Aggregate byValue = bucket.aggregations().get("by_value");
+            if (byValue != null && byValue.isSterms()) {
+                for (StringTermsBucket vb : byValue.sterms().buckets().array()) {
+                    values.add(new AttrValueCount(vb.key().stringValue(), vb.docCount()));
+                }
+            }
+            result.add(new AttrAggItem(bucket.key().stringValue(), attrName, values));
+        }
+        return result;
+    }
+
+    private List<AttrAggItem> extractSaleAttrAggs(Aggregate saleAttrAgg) {
+        List<AttrAggItem> result = new ArrayList<>();
+        if (saleAttrAgg == null || !saleAttrAgg.isNested()) {
+            return result;
+        }
+        Aggregate toSaleAttrs = saleAttrAgg.nested().aggregations().get("to_sale_attrs");
+        if (toSaleAttrs == null || !toSaleAttrs.isNested()) {
+            return result;
+        }
+        Aggregate byAttrKey = toSaleAttrs.nested().aggregations().get("by_attr_key");
+        if (byAttrKey == null || !byAttrKey.isSterms()) {
+            return result;
+        }
+        for (StringTermsBucket bucket : byAttrKey.sterms().buckets().array()) {
+            String attrName = firstStringKey(bucket.aggregations().get("attr_name"));
+            List<AttrValueCount> values = new ArrayList<>();
+            Aggregate byValue = bucket.aggregations().get("by_value");
+            if (byValue != null && byValue.isSterms()) {
+                for (StringTermsBucket vb : byValue.sterms().buckets().array()) {
+                    Aggregate spuCount = vb.aggregations().get("spu_count");
+                    long count = spuCount != null && spuCount.isReverseNested() ? spuCount.reverseNested().docCount()
+                            : vb.docCount();
+                    values.add(new AttrValueCount(vb.key().stringValue(), count));
+                }
+            }
+            result.add(new AttrAggItem(bucket.key().stringValue(), attrName, values));
+        }
+        return result;
     }
 
     private String firstStringKey(Aggregate aggregate) {

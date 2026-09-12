@@ -79,7 +79,7 @@
     <div v-if="products.length > 0" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
       <ProductCard
         v-for="product in products"
-        :key="product.skuId"
+        :key="product.spuId"
         :product="product"
       />
     </div>
@@ -207,10 +207,12 @@ const activeSeckillProductMap = computed(() => {
 function toProduct(item: SearchItem): Product {
   const seckillSku = activeSeckillProductMap.value.get(item.spuId)
   return {
-    skuId: item.skuId,
+    skuId: item.spuId,
     spuId: item.spuId,
-    skuName: item.spuName || item.skuName,
-    price: seckillSku ? seckillSku.seckillPrice : item.price,
+    skuName: item.spuName,
+    // 秒殺是單一規格的促銷價，命中時不該再顯示「起」——不帶 maxPrice。
+    price: seckillSku ? seckillSku.seckillPrice : item.minPrice,
+    maxPrice: seckillSku ? undefined : item.maxPrice,
     skuDefaultImg: item.mainImage,
     saleCount: item.saleCount,
     categoryId: 0,

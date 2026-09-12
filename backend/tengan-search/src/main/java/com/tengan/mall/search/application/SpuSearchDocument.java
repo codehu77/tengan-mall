@@ -7,37 +7,31 @@ import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
 /**
- * 一顆 SKU = 一份 ES 文件（搜尋結果卡片是 SKU 層級，不是 SPU 層級，見 tengan-mall-web 的
- * Product 介面以 skuId 為主鍵）。這份文件是 tengan-product 组好的「厚事件」直接落地，
- * tengan-search 不回頭查任何其他服務。
+ * 一個 SPU = 一份 ES 文件——minPrice/maxPrice 是索引階段就算好的彙總值，列表卡片直接讀這兩個欄位
+ * 顯示「NT$ X 起」，不需要在查詢當下再摺疊/挑代表值。skus 是 nested 陣列，供規格層級（顏色/容量等
+ * 銷售屬性）精準篩選，每個 skus 元素的 saleAttrs 又是一層 nested（nested-in-nested）。這份文件是
+ * tengan-product 组好的「厚事件」直接落地，tengan-search 不回頭查任何其他服務。
  *
- * <p>skuName/spuName 用 ES 內建 standard 分詞器——沒有裝 IK/smartcn 中文分詞外掛，demo 情境下
+ * <p>spuName/skuName 用 ES 內建 standard 分詞器——沒有裝 IK/smartcn 中文分詞外掛，demo 情境下
  * 逐字切已經堪用，之後真的要精準中文分詞才需要另外處理 ES image。</p>
  */
-@Document(indexName = "sku_search")
-public class SkuSearchDocument {
+@Document(indexName = "spu_search")
+public class SpuSearchDocument {
 
     @Id
-    private Long skuId;
-
-    @Field(type = FieldType.Long)
     private Long spuId;
-
-    @Field(type = FieldType.Text)
-    private String skuName;
 
     @Field(type = FieldType.Text)
     private String spuName;
 
-    @Field(type = FieldType.Double)
-    private Double price;
-
-    @Field(type = FieldType.Keyword)
-    private String mainImage;
-
-    /** SPU 層級的主圖——搜尋列表卡片是 collapse 後的商品層級呈現，圖片要用這顆而不是 mainImage（某顆代表 SKU 的圖）。 */
     @Field(type = FieldType.Keyword)
     private String spuMainImage;
+
+    @Field(type = FieldType.Double)
+    private Double minPrice;
+
+    @Field(type = FieldType.Double)
+    private Double maxPrice;
 
     @Field(type = FieldType.Integer)
     private Integer saleCount;
@@ -67,22 +61,23 @@ public class SkuSearchDocument {
     private String catalog3Name;
 
     @Field(type = FieldType.Nested)
-    private List<SkuSearchAttrValue> attrs;
+    private List<SkuSearchAttrValue> baseAttrs;
 
-    public SkuSearchDocument() {
+    @Field(type = FieldType.Nested)
+    private List<SkuVariant> skus;
+
+    public SpuSearchDocument() {
     }
 
-    public SkuSearchDocument(Long skuId, Long spuId, String skuName, String spuName, Double price, String mainImage,
-            String spuMainImage, Integer saleCount, Long brandId, String brandName, Long catalog1Id,
-            String catalog1Name, Long catalog2Id, String catalog2Name, Long catalog3Id, String catalog3Name,
-            List<SkuSearchAttrValue> attrs) {
-        this.skuId = skuId;
+    public SpuSearchDocument(Long spuId, String spuName, String spuMainImage, Double minPrice, Double maxPrice,
+            Integer saleCount, Long brandId, String brandName, Long catalog1Id, String catalog1Name,
+            Long catalog2Id, String catalog2Name, Long catalog3Id, String catalog3Name,
+            List<SkuSearchAttrValue> baseAttrs, List<SkuVariant> skus) {
         this.spuId = spuId;
-        this.skuName = skuName;
         this.spuName = spuName;
-        this.price = price;
-        this.mainImage = mainImage;
         this.spuMainImage = spuMainImage;
+        this.minPrice = minPrice;
+        this.maxPrice = maxPrice;
         this.saleCount = saleCount;
         this.brandId = brandId;
         this.brandName = brandName;
@@ -92,15 +87,8 @@ public class SkuSearchDocument {
         this.catalog2Name = catalog2Name;
         this.catalog3Id = catalog3Id;
         this.catalog3Name = catalog3Name;
-        this.attrs = attrs;
-    }
-
-    public Long getSkuId() {
-        return skuId;
-    }
-
-    public void setSkuId(Long skuId) {
-        this.skuId = skuId;
+        this.baseAttrs = baseAttrs;
+        this.skus = skus;
     }
 
     public Long getSpuId() {
@@ -111,14 +99,6 @@ public class SkuSearchDocument {
         this.spuId = spuId;
     }
 
-    public String getSkuName() {
-        return skuName;
-    }
-
-    public void setSkuName(String skuName) {
-        this.skuName = skuName;
-    }
-
     public String getSpuName() {
         return spuName;
     }
@@ -127,28 +107,28 @@ public class SkuSearchDocument {
         this.spuName = spuName;
     }
 
-    public Double getPrice() {
-        return price;
-    }
-
-    public void setPrice(Double price) {
-        this.price = price;
-    }
-
-    public String getMainImage() {
-        return mainImage;
-    }
-
-    public void setMainImage(String mainImage) {
-        this.mainImage = mainImage;
-    }
-
     public String getSpuMainImage() {
         return spuMainImage;
     }
 
     public void setSpuMainImage(String spuMainImage) {
         this.spuMainImage = spuMainImage;
+    }
+
+    public Double getMinPrice() {
+        return minPrice;
+    }
+
+    public void setMinPrice(Double minPrice) {
+        this.minPrice = minPrice;
+    }
+
+    public Double getMaxPrice() {
+        return maxPrice;
+    }
+
+    public void setMaxPrice(Double maxPrice) {
+        this.maxPrice = maxPrice;
     }
 
     public Integer getSaleCount() {
@@ -223,11 +203,19 @@ public class SkuSearchDocument {
         this.catalog3Name = catalog3Name;
     }
 
-    public List<SkuSearchAttrValue> getAttrs() {
-        return attrs;
+    public List<SkuSearchAttrValue> getBaseAttrs() {
+        return baseAttrs;
     }
 
-    public void setAttrs(List<SkuSearchAttrValue> attrs) {
-        this.attrs = attrs;
+    public void setBaseAttrs(List<SkuSearchAttrValue> baseAttrs) {
+        this.baseAttrs = baseAttrs;
+    }
+
+    public List<SkuVariant> getSkus() {
+        return skus;
+    }
+
+    public void setSkus(List<SkuVariant> skus) {
+        this.skus = skus;
     }
 }

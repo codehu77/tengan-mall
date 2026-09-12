@@ -81,10 +81,11 @@ const { data: hotData } = await useProductSearch(hotQuery)
 
 function toHotProduct(item: SearchItem): Product {
   return {
-    skuId: item.skuId,
+    skuId: item.spuId,
     spuId: item.spuId,
-    skuName: item.spuName || item.skuName,
-    price: item.price,
+    skuName: item.spuName,
+    price: item.minPrice,
+    maxPrice: item.maxPrice,
     skuDefaultImg: item.mainImage,
     saleCount: item.saleCount,
     categoryId: 0,

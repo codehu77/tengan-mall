@@ -1,9 +1,8 @@
 export interface SearchItem {
-  skuId: number
   spuId: number
-  skuName: string
   spuName: string
-  price: number
+  minPrice: number
+  maxPrice: number
   mainImage: string
   saleCount: number
   brandId: number

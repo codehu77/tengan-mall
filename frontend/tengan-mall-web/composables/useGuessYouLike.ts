@@ -6,10 +6,11 @@ const PAGE_SIZE = 10
 
 function toProduct(item: SearchItem): Product {
   return {
-    skuId: item.skuId,
+    skuId: item.spuId,
     spuId: item.spuId,
-    skuName: item.spuName || item.skuName,
-    price: item.price,
+    skuName: item.spuName,
+    price: item.minPrice,
+    maxPrice: item.maxPrice,
     skuDefaultImg: item.mainImage,
     saleCount: item.saleCount,
     categoryId: 0,

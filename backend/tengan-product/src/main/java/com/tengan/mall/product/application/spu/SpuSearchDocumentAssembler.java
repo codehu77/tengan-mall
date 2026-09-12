@@ -9,16 +9,19 @@ import com.tengan.mall.product.domain.repository.BaseAttrRepository;
 import com.tengan.mall.product.domain.repository.BrandRepository;
 import com.tengan.mall.product.domain.repository.CategoryRepository;
 import com.tengan.mall.product.domain.repository.SaleAttrRepository;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 
 /**
- * 「厚事件」的組裝邏輯——把一個已載入完整 skus/attrValues 的 Spu 聚合根，攤平成每顆 sku 對應的
- * 搜尋文件（分類祖先鏈、品牌名稱、只含 searchable=true 的屬性值）。tengan-search 收到事件後
- * 不用回頭查任何其他服務，這裡就是唯一需要做這件事的地方。
+ * 「厚事件」的組裝邏輯——把一個已載入完整 skus/attrValues 的 Spu 聚合根，組成一份 SPU 層級的
+ * 搜尋文件（分類祖先鏈、品牌名稱、只含 searchable=true 的屬性值，minPrice/maxPrice 索引階段就算好，
+ * 每顆 sku 的規格明細巢狀掛在 skus 裡供規格篩選）。tengan-search 收到事件後不用回頭查任何其他服務，
+ * 這裡就是唯一需要做這件事的地方。
  */
 @Component
 class SpuSearchDocumentAssembler {
@@ -36,7 +39,7 @@ class SpuSearchDocumentAssembler {
         this.saleAttrRepository = saleAttrRepository;
     }
 
-    List<SkuSearchDocumentPayload> assemble(Spu spu) {
+    SpuSearchDocumentPayload assemble(Spu spu) {
         Category[] ancestors = resolveAncestorChain(spu.getCategoryId());
         String brandName = brandRepository.findById(spu.getBrandId()).map(b -> b.getName()).orElse(null);
 
@@ -57,20 +60,26 @@ class SpuSearchDocumentAssembler {
                 .map(v -> new SearchAttrPayload(v.attrId(), "BASE", v.attrName(), v.attrValue()))
                 .toList();
 
-        List<SkuSearchDocumentPayload> result = new ArrayList<>();
+        List<SkuVariantPayload> skus = new ArrayList<>();
         for (Sku sku : spu.getSkus()) {
-            List<SearchAttrPayload> attrs = new ArrayList<>(baseAttrs);
-            sku.getSaleAttrValues().stream()
+            List<SearchAttrPayload> saleAttrs = sku.getSaleAttrValues().stream()
                     .filter(v -> searchableSaleAttrIds.contains(v.attrId()))
                     .map(v -> new SearchAttrPayload(v.attrId(), "SALE", v.attrName(), v.attrValue()))
-                    .forEach(attrs::add);
-
-            result.add(new SkuSearchDocumentPayload(sku.getId(), spu.getId(), sku.getName(), spu.getName(),
-                    sku.getPrice(), sku.getMainImage(), spu.getMainImage(), sku.getSaleCount(), spu.getBrandId(),
-                    brandName, idOrNull(ancestors[0]), nameOrNull(ancestors[0]), idOrNull(ancestors[1]),
-                    nameOrNull(ancestors[1]), idOrNull(ancestors[2]), nameOrNull(ancestors[2]), attrs));
+                    .toList();
+            skus.add(new SkuVariantPayload(sku.getId(), sku.getName(), sku.getPrice(), sku.getMainImage(),
+                    sku.getSaleCount(), saleAttrs));
         }
-        return result;
+
+        BigDecimal minPrice = skus.stream().map(SkuVariantPayload::price).min(Comparator.naturalOrder())
+                .orElse(null);
+        BigDecimal maxPrice = skus.stream().map(SkuVariantPayload::price).max(Comparator.naturalOrder())
+                .orElse(null);
+        int totalSaleCount = skus.stream().mapToInt(SkuVariantPayload::saleCount).sum();
+
+        return new SpuSearchDocumentPayload(spu.getId(), spu.getName(), spu.getMainImage(), minPrice, maxPrice,
+                totalSaleCount, spu.getBrandId(), brandName, idOrNull(ancestors[0]), nameOrNull(ancestors[0]),
+                idOrNull(ancestors[1]), nameOrNull(ancestors[1]), idOrNull(ancestors[2]), nameOrNull(ancestors[2]),
+                baseAttrs, skus);
     }
 
     /** 分類只存單一 parentId，往上走最多 3 層組出 [level1, level2, level3] 祖先鏈（含自己）。 */

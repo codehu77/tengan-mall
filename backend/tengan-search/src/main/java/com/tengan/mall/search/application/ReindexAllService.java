@@ -1,6 +1,6 @@
 package com.tengan.mall.search.application;
 
-import com.tengan.mall.search.infrastructure.elasticsearch.SkuSearchRepository;
+import com.tengan.mall.search.infrastructure.elasticsearch.SpuSearchRepository;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -15,29 +15,29 @@ public class ReindexAllService implements ReindexAllUseCase {
     private static final int EXPORT_PAGE_SIZE = 50;
 
     private final ProductCatalogPort productCatalogPort;
-    private final SkuSearchRepository skuSearchRepository;
+    private final SpuSearchRepository spuSearchRepository;
 
-    public ReindexAllService(ProductCatalogPort productCatalogPort, SkuSearchRepository skuSearchRepository) {
+    public ReindexAllService(ProductCatalogPort productCatalogPort, SpuSearchRepository spuSearchRepository) {
         this.productCatalogPort = productCatalogPort;
-        this.skuSearchRepository = skuSearchRepository;
+        this.spuSearchRepository = spuSearchRepository;
     }
 
     @Override
     public int reindexAll() {
-        List<SkuSearchDocument> documents = new ArrayList<>();
+        List<SpuSearchDocument> documents = new ArrayList<>();
         int pageNum = 1;
         while (true) {
             ProductCatalogPage page = productCatalogPort.fetchPage(pageNum, EXPORT_PAGE_SIZE);
-            page.skus().stream().map(SkuSearchDocumentFactory::from).forEach(documents::add);
+            page.spus().stream().map(SpuSearchDocumentFactory::from).forEach(documents::add);
             if (!page.hasNext()) {
                 break;
             }
             pageNum++;
         }
 
-        skuSearchRepository.deleteAll();
+        spuSearchRepository.deleteAll();
         if (!documents.isEmpty()) {
-            skuSearchRepository.saveAll(documents);
+            spuSearchRepository.saveAll(documents);
         }
         return documents.size();
     }

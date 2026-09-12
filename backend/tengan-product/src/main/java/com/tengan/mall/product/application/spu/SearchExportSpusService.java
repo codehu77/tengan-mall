@@ -27,10 +27,10 @@ public class SearchExportSpusService implements SearchExportSpusUseCase {
         long total = spuSearchPort.countSearch(criteria);
         boolean hasNext = (long) pageNum * pageSize < total;
 
-        List<SkuSearchDocumentPayload> skus = new ArrayList<>();
+        List<SpuSearchDocumentPayload> spus = new ArrayList<>();
         for (SpuSummary summary : page) {
-            spuRepository.findById(summary.id()).ifPresent(spu -> skus.addAll(assembler.assemble(spu)));
+            spuRepository.findById(summary.id()).ifPresent(spu -> spus.add(assembler.assemble(spu)));
         }
-        return new SearchExportSpusResult(skus, hasNext);
+        return new SearchExportSpusResult(spus, hasNext);
     }
 }

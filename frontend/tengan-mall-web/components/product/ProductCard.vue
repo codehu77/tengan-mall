@@ -31,7 +31,7 @@
 
         <div class="h-5 flex items-baseline">
           <span class="text-danger font-bold text-lg leading-none">
-            NT$ {{ product.price.toLocaleString() }}
+            NT$ {{ product.price.toLocaleString() }}<template v-if="product.maxPrice && product.maxPrice > product.price"> 起</template>
           </span>
         </div>
 
