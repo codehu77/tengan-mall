@@ -35,3 +35,6 @@ pnpm-debug.log*
 # .env 的其他變體（.env 本身已在上面擋掉）
 .env.local
 .env.*.local
+
+# 資料庫備份，本機保留即可，不進版控
+/backups/
