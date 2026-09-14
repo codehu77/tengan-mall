@@ -225,9 +225,17 @@ public class MomoScraperService {
         }
 
         Document doc = Jsoup.parse(srcdoc);
-        List<String> images = doc.select("img[src]").eachAttr("src");
+        List<String> images = doc.select("img[src]").eachAttr("src").stream()
+                .map(this::normalizeImageUrl).toList();
         String text = doc.body().text();
         return new FeatureSection(images, text.isBlank() ? null : text);
+    }
+
+    /** 商品特色區塊是賣家自己貼的 HTML，img src 常常寫成 protocol-relative（{@code //img...}）——
+     * 瀏覽器渲染頁面時會照當前頁面協定自動補齊，但這裡是拿 srcdoc 字串直接解析，不會有這層補齊，
+     * 沒補的話下載端 {@code URI.create} 會因為缺 scheme 直接丟例外，匯入到一半就整批失敗。 */
+    private String normalizeImageUrl(String url) {
+        return url.startsWith("//") ? "https:" + url : url;
     }
 
     private record FeatureSection(List<String> images, String text) {
