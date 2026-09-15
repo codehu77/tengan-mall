@@ -55,8 +55,8 @@ public class InternalBaseAttrController {
     @PreAuthorize("hasAuthority('SCOPE_product.read')")
     public ListBaseAttrsResponse list(@RequestParam Long categoryId) {
         var items = listBaseAttrsUseCase.list(new ListBaseAttrsQuery(categoryId)).items().stream()
-                .map(a -> new BaseAttrResponse(a.id(), a.categoryId(), a.attrGroupId(), a.name(), a.searchable(),
-                        a.sort()))
+                .map(a -> new BaseAttrResponse(a.id(), a.categoryId(), a.attrGroupId(), a.name(), a.unit(),
+                        a.searchable(), a.sort()))
                 .toList();
         return new ListBaseAttrsResponse(items);
     }
@@ -67,7 +67,8 @@ public class InternalBaseAttrController {
             @RequestHeader("X-Identity-Assertion") String identityAssertion,
             @Valid @RequestBody CreateBaseAttrRequest request) {
         var result = createBaseAttrUseCase.create(new CreateBaseAttrCommand(operator(identityAssertion),
-                request.categoryId(), request.attrGroupId(), request.name(), request.searchable(), request.sort()));
+                request.categoryId(), request.attrGroupId(), request.name(), request.unit(), request.searchable(),
+                request.sort()));
         return ResponseEntity.status(HttpStatus.CREATED).body(new CreateBaseAttrResponse(result.id()));
     }
 
@@ -76,7 +77,7 @@ public class InternalBaseAttrController {
     public ResponseEntity<Void> update(@RequestHeader("X-Identity-Assertion") String identityAssertion,
             @PathVariable Long id, @Valid @RequestBody UpdateBaseAttrRequest request) {
         updateBaseAttrUseCase.update(new UpdateBaseAttrCommand(operator(identityAssertion), id,
-                request.attrGroupId(), request.name(), request.searchable(), request.sort()));
+                request.attrGroupId(), request.name(), request.unit(), request.searchable(), request.sort()));
         return ResponseEntity.noContent().build();
     }
 

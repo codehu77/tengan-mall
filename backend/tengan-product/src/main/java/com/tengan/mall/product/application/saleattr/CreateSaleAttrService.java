@@ -33,7 +33,8 @@ public class CreateSaleAttrService implements CreateSaleAttrUseCase {
             throw new CategoryNotLeafException(command.categoryId());
         }
 
-        SaleAttr attr = SaleAttr.create(command.categoryId(), command.name(), command.searchable(), command.sort());
+        SaleAttr attr = SaleAttr.create(command.categoryId(), command.name(), command.unit(), command.searchable(),
+                command.sort());
         SaleAttr saved = saleAttrRepository.save(attr);
 
         productOperLogRepository.save(ProductOperLog.create(command.operator(), "sale_attr", "create",

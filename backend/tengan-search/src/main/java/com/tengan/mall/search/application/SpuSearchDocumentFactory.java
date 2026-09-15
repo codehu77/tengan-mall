@@ -26,7 +26,7 @@ public final class SpuSearchDocumentFactory {
         return attrs == null ? null
                 : attrs.stream()
                         .map(a -> new SkuSearchAttrValue(a.attrType() + "-" + a.attrId(), a.attrId(), a.attrName(),
-                                a.attrValue()))
+                                a.attrValue(), a.facetValue(), a.facetSort()))
                         .toList();
     }
 }

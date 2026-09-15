@@ -1,4 +1,4 @@
 package com.tengan.mall.admin.interfaces.rest.dto;
 
-public record SpuBaseAttrValueResponse(Long attrId, String attrName, String attrValue) {
+public record SpuBaseAttrValueResponse(Long attrId, String attrName, String attrValue, Long standardValueId) {
 }

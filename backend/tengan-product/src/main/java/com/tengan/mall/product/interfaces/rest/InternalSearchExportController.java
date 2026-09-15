@@ -46,6 +46,7 @@ public class InternalSearchExportController {
     }
 
     private SearchAttrResponse toAttrResponse(SearchAttrPayload a) {
-        return new SearchAttrResponse(a.attrId(), a.attrType(), a.attrName(), a.attrValue());
+        return new SearchAttrResponse(a.attrId(), a.attrType(), a.attrName(), a.attrValue(), a.facetValue(),
+                a.facetSort());
     }
 }

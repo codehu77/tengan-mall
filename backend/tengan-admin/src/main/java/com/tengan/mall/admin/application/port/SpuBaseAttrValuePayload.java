@@ -1,4 +1,4 @@
 package com.tengan.mall.admin.application.port;
 
-public record SpuBaseAttrValuePayload(Long attrId, String attrValue) {
+public record SpuBaseAttrValuePayload(Long attrId, String attrValue, Long standardValueId) {
 }

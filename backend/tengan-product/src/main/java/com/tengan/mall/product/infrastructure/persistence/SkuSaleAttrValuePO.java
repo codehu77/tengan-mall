@@ -13,6 +13,7 @@ public class SkuSaleAttrValuePO {
     private Long attrId;
     private String attrName;
     private String attrValue;
+    private Long standardValueId;
 
     public Long getId() {
         return id;
@@ -52,5 +53,13 @@ public class SkuSaleAttrValuePO {
 
     public void setAttrValue(String attrValue) {
         this.attrValue = attrValue;
+    }
+
+    public Long getStandardValueId() {
+        return standardValueId;
+    }
+
+    public void setStandardValueId(Long standardValueId) {
+        this.standardValueId = standardValueId;
     }
 }

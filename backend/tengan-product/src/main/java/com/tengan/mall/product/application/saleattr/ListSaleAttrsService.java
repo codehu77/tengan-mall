@@ -17,8 +17,8 @@ public class ListSaleAttrsService implements ListSaleAttrsUseCase {
     public ListSaleAttrsResult list(ListSaleAttrsQuery query) {
         var items = saleAttrRepository.findByCategoryId(query.categoryId()).stream()
                 .sorted(Comparator.comparingInt(a -> a.getSort()))
-                .map(a -> new SaleAttrSummary(a.getId(), a.getCategoryId(), a.getName(), a.isSearchable(),
-                        a.getSort()))
+                .map(a -> new SaleAttrSummary(a.getId(), a.getCategoryId(), a.getName(), a.getUnit(),
+                        a.isSearchable(), a.getSort()))
                 .toList();
         return new ListSaleAttrsResult(items);
     }

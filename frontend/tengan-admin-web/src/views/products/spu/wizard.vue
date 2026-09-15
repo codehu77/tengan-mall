@@ -18,9 +18,13 @@ import {
   type BaseAttrGroupItem,
   type BaseAttrItem,
   type SaleAttrItem,
+  type BaseAttrStandardValueItem,
+  type SaleAttrStandardValueItem,
   getBaseAttrGroups,
   getBaseAttrs,
-  getSaleAttrs
+  getSaleAttrs,
+  getBaseAttrStandardValuesByCategory,
+  getSaleAttrStandardValuesByCategory
 } from "@/api/productAttr";
 import {
   type SkuFormData,
@@ -74,7 +78,11 @@ type SkuDraft = {
   sort: number;
   purchaseLimitPerUser?: number | null;
   images: Array<{ imageUrl: string; sort: number }>;
-  saleAttrValues: Array<{ attrId: number | null; attrValue: string }>;
+  saleAttrValues: Array<{
+    attrId: number | null;
+    attrValue: string;
+    standardValueId: number | null;
+  }>;
 };
 
 const skus = ref<Array<SkuDraft>>([]);
@@ -99,8 +107,33 @@ const brandList = ref<Array<BrandItem>>([]);
 const baseAttrGroups = ref<Array<BaseAttrGroupItem>>([]);
 const baseAttrs = ref<Array<BaseAttrItem>>([]);
 const saleAttrs = ref<Array<SaleAttrItem>>([]);
-const baseAttrValueMap = reactive<Record<number, string>>({});
-const orphanAttrValues = ref<Array<{ attrId: number; attrName: string; attrValue: string }>>([]);
+const baseAttrStandardValues = ref<Array<BaseAttrStandardValueItem>>([]);
+const saleAttrStandardValues = ref<Array<SaleAttrStandardValueItem>>([]);
+const baseAttrValueMap = reactive<
+  Record<number, { value: string; standardValueId: number | null }>
+>({});
+const orphanAttrValues = ref<
+  Array<{
+    attrId: number;
+    attrName: string;
+    attrValue: string;
+    standardValueId: number | null;
+  }>
+>([]);
+
+/** 下拉只列出啟用中的聚合值，但編輯既有 SPU/SKU 時若綁定的那筆剛好已停用，仍要讓它出現（標示停用）避免選項憑空消失。 */
+function standardValuesForBaseAttr(attrId: number | null, currentId?: number | null) {
+  if (attrId == null) return [];
+  return baseAttrStandardValues.value.filter(
+    v => v.attrId === attrId && (v.enabled || v.id === currentId)
+  );
+}
+function standardValuesForSaleAttr(attrId: number | null, currentId?: number | null) {
+  if (attrId == null) return [];
+  return saleAttrStandardValues.value.filter(
+    v => v.attrId === attrId && (v.enabled || v.id === currentId)
+  );
+}
 
 const sortedBaseAttrGroups = computed(() =>
   [...baseAttrGroups.value].sort((a, b) => a.sort - b.sort)
@@ -114,20 +147,35 @@ function attrsInGroup(groupId: number) {
 let previousCategoryId: number | null = null;
 
 async function loadCategoryTemplates(categoryId: number) {
-  const [{ items: groups }, { items: attrs }, { items: sales }] = await Promise.all([
+  const [
+    { items: groups },
+    { items: attrs },
+    { items: sales },
+    { items: baseStdValues },
+    { items: saleStdValues }
+  ] = await Promise.all([
     getBaseAttrGroups(categoryId),
     getBaseAttrs(categoryId),
-    getSaleAttrs(categoryId)
+    getSaleAttrs(categoryId),
+    getBaseAttrStandardValuesByCategory(categoryId),
+    getSaleAttrStandardValuesByCategory(categoryId)
   ]);
   baseAttrGroups.value = groups;
   baseAttrs.value = attrs;
   saleAttrs.value = sales;
+  baseAttrStandardValues.value = baseStdValues;
+  saleAttrStandardValues.value = saleStdValues;
+  for (const attr of attrs) {
+    if (!baseAttrValueMap[attr.id]) {
+      baseAttrValueMap[attr.id] = { value: "", standardValueId: null };
+    }
+  }
 }
 
 /** Step2/3 只要有任何一邊填過資料，換分類就要二次確認、確認後才清空重拉樣板。 */
 const step2Touched = computed(
   () =>
-    Object.values(baseAttrValueMap).some(v => !!v) ||
+    Object.values(baseAttrValueMap).some(v => !!v.value) ||
     orphanAttrValues.value.length > 0 ||
     skus.value.length > 0
 );
@@ -201,7 +249,7 @@ function removeSkuImage(sku: SkuDraft, index: number) {
   sku.images.splice(index, 1);
 }
 function addSkuSaleAttrValue(sku: SkuDraft) {
-  sku.saleAttrValues.push({ attrId: null, attrValue: "" });
+  sku.saleAttrValues.push({ attrId: null, attrValue: "", standardValueId: null });
 }
 function removeSkuSaleAttrValue(sku: SkuDraft, index: number) {
   sku.saleAttrValues.splice(index, 1);
@@ -215,7 +263,10 @@ function availableSaleAttrs(sku: SkuDraft, currentAttrId: number | null) {
 
 // --- Step3: 快速產生組合 ---
 const generateDialogVisible = ref(false);
-const candidateValues = reactive<Record<number, Array<string>>>({});
+/** 每個候選值可以順便勾一個標準聚合值，產生組合時直接帶上，不用事後逐顆 SKU 補。 */
+const candidateValues = reactive<
+  Record<number, Array<{ value: string; standardValueId: number | null }>>
+>({});
 /** 每個屬性目前正在輸入、還沒按 Enter 確認的暫存文字，跟已確認的 candidateValues 分開存。 */
 const candidateInputs = reactive<Record<number, string>>({});
 
@@ -231,8 +282,8 @@ function onAddCandidate(attrId: number) {
   const value = candidateInputs[attrId]?.trim();
   candidateInputs[attrId] = "";
   if (!value) return;
-  if (candidateValues[attrId].includes(value)) return;
-  candidateValues[attrId].push(value);
+  if (candidateValues[attrId].some(c => c.value === value)) return;
+  candidateValues[attrId].push({ value, standardValueId: null });
 }
 
 function removeCandidate(attrId: number, index: number) {
@@ -254,12 +305,27 @@ function onGenerateCombinations() {
     return;
   }
 
-  let combos: Array<Array<{ attrId: number; attrName: string; attrValue: string }>> = [[]];
+  let combos: Array<
+    Array<{
+      attrId: number;
+      attrName: string;
+      attrValue: string;
+      standardValueId: number | null;
+    }>
+  > = [[]];
   for (const attr of activeAttrs) {
     const next: typeof combos = [];
     for (const combo of combos) {
-      for (const value of candidateValues[attr.id]) {
-        next.push([...combo, { attrId: attr.id, attrName: attr.name, attrValue: value }]);
+      for (const cand of candidateValues[attr.id]) {
+        next.push([
+          ...combo,
+          {
+            attrId: attr.id,
+            attrName: attr.name,
+            attrValue: cand.value,
+            standardValueId: cand.standardValueId
+          }
+        ]);
       }
     }
     combos = next;
@@ -282,7 +348,11 @@ function onGenerateCombinations() {
       mainImage: "",
       sort: skus.value.length,
       images: [],
-      saleAttrValues: combo.map(c => ({ attrId: c.attrId, attrValue: c.attrValue }))
+      saleAttrValues: combo.map(c => ({
+        attrId: c.attrId,
+        attrValue: c.attrValue,
+        standardValueId: c.standardValueId
+      }))
     });
     added++;
   }
@@ -347,9 +417,17 @@ async function saveSpu(): Promise<boolean> {
 
   const attrValues = [
     ...Object.entries(baseAttrValueMap)
-      .filter(([, v]) => !!v && v.trim() !== "")
-      .map(([attrId, attrValue]) => ({ attrId: Number(attrId), attrValue })),
-    ...orphanAttrValues.value.map(o => ({ attrId: o.attrId, attrValue: o.attrValue }))
+      .filter(([, v]) => !!v.value && v.value.trim() !== "")
+      .map(([attrId, v]) => ({
+        attrId: Number(attrId),
+        attrValue: v.value,
+        standardValueId: v.standardValueId
+      })),
+    ...orphanAttrValues.value.map(o => ({
+      attrId: o.attrId,
+      attrValue: o.attrValue,
+      standardValueId: o.standardValueId
+    }))
   ];
 
   const skuPayloads: Array<SkuFormData> = skus.value.map(s => ({
@@ -362,7 +440,11 @@ async function saveSpu(): Promise<boolean> {
     images: s.images,
     saleAttrValues: s.saleAttrValues
       .filter(v => v.attrId != null)
-      .map(v => ({ attrId: v.attrId as number, attrValue: v.attrValue }))
+      .map(v => ({
+        attrId: v.attrId as number,
+        attrValue: v.attrValue,
+        standardValueId: v.standardValueId
+      }))
   }));
 
   const payload = {
@@ -439,9 +521,17 @@ onMounted(async () => {
 
     for (const v of detail.attrValues) {
       if (baseAttrs.value.some(a => a.id === v.attrId)) {
-        baseAttrValueMap[v.attrId] = v.attrValue;
+        baseAttrValueMap[v.attrId] = {
+          value: v.attrValue,
+          standardValueId: v.standardValueId
+        };
       } else {
-        orphanAttrValues.value.push({ attrId: v.attrId, attrName: v.attrName, attrValue: v.attrValue });
+        orphanAttrValues.value.push({
+          attrId: v.attrId,
+          attrName: v.attrName,
+          attrValue: v.attrValue,
+          standardValueId: v.standardValueId
+        });
       }
     }
 
@@ -454,7 +544,11 @@ onMounted(async () => {
       sort: s.sort,
       purchaseLimitPerUser: s.purchaseLimitPerUser ?? null,
       images: s.images.map(i => ({ ...i })),
-      saleAttrValues: s.saleAttrValues.map(v => ({ attrId: v.attrId, attrValue: v.attrValue }))
+      saleAttrValues: s.saleAttrValues.map(v => ({
+        attrId: v.attrId,
+        attrValue: v.attrValue,
+        standardValueId: v.standardValueId
+      }))
     }));
   }
   loading.value = false;
@@ -626,12 +720,39 @@ onMounted(async () => {
 
     <!-- Step2 規格參數 -->
     <div v-show="currentStep === 1">
+      <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+        <span class="text-base font-semibold text-gray-800 truncate">{{ form.name || "（尚未填寫）" }}</span>
+      </div>
       <el-empty v-if="sortedBaseAttrGroups.length === 0" description="此分類尚未設定規格參數樣板，可跳過此步驟" />
       <el-card v-for="group in sortedBaseAttrGroups" :key="group.id" class="mb-3">
         <template #header>{{ group.name }}</template>
         <el-form label-width="120px">
           <el-form-item v-for="attr in attrsInGroup(group.id)" :key="attr.id" :label="attr.name">
-            <el-input v-model="baseAttrValueMap[attr.id]" placeholder="選填" style="width: 320px" />
+            <div class="flex items-center gap-2">
+              <el-input
+                v-model="baseAttrValueMap[attr.id].value"
+                :placeholder="attr.unit ? '選填，只需輸入數字' : '選填'"
+                style="width: 320px"
+              >
+                <template v-if="attr.unit" #suffix>
+                  <span class="text-gray-400">{{ attr.unit }}</span>
+                </template>
+              </el-input>
+              <el-select
+                v-if="attr.searchable && standardValuesForBaseAttr(attr.id, baseAttrValueMap[attr.id].standardValueId).length"
+                v-model="baseAttrValueMap[attr.id].standardValueId"
+                placeholder="標準聚合值（選填）"
+                clearable
+                style="width: 220px"
+              >
+                <el-option
+                  v-for="std in standardValuesForBaseAttr(attr.id, baseAttrValueMap[attr.id].standardValueId)"
+                  :key="std.id"
+                  :label="std.enabled ? std.label : `${std.label}（已停用）`"
+                  :value="std.id"
+                />
+              </el-select>
+            </div>
           </el-form-item>
           <el-empty v-if="attrsInGroup(group.id).length === 0" description="此分組尚無規格參數" :image-size="60" />
         </el-form>
@@ -736,7 +857,7 @@ onMounted(async () => {
                 :key="valIdx"
                 class="mb-2 flex items-center gap-2"
               >
-                <el-select v-model="value.attrId" placeholder="屬性" style="width: 160px">
+                <el-select v-model="value.attrId" placeholder="屬性" style="width: 140px">
                   <el-option
                     v-for="attr in availableSaleAttrs(sku, value.attrId)"
                     :key="attr.id"
@@ -744,7 +865,28 @@ onMounted(async () => {
                     :value="attr.id"
                   />
                 </el-select>
-                <el-input v-model="value.attrValue" placeholder="屬性值" style="width: 200px" />
+                <el-input v-model="value.attrValue" placeholder="屬性值" style="width: 160px">
+                  <template
+                    v-if="value.attrId != null && saleAttrs.find(a => a.id === value.attrId)?.unit"
+                    #suffix
+                  >
+                    <span class="text-gray-400">{{ saleAttrs.find(a => a.id === value.attrId)?.unit }}</span>
+                  </template>
+                </el-input>
+                <el-select
+                  v-if="value.attrId != null && saleAttrs.find(a => a.id === value.attrId)?.searchable && standardValuesForSaleAttr(value.attrId, value.standardValueId).length"
+                  v-model="value.standardValueId"
+                  placeholder="標準聚合值（選填）"
+                  clearable
+                  style="width: 200px"
+                >
+                  <el-option
+                    v-for="std in standardValuesForSaleAttr(value.attrId, value.standardValueId)"
+                    :key="std.id"
+                    :label="std.enabled ? std.label : `${std.label}（已停用）`"
+                    :value="std.id"
+                  />
+                </el-select>
                 <el-button link type="danger" @click="removeSkuSaleAttrValue(sku, valIdx)">移除</el-button>
               </div>
               <el-button link type="primary" @click="addSkuSaleAttrValue(sku)">新增銷售屬性</el-button>
@@ -768,12 +910,31 @@ onMounted(async () => {
         <div style="width: 80px; font-weight: 700; flex-shrink: 0">{{ attr.name }}</div>
         <div class="flex flex-wrap items-center gap-2">
           <el-tag
-            v-for="(value, idx) in candidateValues[attr.id]"
-            :key="value"
+            v-for="(cand, idx) in candidateValues[attr.id]"
+            :key="cand.value"
             closable
+            style="height: auto; padding: 4px 6px"
             @close="removeCandidate(attr.id, idx)"
           >
-            {{ value }}
+            <div class="flex items-center gap-1">
+              <span>{{ cand.value }}</span>
+              <el-select
+                v-if="attr.searchable && standardValuesForSaleAttr(attr.id, cand.standardValueId).length"
+                v-model="cand.standardValueId"
+                placeholder="聚合值"
+                clearable
+                size="small"
+                style="width: 130px"
+                @click.stop
+              >
+                <el-option
+                  v-for="std in standardValuesForSaleAttr(attr.id, cand.standardValueId)"
+                  :key="std.id"
+                  :label="std.enabled ? std.label : `${std.label}（已停用）`"
+                  :value="std.id"
+                />
+              </el-select>
+            </div>
           </el-tag>
           <el-input
             v-model="candidateInputs[attr.id]"

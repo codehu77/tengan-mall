@@ -37,7 +37,7 @@ public class ProductSaleAttrController {
     @PreAuthorize("hasAuthority('product:saleattr:read')")
     public ListSaleAttrsResponse list(@RequestParam Long categoryId) {
         var items = productSaleAttrPort.listSaleAttrs(categoryId).stream()
-                .map(a -> new SaleAttrResponse(a.id(), a.categoryId(), a.name(), a.searchable(), a.sort()))
+                .map(a -> new SaleAttrResponse(a.id(), a.categoryId(), a.name(), a.unit(), a.searchable(), a.sort()))
                 .toList();
         return new ListSaleAttrsResponse(items);
     }
@@ -47,7 +47,8 @@ public class ProductSaleAttrController {
     public CreateSaleAttrResponse create(@AuthenticationPrincipal Jwt operatorJwt,
             @Valid @RequestBody CreateSaleAttrRequest request) {
         Long id = productSaleAttrPort.createSaleAttr(
-                new CreateSaleAttrPayload(request.categoryId(), request.name(), request.searchable(), request.sort()),
+                new CreateSaleAttrPayload(request.categoryId(), request.name(), request.unit(), request.searchable(),
+                        request.sort()),
                 operatorJwt.getTokenValue());
         return new CreateSaleAttrResponse(id);
     }
@@ -57,7 +58,7 @@ public class ProductSaleAttrController {
     public void update(@AuthenticationPrincipal Jwt operatorJwt, @PathVariable Long id,
             @Valid @RequestBody UpdateSaleAttrRequest request) {
         productSaleAttrPort.updateSaleAttr(id,
-                new UpdateSaleAttrPayload(request.name(), request.searchable(), request.sort()),
+                new UpdateSaleAttrPayload(request.name(), request.unit(), request.searchable(), request.sort()),
                 operatorJwt.getTokenValue());
     }
 

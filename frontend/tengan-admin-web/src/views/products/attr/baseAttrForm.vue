@@ -8,6 +8,7 @@ defineOptions({
 
 interface FormItemProps {
   name: string;
+  unit: string | null;
   searchable: boolean;
   sort: number;
 }
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<FormProps>(), {
   groupName: "",
   formInline: () => ({
     name: "",
+    unit: null,
     searchable: false,
     sort: 0
   })
@@ -55,6 +57,13 @@ defineExpose({ getRef });
       <el-input
         v-model="newFormInline.name"
         placeholder="請輸入屬性名稱"
+        clearable
+      />
+    </el-form-item>
+    <el-form-item label="單位">
+      <el-input
+        v-model="newFormInline.unit"
+        placeholder="選填，例如「吋」，填值時只需輸入數字"
         clearable
       />
     </el-form-item>

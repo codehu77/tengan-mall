@@ -15,6 +15,7 @@ export type SpuBaseAttrValueItem = {
   attrId: number;
   attrName: string;
   attrValue: string;
+  standardValueId: number | null;
 };
 
 /** Spu 層級共通圖片——所有底下的 Sku 共用，跟各自專屬的 SkuImageItem 分開存。 */
@@ -32,6 +33,7 @@ export type SkuSaleAttrValueItem = {
   attrId: number;
   attrName: string;
   attrValue: string;
+  standardValueId: number | null;
 };
 
 export type SkuDetailItem = {
@@ -87,6 +89,7 @@ export const getSpuDetail = (id: number) => {
 export type SpuBaseAttrValueFormData = {
   attrId: number;
   attrValue: string;
+  standardValueId: number | null;
 };
 
 export type SpuImageFormData = {
@@ -102,6 +105,7 @@ export type SkuImageFormData = {
 export type SkuSaleAttrValueFormData = {
   attrId: number;
   attrValue: string;
+  standardValueId: number | null;
 };
 
 export type SkuFormData = {

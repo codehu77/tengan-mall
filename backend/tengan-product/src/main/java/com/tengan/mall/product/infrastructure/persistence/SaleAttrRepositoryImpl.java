@@ -60,13 +60,14 @@ public class SaleAttrRepositoryImpl implements SaleAttrRepository {
         po.setId(attr.getId());
         po.setCategoryId(attr.getCategoryId());
         po.setName(attr.getName());
+        po.setUnit(attr.getUnit());
         po.setSearchable(attr.isSearchable());
         po.setSort(attr.getSort());
         return po;
     }
 
     private SaleAttr toDomain(SaleAttrPO po) {
-        return SaleAttr.reconstitute(po.getId(), po.getCategoryId(), po.getName(),
+        return SaleAttr.reconstitute(po.getId(), po.getCategoryId(), po.getName(), po.getUnit(),
                 Boolean.TRUE.equals(po.getSearchable()), po.getSort());
     }
 }

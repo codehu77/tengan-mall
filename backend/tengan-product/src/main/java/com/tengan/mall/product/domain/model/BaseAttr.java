@@ -14,25 +14,29 @@ public class BaseAttr {
     private final Long categoryId;
     private Long attrGroupId;
     private String name;
+    private String unit;
     private boolean searchable;
     private int sort;
 
-    private BaseAttr(Long id, Long categoryId, Long attrGroupId, String name, boolean searchable, int sort) {
+    private BaseAttr(Long id, Long categoryId, Long attrGroupId, String name, String unit, boolean searchable,
+            int sort) {
         this.id = id;
         this.categoryId = categoryId;
         this.attrGroupId = attrGroupId;
         this.name = name;
+        this.unit = unit;
         this.searchable = searchable;
         this.sort = sort;
     }
 
-    public static BaseAttr create(Long categoryId, Long attrGroupId, String name, boolean searchable, int sort) {
-        return new BaseAttr(null, categoryId, attrGroupId, name, searchable, sort);
+    public static BaseAttr create(Long categoryId, Long attrGroupId, String name, String unit, boolean searchable,
+            int sort) {
+        return new BaseAttr(null, categoryId, attrGroupId, name, unit, searchable, sort);
     }
 
-    public static BaseAttr reconstitute(Long id, Long categoryId, Long attrGroupId, String name, boolean searchable,
-            int sort) {
-        return new BaseAttr(id, categoryId, attrGroupId, name, searchable, sort);
+    public static BaseAttr reconstitute(Long id, Long categoryId, Long attrGroupId, String name, String unit,
+            boolean searchable, int sort) {
+        return new BaseAttr(id, categoryId, attrGroupId, name, unit, searchable, sort);
     }
 
     public void assignId(Long id) {
@@ -44,6 +48,10 @@ public class BaseAttr {
 
     public void rename(String name) {
         this.name = name;
+    }
+
+    public void updateUnit(String unit) {
+        this.unit = unit;
     }
 
     public void updateSearchable(boolean searchable) {
@@ -76,6 +84,10 @@ public class BaseAttr {
 
     public String getName() {
         return name;
+    }
+
+    public String getUnit() {
+        return unit;
     }
 
     public boolean isSearchable() {

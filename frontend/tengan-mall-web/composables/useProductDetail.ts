@@ -7,6 +7,8 @@ export interface ApiAttrValue {
   attrId: number
   attrName: string
   attrValue: string
+  standardValueId: number | null
+  unit: string | null
 }
 
 export interface ApiSkuDetail {

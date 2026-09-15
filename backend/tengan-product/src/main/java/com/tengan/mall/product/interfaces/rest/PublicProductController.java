@@ -53,7 +53,8 @@ public class PublicProductController {
     public SpuDetailResponse spuDetail(@PathVariable Long id) {
         var result = getPublicSpuDetailUseCase.get(id);
         var attrValues = result.attrValues().stream()
-                .map(v -> new SpuBaseAttrValueResponse(v.attrId(), v.attrName(), v.attrValue()))
+                .map(v -> new SpuBaseAttrValueResponse(v.attrId(), v.attrName(), v.attrValue(), v.standardValueId(),
+                        v.unit()))
                 .toList();
         var images = result.images().stream().map(i -> new SpuImageResponse(i.imageUrl(), i.sort())).toList();
         var skus = result.skus().stream().map(this::toResponse).toList();
@@ -92,7 +93,8 @@ public class PublicProductController {
         var images = view.images().stream().map(i -> new SkuImageResponse(i.imageUrl(), i.sort()))
                 .toList();
         var saleAttrValues = view.saleAttrValues().stream()
-                .map(v -> new SkuSaleAttrValueResponse(v.attrId(), v.attrName(), v.attrValue()))
+                .map(v -> new SkuSaleAttrValueResponse(v.attrId(), v.attrName(), v.attrValue(), v.standardValueId(),
+                        v.unit()))
                 .toList();
         return new SkuDetailResponse(view.id(), view.spuId(), view.name(), view.price(), view.mainImage(),
                 view.saleCount(), view.sort(), view.purchaseLimitPerUser(), images, saleAttrValues);

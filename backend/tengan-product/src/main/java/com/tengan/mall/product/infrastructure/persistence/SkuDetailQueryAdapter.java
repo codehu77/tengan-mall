@@ -5,9 +5,12 @@ import com.tengan.mall.product.application.spu.SkuDetailPort;
 import com.tengan.mall.product.application.spu.SkuDetailView;
 import com.tengan.mall.product.application.spu.SkuImageView;
 import com.tengan.mall.product.application.spu.SkuSaleAttrValueView;
+import com.tengan.mall.product.domain.repository.SaleAttrRepository;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
@@ -21,12 +24,21 @@ public class SkuDetailQueryAdapter implements SkuDetailPort {
     private final SkuMapper skuMapper;
     private final SkuImageMapper skuImageMapper;
     private final SkuSaleAttrValueMapper skuSaleAttrValueMapper;
+    private final SaleAttrRepository saleAttrRepository;
 
     public SkuDetailQueryAdapter(SkuMapper skuMapper, SkuImageMapper skuImageMapper,
-            SkuSaleAttrValueMapper skuSaleAttrValueMapper) {
+            SkuSaleAttrValueMapper skuSaleAttrValueMapper, SaleAttrRepository saleAttrRepository) {
         this.skuMapper = skuMapper;
         this.skuImageMapper = skuImageMapper;
         this.skuSaleAttrValueMapper = skuSaleAttrValueMapper;
+        this.saleAttrRepository = saleAttrRepository;
+    }
+
+    /** 每顆 SKU 的銷售屬性數量很小（通常 1-3 個），逐一 findById 解析 unit 即可，不需要額外開 batch 查詢方法。 */
+    private Map<Long, String> resolveUnits(Set<Long> attrIds) {
+        Map<Long, String> unitById = new HashMap<>();
+        attrIds.forEach(id -> saleAttrRepository.findById(id).ifPresent(a -> unitById.put(id, a.getUnit())));
+        return unitById;
     }
 
     @Override
@@ -40,10 +52,13 @@ public class SkuDetailQueryAdapter implements SkuDetailPort {
                 .stream()
                 .map(i -> new SkuImageView(i.getImageUrl(), i.getSort()))
                 .toList();
-        var saleAttrValues = skuSaleAttrValueMapper
-                .selectList(new LambdaQueryWrapper<SkuSaleAttrValuePO>().eq(SkuSaleAttrValuePO::getSkuId, skuId))
-                .stream()
-                .map(v -> new SkuSaleAttrValueView(v.getAttrId(), v.getAttrName(), v.getAttrValue()))
+        List<SkuSaleAttrValuePO> saleAttrValuePOs = skuSaleAttrValueMapper
+                .selectList(new LambdaQueryWrapper<SkuSaleAttrValuePO>().eq(SkuSaleAttrValuePO::getSkuId, skuId));
+        Map<Long, String> unitById = resolveUnits(
+                saleAttrValuePOs.stream().map(SkuSaleAttrValuePO::getAttrId).collect(Collectors.toSet()));
+        var saleAttrValues = saleAttrValuePOs.stream()
+                .map(v -> new SkuSaleAttrValueView(v.getAttrId(), v.getAttrName(), v.getAttrValue(),
+                        v.getStandardValueId(), unitById.get(v.getAttrId())))
                 .toList();
 
         return Optional.of(new SkuDetailView(po.getId(), po.getSpuId(), po.getName(), po.getPrice(),
@@ -67,11 +82,14 @@ public class SkuDetailQueryAdapter implements SkuDetailPort {
                 .stream()
                 .collect(Collectors.groupingBy(SkuImagePO::getSkuId,
                         Collectors.mapping(i -> new SkuImageView(i.getImageUrl(), i.getSort()), Collectors.toList())));
-        Map<Long, List<SkuSaleAttrValueView>> saleAttrValuesBySkuId = skuSaleAttrValueMapper
-                .selectList(new LambdaQueryWrapper<SkuSaleAttrValuePO>().in(SkuSaleAttrValuePO::getSkuId, foundIds))
-                .stream()
+        List<SkuSaleAttrValuePO> allSaleAttrValuePOs = skuSaleAttrValueMapper
+                .selectList(new LambdaQueryWrapper<SkuSaleAttrValuePO>().in(SkuSaleAttrValuePO::getSkuId, foundIds));
+        Map<Long, String> unitById = resolveUnits(
+                allSaleAttrValuePOs.stream().map(SkuSaleAttrValuePO::getAttrId).collect(Collectors.toSet()));
+        Map<Long, List<SkuSaleAttrValueView>> saleAttrValuesBySkuId = allSaleAttrValuePOs.stream()
                 .collect(Collectors.groupingBy(SkuSaleAttrValuePO::getSkuId, Collectors.mapping(
-                        v -> new SkuSaleAttrValueView(v.getAttrId(), v.getAttrName(), v.getAttrValue()),
+                        v -> new SkuSaleAttrValueView(v.getAttrId(), v.getAttrName(), v.getAttrValue(),
+                                v.getStandardValueId(), unitById.get(v.getAttrId())),
                         Collectors.toList())));
 
         return skuPOs.stream()

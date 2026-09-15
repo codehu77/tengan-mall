@@ -13,6 +13,7 @@ public class SpuBaseAttrValuePO {
     private Long attrId;
     private String attrName;
     private String attrValue;
+    private Long standardValueId;
 
     public Long getId() {
         return id;
@@ -52,5 +53,13 @@ public class SpuBaseAttrValuePO {
 
     public void setAttrValue(String attrValue) {
         this.attrValue = attrValue;
+    }
+
+    public Long getStandardValueId() {
+        return standardValueId;
+    }
+
+    public void setStandardValueId(Long standardValueId) {
+        this.standardValueId = standardValueId;
     }
 }

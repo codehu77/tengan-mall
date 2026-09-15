@@ -56,13 +56,14 @@ public class BaseAttrRepositoryImpl implements BaseAttrRepository {
         po.setCategoryId(attr.getCategoryId());
         po.setAttrGroupId(attr.getAttrGroupId());
         po.setName(attr.getName());
+        po.setUnit(attr.getUnit());
         po.setSearchable(attr.isSearchable());
         po.setSort(attr.getSort());
         return po;
     }
 
     private BaseAttr toDomain(BaseAttrPO po) {
-        return BaseAttr.reconstitute(po.getId(), po.getCategoryId(), po.getAttrGroupId(), po.getName(),
+        return BaseAttr.reconstitute(po.getId(), po.getCategoryId(), po.getAttrGroupId(), po.getName(), po.getUnit(),
                 Boolean.TRUE.equals(po.getSearchable()), po.getSort());
     }
 }

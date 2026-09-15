@@ -10,6 +10,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.FieldValueFactorModifie
 import co.elastic.clients.elasticsearch._types.query_dsl.FunctionBoostMode;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.PageRequest;
@@ -83,12 +84,19 @@ public class SearchSkusService implements SearchSkusUseCase {
         BoolQuery.Builder bool = new BoolQuery.Builder();
 
         if (query.keyword() != null && !query.keyword().isBlank()) {
-            // 商品名或任一規格名命中都算——spuName 是頂層欄位，skuName 掛在 nested 的 skus 底下，
-            // 兩邊各包一個 should，只要其中一邊命中就算符合。
+            // 商品名、任一規格名、規格屬性的原始行銷值命中都算——spuName 頂層欄位，skuName 掛在 nested
+            // 的 skus 底下，baseAttrs.attrValue 單層 nested，skus.saleAttrs.attrValue 雙層 nested
+            // （比照下面 attrs filter 迴圈已經在用的雙層 nested 包法）。原始行銷值（例如「鼠尾草綠色」）
+            // 即使已經綁定標準聚合值，關鍵字全文搜尋還是要比對得到，不能只靠正規化後的 facetValue。
             bool.must(m -> m.bool(b -> b
                     .should(s -> s.multiMatch(mm -> mm.query(query.keyword()).fields("spuName")))
                     .should(s -> s.nested(n -> n.path("skus")
                             .query(nq -> nq.multiMatch(mm -> mm.query(query.keyword()).fields("skus.skuName")))))
+                    .should(s -> s.nested(n -> n.path("baseAttrs").query(
+                            nq -> nq.multiMatch(mm -> mm.query(query.keyword()).fields("baseAttrs.attrValue")))))
+                    .should(s -> s.nested(n -> n.path("skus").query(nq -> nq.nested(n2 -> n2.path("skus.saleAttrs")
+                            .query(nq2 -> nq2.multiMatch(
+                                    mm -> mm.query(query.keyword()).fields("skus.saleAttrs.attrValue")))))))
                     .minimumShouldMatch("1")));
         }
 
@@ -118,14 +126,14 @@ public class SearchSkusService implements SearchSkusUseCase {
                             .query(nq -> nq.bool(nb -> nb
                                     .must(nm -> nm.term(t -> t.field("skus.saleAttrs.attrKey").value(attrKey)))
                                     .must(nm -> nm.terms(
-                                            t -> t.field("skus.saleAttrs.attrValue").terms(tt -> tt.value(values))))))
+                                            t -> t.field("skus.saleAttrs.facetValue").terms(tt -> tt.value(values))))))
                     )));
                 } else {
                     bool.filter(f -> f.nested(n -> n.path("baseAttrs")
                             .query(nq -> nq.bool(nb -> nb
                                     .must(nm -> nm.term(t -> t.field("baseAttrs.attrKey").value(attrKey)))
                                     .must(nm -> nm.terms(
-                                            t -> t.field("baseAttrs.attrValue").terms(tt -> tt.value(values))))))));
+                                            t -> t.field("baseAttrs.facetValue").terms(tt -> tt.value(values))))))));
                 }
             }
             // 所有 SALE 條件包進「同一個」nested(path="skus")，內層再各自 nested(path="skus.saleAttrs")——
@@ -178,8 +186,10 @@ public class SearchSkusService implements SearchSkusUseCase {
     }
 
     private Aggregation buildBaseAttrAggregation() {
+        Aggregation facetSort = Aggregation.of(a -> a.min(m -> m.field("baseAttrs.facetSort")));
         Aggregation byValue = Aggregation.of(a -> a
-                .terms(t -> t.field("baseAttrs.attrValue").size(ATTR_VALUE_AGG_SIZE)));
+                .terms(t -> t.field("baseAttrs.facetValue").size(ATTR_VALUE_AGG_SIZE))
+                .aggregations("facet_sort", facetSort));
         Aggregation attrName = Aggregation.of(a -> a.terms(t -> t.field("baseAttrs.attrName").size(1)));
         Aggregation byAttrKey = Aggregation.of(a -> a
                 .terms(t -> t.field("baseAttrs.attrKey").size(ATTR_ID_AGG_SIZE))
@@ -198,9 +208,11 @@ public class SearchSkusService implements SearchSkusUseCase {
      */
     private Aggregation buildSaleAttrAggregation() {
         Aggregation spuCount = Aggregation.of(a -> a.reverseNested(rn -> rn));
+        Aggregation facetSort = Aggregation.of(a -> a.min(m -> m.field("skus.saleAttrs.facetSort")));
         Aggregation byValue = Aggregation.of(a -> a
-                .terms(t -> t.field("skus.saleAttrs.attrValue").size(ATTR_VALUE_AGG_SIZE))
-                .aggregations("spu_count", spuCount));
+                .terms(t -> t.field("skus.saleAttrs.facetValue").size(ATTR_VALUE_AGG_SIZE))
+                .aggregations("spu_count", spuCount)
+                .aggregations("facet_sort", facetSort));
         Aggregation attrName = Aggregation.of(a -> a.terms(t -> t.field("skus.saleAttrs.attrName").size(1)));
         Aggregation byAttrKey = Aggregation.of(a -> a
                 .terms(t -> t.field("skus.saleAttrs.attrKey").size(ATTR_ID_AGG_SIZE))
@@ -262,7 +274,9 @@ public class SearchSkusService implements SearchSkusUseCase {
             List<AttrValueCount> values = new ArrayList<>();
             Aggregate byValue = bucket.aggregations().get("by_value");
             if (byValue != null && byValue.isSterms()) {
-                for (StringTermsBucket vb : byValue.sterms().buckets().array()) {
+                List<StringTermsBucket> valueBuckets = new ArrayList<>(byValue.sterms().buckets().array());
+                valueBuckets.sort(Comparator.comparingDouble(this::facetSortOf));
+                for (StringTermsBucket vb : valueBuckets) {
                     values.add(new AttrValueCount(vb.key().stringValue(), vb.docCount()));
                 }
             }
@@ -289,7 +303,9 @@ public class SearchSkusService implements SearchSkusUseCase {
             List<AttrValueCount> values = new ArrayList<>();
             Aggregate byValue = bucket.aggregations().get("by_value");
             if (byValue != null && byValue.isSterms()) {
-                for (StringTermsBucket vb : byValue.sterms().buckets().array()) {
+                List<StringTermsBucket> valueBuckets = new ArrayList<>(byValue.sterms().buckets().array());
+                valueBuckets.sort(Comparator.comparingDouble(this::facetSortOf));
+                for (StringTermsBucket vb : valueBuckets) {
                     Aggregate spuCount = vb.aggregations().get("spu_count");
                     long count = spuCount != null && spuCount.isReverseNested() ? spuCount.reverseNested().docCount()
                             : vb.docCount();
@@ -299,6 +315,12 @@ public class SearchSkusService implements SearchSkusUseCase {
             result.add(new AttrAggItem(bucket.key().stringValue(), attrName, values));
         }
         return result;
+    }
+
+    /** 標準聚合值照後台拖曳的排序顯示，未綁定的原始值（沒有 facet_sort 子聚合可用）固定排在最後。 */
+    private double facetSortOf(StringTermsBucket bucket) {
+        Aggregate facetSort = bucket.aggregations().get("facet_sort");
+        return facetSort != null && facetSort.isMin() ? facetSort.min().value() : Integer.MAX_VALUE;
     }
 
     private String firstStringKey(Aggregate aggregate) {

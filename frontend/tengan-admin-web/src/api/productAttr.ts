@@ -14,6 +14,7 @@ export type BaseAttrItem = {
   categoryId: number;
   attrGroupId: number;
   name: string;
+  unit: string | null;
   searchable: boolean;
   sort: number;
 };
@@ -23,7 +24,25 @@ export type SaleAttrItem = {
   id: number;
   categoryId: number;
   name: string;
+  unit: string | null;
   searchable: boolean;
+  sort: number;
+};
+
+/** 屬性底下的標準聚合值——用來把 SPU/SKU 填的原始行銷值正規化成有限幾個篩選桶。 */
+export type BaseAttrStandardValueItem = {
+  id: number;
+  attrId: number;
+  label: string;
+  enabled: boolean;
+  sort: number;
+};
+
+export type SaleAttrStandardValueItem = {
+  id: number;
+  attrId: number;
+  label: string;
+  enabled: boolean;
   sort: number;
 };
 
@@ -78,6 +97,7 @@ export const createBaseAttr = (data: {
   categoryId: number;
   attrGroupId: number;
   name: string;
+  unit: string | null;
   searchable: boolean;
   sort: number;
 }) => {
@@ -90,7 +110,13 @@ export const createBaseAttr = (data: {
 
 export const updateBaseAttr = (
   id: number,
-  data: { attrGroupId: number; name: string; searchable: boolean; sort: number }
+  data: {
+    attrGroupId: number;
+    name: string;
+    unit: string | null;
+    searchable: boolean;
+    sort: number;
+  }
 ) => {
   return http.request<void>("put", `/api/admin/products/base-attrs/${id}`, {
     data
@@ -99,6 +125,45 @@ export const updateBaseAttr = (
 
 export const deleteBaseAttr = (id: number) => {
   return http.request<void>("delete", `/api/admin/products/base-attrs/${id}`);
+};
+
+export const getBaseAttrStandardValues = (attrId: number) => {
+  return http.request<{ items: Array<BaseAttrStandardValueItem> }>(
+    "get",
+    `/api/admin/products/base-attrs/${attrId}/standard-values`
+  );
+};
+
+/** 給 SPU 精靈一次撈整個分類底下所有 BaseAttr 的標準聚合值，避免逐個屬性各打一次 API。 */
+export const getBaseAttrStandardValuesByCategory = (categoryId: number) => {
+  return http.request<{ items: Array<BaseAttrStandardValueItem> }>(
+    "get",
+    "/api/admin/products/base-attrs/standard-values",
+    { params: { categoryId } }
+  );
+};
+
+export const createBaseAttrStandardValue = (
+  attrId: number,
+  data: { label: string; sort: number }
+) => {
+  return http.request<{ id: number }>(
+    "post",
+    `/api/admin/products/base-attrs/${attrId}/standard-values`,
+    { data }
+  );
+};
+
+/** 「刪除」在 UI 上是呼叫這支把 enabled 設 false（軟刪除），不是真的刪除。 */
+export const updateBaseAttrStandardValue = (
+  id: number,
+  data: { label: string; enabled: boolean; sort: number }
+) => {
+  return http.request<void>(
+    "put",
+    `/api/admin/products/base-attr-standard-values/${id}`,
+    { data }
+  );
 };
 
 export const getSaleAttrs = (categoryId: number) => {
@@ -112,6 +177,7 @@ export const getSaleAttrs = (categoryId: number) => {
 export const createSaleAttr = (data: {
   categoryId: number;
   name: string;
+  unit: string | null;
   searchable: boolean;
   sort: number;
 }) => {
@@ -124,7 +190,12 @@ export const createSaleAttr = (data: {
 
 export const updateSaleAttr = (
   id: number,
-  data: { name: string; searchable: boolean; sort: number }
+  data: {
+    name: string;
+    unit: string | null;
+    searchable: boolean;
+    sort: number;
+  }
 ) => {
   return http.request<void>("put", `/api/admin/products/sale-attrs/${id}`, {
     data
@@ -133,6 +204,45 @@ export const updateSaleAttr = (
 
 export const deleteSaleAttr = (id: number) => {
   return http.request<void>("delete", `/api/admin/products/sale-attrs/${id}`);
+};
+
+export const getSaleAttrStandardValues = (attrId: number) => {
+  return http.request<{ items: Array<SaleAttrStandardValueItem> }>(
+    "get",
+    `/api/admin/products/sale-attrs/${attrId}/standard-values`
+  );
+};
+
+/** 給 SPU 精靈一次撈整個分類底下所有 SaleAttr 的標準聚合值，避免逐個屬性各打一次 API。 */
+export const getSaleAttrStandardValuesByCategory = (categoryId: number) => {
+  return http.request<{ items: Array<SaleAttrStandardValueItem> }>(
+    "get",
+    "/api/admin/products/sale-attrs/standard-values",
+    { params: { categoryId } }
+  );
+};
+
+export const createSaleAttrStandardValue = (
+  attrId: number,
+  data: { label: string; sort: number }
+) => {
+  return http.request<{ id: number }>(
+    "post",
+    `/api/admin/products/sale-attrs/${attrId}/standard-values`,
+    { data }
+  );
+};
+
+/** 「刪除」在 UI 上是呼叫這支把 enabled 設 false（軟刪除），不是真的刪除。 */
+export const updateSaleAttrStandardValue = (
+  id: number,
+  data: { label: string; enabled: boolean; sort: number }
+) => {
+  return http.request<void>(
+    "put",
+    `/api/admin/products/sale-attr-standard-values/${id}`,
+    { data }
+  );
 };
 
 /** 給左側分類樹畫「尚未設定屬性」提醒用。 */

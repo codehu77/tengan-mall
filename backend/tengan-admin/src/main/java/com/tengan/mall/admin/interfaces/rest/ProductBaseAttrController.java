@@ -37,8 +37,8 @@ public class ProductBaseAttrController {
     @PreAuthorize("hasAuthority('product:baseattr:read')")
     public ListBaseAttrsResponse list(@RequestParam Long categoryId) {
         var items = productBaseAttrPort.listBaseAttrs(categoryId).stream()
-                .map(a -> new BaseAttrResponse(a.id(), a.categoryId(), a.attrGroupId(), a.name(), a.searchable(),
-                        a.sort()))
+                .map(a -> new BaseAttrResponse(a.id(), a.categoryId(), a.attrGroupId(), a.name(), a.unit(),
+                        a.searchable(), a.sort()))
                 .toList();
         return new ListBaseAttrsResponse(items);
     }
@@ -49,7 +49,7 @@ public class ProductBaseAttrController {
             @Valid @RequestBody CreateBaseAttrRequest request) {
         Long id = productBaseAttrPort.createBaseAttr(
                 new CreateBaseAttrPayload(request.categoryId(), request.attrGroupId(), request.name(),
-                        request.searchable(), request.sort()),
+                        request.unit(), request.searchable(), request.sort()),
                 operatorJwt.getTokenValue());
         return new CreateBaseAttrResponse(id);
     }
@@ -59,8 +59,8 @@ public class ProductBaseAttrController {
     public void update(@AuthenticationPrincipal Jwt operatorJwt, @PathVariable Long id,
             @Valid @RequestBody UpdateBaseAttrRequest request) {
         productBaseAttrPort.updateBaseAttr(id,
-                new UpdateBaseAttrPayload(request.attrGroupId(), request.name(), request.searchable(),
-                        request.sort()),
+                new UpdateBaseAttrPayload(request.attrGroupId(), request.name(), request.unit(),
+                        request.searchable(), request.sort()),
                 operatorJwt.getTokenValue());
     }
 

@@ -2,15 +2,21 @@ package com.tengan.mall.product.application.spu;
 
 import com.tengan.mall.product.domain.exception.BaseAttrCategoryMismatchException;
 import com.tengan.mall.product.domain.exception.BaseAttrNotFoundException;
+import com.tengan.mall.product.domain.exception.BaseAttrStandardValueAttrMismatchException;
+import com.tengan.mall.product.domain.exception.BaseAttrStandardValueNotFoundException;
 import com.tengan.mall.product.domain.exception.SaleAttrCategoryMismatchException;
 import com.tengan.mall.product.domain.exception.SaleAttrNotFoundException;
+import com.tengan.mall.product.domain.exception.SaleAttrStandardValueAttrMismatchException;
+import com.tengan.mall.product.domain.exception.SaleAttrStandardValueNotFoundException;
 import com.tengan.mall.product.domain.exception.SkuIdMismatchException;
 import com.tengan.mall.product.domain.model.Sku;
 import com.tengan.mall.product.domain.model.SkuImage;
 import com.tengan.mall.product.domain.model.SkuSaleAttrValue;
 import com.tengan.mall.product.domain.model.SpuBaseAttrValue;
 import com.tengan.mall.product.domain.repository.BaseAttrRepository;
+import com.tengan.mall.product.domain.repository.BaseAttrStandardValueRepository;
 import com.tengan.mall.product.domain.repository.SaleAttrRepository;
+import com.tengan.mall.product.domain.repository.SaleAttrStandardValueRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -32,10 +38,16 @@ class SpuCompositionAssembler {
 
     private final BaseAttrRepository baseAttrRepository;
     private final SaleAttrRepository saleAttrRepository;
+    private final BaseAttrStandardValueRepository baseAttrStandardValueRepository;
+    private final SaleAttrStandardValueRepository saleAttrStandardValueRepository;
 
-    SpuCompositionAssembler(BaseAttrRepository baseAttrRepository, SaleAttrRepository saleAttrRepository) {
+    SpuCompositionAssembler(BaseAttrRepository baseAttrRepository, SaleAttrRepository saleAttrRepository,
+            BaseAttrStandardValueRepository baseAttrStandardValueRepository,
+            SaleAttrStandardValueRepository saleAttrStandardValueRepository) {
         this.baseAttrRepository = baseAttrRepository;
         this.saleAttrRepository = saleAttrRepository;
+        this.baseAttrStandardValueRepository = baseAttrStandardValueRepository;
+        this.saleAttrStandardValueRepository = saleAttrStandardValueRepository;
     }
 
     List<SpuBaseAttrValue> resolveSpuBaseAttrValues(Long categoryId, List<SpuBaseAttrValueCommand> commands) {
@@ -45,7 +57,14 @@ class SpuCompositionAssembler {
             if (!attr.getCategoryId().equals(categoryId)) {
                 throw new BaseAttrCategoryMismatchException(c.attrId(), categoryId);
             }
-            return new SpuBaseAttrValue(attr.getId(), attr.getName(), c.attrValue());
+            if (c.standardValueId() != null) {
+                var std = baseAttrStandardValueRepository.findById(c.standardValueId())
+                        .orElseThrow(() -> new BaseAttrStandardValueNotFoundException(c.standardValueId()));
+                if (!std.getAttrId().equals(attr.getId())) {
+                    throw new BaseAttrStandardValueAttrMismatchException(c.standardValueId(), attr.getId());
+                }
+            }
+            return new SpuBaseAttrValue(attr.getId(), attr.getName(), c.attrValue(), c.standardValueId());
         }).toList();
     }
 
@@ -70,7 +89,14 @@ class SpuCompositionAssembler {
             if (!attr.getCategoryId().equals(categoryId)) {
                 throw new SaleAttrCategoryMismatchException(c.attrId(), categoryId);
             }
-            return new SkuSaleAttrValue(attr.getId(), attr.getName(), c.attrValue());
+            if (c.standardValueId() != null) {
+                var std = saleAttrStandardValueRepository.findById(c.standardValueId())
+                        .orElseThrow(() -> new SaleAttrStandardValueNotFoundException(c.standardValueId()));
+                if (!std.getAttrId().equals(attr.getId())) {
+                    throw new SaleAttrStandardValueAttrMismatchException(c.standardValueId(), attr.getId());
+                }
+            }
+            return new SkuSaleAttrValue(attr.getId(), attr.getName(), c.attrValue(), c.standardValueId());
         }).toList();
 
         if (command.id() == null) {

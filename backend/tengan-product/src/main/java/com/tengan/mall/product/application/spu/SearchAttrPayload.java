@@ -8,5 +8,6 @@ package com.tengan.mall.product.application.spu;
  * 跟 SaleAttr「顏色」剛好都是 id=10）。tengan-search 那邊拿 attrId 分組篩選/聚合時，沒有這個標記會把
  * 兩個不相干的屬性誤判成同一組。純字串常數，不是把已經拆掉的 domain {@code AttrType} 概念復活。</p>
  */
-public record SearchAttrPayload(Long attrId, String attrType, String attrName, String attrValue) {
+public record SearchAttrPayload(Long attrId, String attrType, String attrName, String attrValue, String facetValue,
+        int facetSort) {
 }

@@ -55,7 +55,7 @@ public class InternalSaleAttrController {
     @PreAuthorize("hasAuthority('SCOPE_product.read')")
     public ListSaleAttrsResponse list(@RequestParam Long categoryId) {
         var items = listSaleAttrsUseCase.list(new ListSaleAttrsQuery(categoryId)).items().stream()
-                .map(a -> new SaleAttrResponse(a.id(), a.categoryId(), a.name(), a.searchable(), a.sort()))
+                .map(a -> new SaleAttrResponse(a.id(), a.categoryId(), a.name(), a.unit(), a.searchable(), a.sort()))
                 .toList();
         return new ListSaleAttrsResponse(items);
     }
@@ -66,7 +66,7 @@ public class InternalSaleAttrController {
             @RequestHeader("X-Identity-Assertion") String identityAssertion,
             @Valid @RequestBody CreateSaleAttrRequest request) {
         var result = createSaleAttrUseCase.create(new CreateSaleAttrCommand(operator(identityAssertion),
-                request.categoryId(), request.name(), request.searchable(), request.sort()));
+                request.categoryId(), request.name(), request.unit(), request.searchable(), request.sort()));
         return ResponseEntity.status(HttpStatus.CREATED).body(new CreateSaleAttrResponse(result.id()));
     }
 
@@ -75,7 +75,7 @@ public class InternalSaleAttrController {
     public ResponseEntity<Void> update(@RequestHeader("X-Identity-Assertion") String identityAssertion,
             @PathVariable Long id, @Valid @RequestBody UpdateSaleAttrRequest request) {
         updateSaleAttrUseCase.update(new UpdateSaleAttrCommand(operator(identityAssertion), id, request.name(),
-                request.searchable(), request.sort()));
+                request.unit(), request.searchable(), request.sort()));
         return ResponseEntity.noContent().build();
     }
 

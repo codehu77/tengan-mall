@@ -27,6 +27,7 @@ public class UpdateSaleAttrService implements UpdateSaleAttrUseCase {
         SaleAttr attr = saleAttrRepository.findById(command.id())
                 .orElseThrow(() -> new SaleAttrNotFoundException(command.id()));
         attr.rename(command.name());
+        attr.updateUnit(command.unit());
         attr.updateSearchable(command.searchable());
         attr.updateSort(command.sort());
         saleAttrRepository.save(attr);

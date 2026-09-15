@@ -140,20 +140,20 @@
               <div class="flex flex-wrap gap-2">
                 <button
                   v-for="opt in attr.options"
-                  :key="opt"
+                  :key="opt.value"
                   class="px-4 py-2 rounded border text-base transition"
-                  :class="isOptionSoldOut(attr.attrName, opt)
+                  :class="isOptionSoldOut(attr.attrName, opt.value)
                     ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                    : selectedAttrs[attr.attrName] === opt
+                    : selectedAttrs[attr.attrName] === opt.value
                       ? 'border-red-500 bg-red-50 text-red-600'
-                      : isOptionOutOfStock(attr.attrName, opt)
+                      : isOptionOutOfStock(attr.attrName, opt.value)
                         ? 'border-gray-200 text-gray-400 hover:border-red-300'
                         : 'border-gray-200 text-gray-700 hover:border-red-300'"
-                  :disabled="isOptionSoldOut(attr.attrName, opt)"
-                  @click="selectAttr(attr.attrName, opt)"
+                  :disabled="isOptionSoldOut(attr.attrName, opt.value)"
+                  @click="selectAttr(attr.attrName, opt.value)"
                 >
-                  {{ opt }}
-                  <span v-if="isOptionSoldOut(attr.attrName, opt)" class="text-xs">（已售完）</span>
+                  {{ opt.label }}
+                  <span v-if="isOptionSoldOut(attr.attrName, opt.value)" class="text-xs">（已售完）</span>
                 </button>
               </div>
             </div>
@@ -387,13 +387,17 @@ watch(images, async () => {
   updateThumbScrollState()
 })
 
-// 銷售屬性（顏色/容量...）的可選值，彙整同一顆 spu 底下所有 sku 出現過的組合
+// 銷售屬性（顏色/容量...）的可選值，彙整同一顆 spu 底下所有 sku 出現過的組合。
+// value 是原始行銷值——選中狀態比對/skuId 匹配都用它當 key，不受單位顯示影響；
+// label 才是加了單位的顯示文字（例如「6.7」+ 單位「吋」→「6.7吋」）。
 const attrOptions = computed(() => {
-  const map = new Map<string, string[]>()
+  const map = new Map<string, Array<{ value: string; label: string }>>()
   for (const sku of skus.value) {
     for (const av of sku.saleAttrValues) {
       const options = map.get(av.attrName) ?? []
-      if (!options.includes(av.attrValue)) options.push(av.attrValue)
+      if (!options.some(opt => opt.value === av.attrValue)) {
+        options.push({ value: av.attrValue, label: `${av.attrValue}${av.unit ?? ''}` })
+      }
       map.set(av.attrName, options)
     }
   }
@@ -441,7 +445,8 @@ function selectAttr(attrName: string, value: string) {
   activeImg.value = 0
 }
 
-const specs = computed(() => (spu.value?.attrValues ?? []).map(v => ({ label: v.attrName, value: v.attrValue })))
+const specs = computed(() => (spu.value?.attrValues ?? [])
+  .map(v => ({ label: v.attrName, value: `${v.attrValue}${v.unit ?? ''}` })))
 const sanitizedDescription = computed(() => DOMPurify.sanitize(spu.value?.description ?? ''))
 
 // 目前選中 sku 的一般倉庫存（來自上面一次查好的 skuStocks）——秒殺 SKU 的庫存語意是搶購名額

@@ -44,6 +44,7 @@ public class UpdateBaseAttrService implements UpdateBaseAttrUseCase {
             attr.moveToAttrGroup(command.attrGroupId());
         }
         attr.rename(command.name());
+        attr.updateUnit(command.unit());
         attr.updateSearchable(command.searchable());
         attr.updateSort(command.sort());
         baseAttrRepository.save(attr);

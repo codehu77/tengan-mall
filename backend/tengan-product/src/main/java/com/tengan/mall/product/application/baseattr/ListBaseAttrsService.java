@@ -18,7 +18,7 @@ public class ListBaseAttrsService implements ListBaseAttrsUseCase {
         var items = baseAttrRepository.findByCategoryId(query.categoryId()).stream()
                 .sorted(Comparator.comparingInt(a -> a.getSort()))
                 .map(a -> new BaseAttrSummary(a.getId(), a.getCategoryId(), a.getAttrGroupId(), a.getName(),
-                        a.isSearchable(), a.getSort()))
+                        a.getUnit(), a.isSearchable(), a.getSort()))
                 .toList();
         return new ListBaseAttrsResult(items);
     }

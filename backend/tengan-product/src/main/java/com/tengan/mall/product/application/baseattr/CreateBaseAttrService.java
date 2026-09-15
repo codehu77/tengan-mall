@@ -45,7 +45,7 @@ public class CreateBaseAttrService implements CreateBaseAttrUseCase {
             throw new BaseAttrGroupCategoryMismatchException(command.attrGroupId(), command.categoryId());
         }
 
-        BaseAttr attr = BaseAttr.create(command.categoryId(), command.attrGroupId(), command.name(),
+        BaseAttr attr = BaseAttr.create(command.categoryId(), command.attrGroupId(), command.name(), command.unit(),
                 command.searchable(), command.sort());
         BaseAttr saved = baseAttrRepository.save(attr);
 

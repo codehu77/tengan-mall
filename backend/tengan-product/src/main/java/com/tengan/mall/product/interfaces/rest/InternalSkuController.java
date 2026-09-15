@@ -33,7 +33,8 @@ public class InternalSkuController {
                         s.sort(), s.purchaseLimitPerUser(),
                         s.images().stream().map(i -> new SkuImageResponse(i.imageUrl(), i.sort())).toList(),
                         s.saleAttrValues().stream()
-                                .map(v -> new SkuSaleAttrValueResponse(v.attrId(), v.attrName(), v.attrValue()))
+                                .map(v -> new SkuSaleAttrValueResponse(v.attrId(), v.attrName(), v.attrValue(),
+                                        v.standardValueId(), v.unit()))
                                 .toList()))
                 .toList();
     }

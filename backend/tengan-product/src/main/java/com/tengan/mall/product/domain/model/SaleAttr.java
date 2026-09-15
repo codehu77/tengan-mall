@@ -11,23 +11,26 @@ public class SaleAttr {
     private Long id;
     private final Long categoryId;
     private String name;
+    private String unit;
     private boolean searchable;
     private int sort;
 
-    private SaleAttr(Long id, Long categoryId, String name, boolean searchable, int sort) {
+    private SaleAttr(Long id, Long categoryId, String name, String unit, boolean searchable, int sort) {
         this.id = id;
         this.categoryId = categoryId;
         this.name = name;
+        this.unit = unit;
         this.searchable = searchable;
         this.sort = sort;
     }
 
-    public static SaleAttr create(Long categoryId, String name, boolean searchable, int sort) {
-        return new SaleAttr(null, categoryId, name, searchable, sort);
+    public static SaleAttr create(Long categoryId, String name, String unit, boolean searchable, int sort) {
+        return new SaleAttr(null, categoryId, name, unit, searchable, sort);
     }
 
-    public static SaleAttr reconstitute(Long id, Long categoryId, String name, boolean searchable, int sort) {
-        return new SaleAttr(id, categoryId, name, searchable, sort);
+    public static SaleAttr reconstitute(Long id, Long categoryId, String name, String unit, boolean searchable,
+            int sort) {
+        return new SaleAttr(id, categoryId, name, unit, searchable, sort);
     }
 
     public void assignId(Long id) {
@@ -39,6 +42,10 @@ public class SaleAttr {
 
     public void rename(String name) {
         this.name = name;
+    }
+
+    public void updateUnit(String unit) {
+        this.unit = unit;
     }
 
     public void updateSearchable(boolean searchable) {
@@ -59,6 +66,10 @@ public class SaleAttr {
 
     public String getName() {
         return name;
+    }
+
+    public String getUnit() {
+        return unit;
     }
 
     public boolean isSearchable() {

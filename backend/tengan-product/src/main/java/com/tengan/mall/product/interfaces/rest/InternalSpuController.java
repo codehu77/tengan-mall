@@ -166,7 +166,9 @@ public class InternalSpuController {
 
     private List<SpuBaseAttrValueCommand> toAttrValueCommands(List<SpuBaseAttrValueRequest> requests) {
         return requests == null ? List.of()
-                : requests.stream().map(r -> new SpuBaseAttrValueCommand(r.attrId(), r.attrValue())).toList();
+                : requests.stream()
+                        .map(r -> new SpuBaseAttrValueCommand(r.attrId(), r.attrValue(), r.standardValueId()))
+                        .toList();
     }
 
     private List<SpuImageCommand> toSpuImageCommands(List<SpuImageRequest> requests) {
@@ -192,12 +194,15 @@ public class InternalSpuController {
 
     private List<SkuSaleAttrValueCommand> toSaleAttrValueCommands(List<SkuSaleAttrValueRequest> requests) {
         return requests == null ? List.of()
-                : requests.stream().map(r -> new SkuSaleAttrValueCommand(r.attrId(), r.attrValue())).toList();
+                : requests.stream()
+                        .map(r -> new SkuSaleAttrValueCommand(r.attrId(), r.attrValue(), r.standardValueId()))
+                        .toList();
     }
 
     private SpuDetailResponse toResponse(GetSpuDetailResult result) {
         var attrValues = result.attrValues().stream()
-                .map(v -> new SpuBaseAttrValueResponse(v.attrId(), v.attrName(), v.attrValue()))
+                .map(v -> new SpuBaseAttrValueResponse(v.attrId(), v.attrName(), v.attrValue(), v.standardValueId(),
+                        v.unit()))
                 .toList();
         var images = result.images().stream()
                 .map(i -> new SpuImageResponse(i.imageUrl(), i.sort()))
@@ -208,7 +213,8 @@ public class InternalSpuController {
                         s.images().stream().map(i -> new SkuImageResponse(i.imageUrl(), i.sort()))
                                 .toList(),
                         s.saleAttrValues().stream()
-                                .map(v -> new SkuSaleAttrValueResponse(v.attrId(), v.attrName(), v.attrValue()))
+                                .map(v -> new SkuSaleAttrValueResponse(v.attrId(), v.attrName(), v.attrValue(),
+                                        v.standardValueId(), v.unit()))
                                 .toList()))
                 .toList();
         return new SpuDetailResponse(result.id(), result.categoryId(), result.catalog1Id(), result.brandId(),

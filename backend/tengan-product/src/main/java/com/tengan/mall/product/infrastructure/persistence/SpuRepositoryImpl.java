@@ -110,6 +110,7 @@ public class SpuRepositoryImpl implements SpuRepository {
             po.setAttrId(value.attrId());
             po.setAttrName(value.attrName());
             po.setAttrValue(value.attrValue());
+            po.setStandardValueId(value.standardValueId());
             skuSaleAttrValueMapper.insert(po);
         }
     }
@@ -123,6 +124,7 @@ public class SpuRepositoryImpl implements SpuRepository {
             po.setAttrId(value.attrId());
             po.setAttrName(value.attrName());
             po.setAttrValue(value.attrValue());
+            po.setStandardValueId(value.standardValueId());
             spuAttrValueMapper.insert(po);
         }
     }
@@ -231,7 +233,8 @@ public class SpuRepositoryImpl implements SpuRepository {
         for (SpuBaseAttrValuePO po : spuAttrValueMapper
                 .selectList(new LambdaQueryWrapper<SpuBaseAttrValuePO>().in(SpuBaseAttrValuePO::getSpuId, spuIds))) {
             result.computeIfAbsent(po.getSpuId(), k -> new ArrayList<>())
-                    .add(new SpuBaseAttrValue(po.getAttrId(), po.getAttrName(), po.getAttrValue()));
+                    .add(new SpuBaseAttrValue(po.getAttrId(), po.getAttrName(), po.getAttrValue(),
+                            po.getStandardValueId()));
         }
         return result;
     }
@@ -241,7 +244,8 @@ public class SpuRepositoryImpl implements SpuRepository {
                 .map(img -> new SkuImage(img.getImageUrl(), img.getSort()))
                 .toList();
         List<SkuSaleAttrValue> saleAttrValues = saleAttrValuePOs.stream()
-                .map(v -> new SkuSaleAttrValue(v.getAttrId(), v.getAttrName(), v.getAttrValue()))
+                .map(v -> new SkuSaleAttrValue(v.getAttrId(), v.getAttrName(), v.getAttrValue(),
+                        v.getStandardValueId()))
                 .toList();
         return Sku.reconstitute(po.getId(), po.getName(), po.getPrice(), po.getMainImage(), po.getSaleCount(),
                 po.getSort(), po.getPurchaseLimitPerUser(), images, saleAttrValues);

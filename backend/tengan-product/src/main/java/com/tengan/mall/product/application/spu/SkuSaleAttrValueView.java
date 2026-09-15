@@ -1,4 +1,5 @@
 package com.tengan.mall.product.application.spu;
 
-public record SkuSaleAttrValueView(Long attrId, String attrName, String attrValue) {
+public record SkuSaleAttrValueView(Long attrId, String attrName, String attrValue, Long standardValueId,
+        String unit) {
 }

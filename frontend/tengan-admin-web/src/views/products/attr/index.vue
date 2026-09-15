@@ -25,6 +25,7 @@ import {
 import baseAttrGroupForm from "./baseAttrGroupForm.vue";
 import baseAttrForm from "./baseAttrForm.vue";
 import saleAttrForm from "./saleAttrForm.vue";
+import standardValueManager from "./standardValueManager.vue";
 
 defineOptions({
   name: "ProductAttr"
@@ -204,6 +205,7 @@ function openAttrDialog(
       : group!.name;
   const formInline = {
     name: row?.name ?? "",
+    unit: row?.unit ?? null,
     searchable: row?.searchable ?? false,
     sort: row?.sort ?? 0
   };
@@ -227,12 +229,14 @@ function openAttrDialog(
                 categoryId: selectedCategory.value!.id,
                 attrGroupId,
                 name: formInline.name,
+                unit: formInline.unit,
                 searchable: formInline.searchable,
                 sort: formInline.sort
               })
             : updateBaseAttr(row!.id, {
                 attrGroupId: row!.attrGroupId,
                 name: formInline.name,
+                unit: formInline.unit,
                 searchable: formInline.searchable,
                 sort: formInline.sort
               });
@@ -270,6 +274,7 @@ const saleAttrFormRef = ref();
 function openSaleAttrDialog(mode: "create" | "edit", row?: SaleAttrItem) {
   const formInline = {
     name: row?.name ?? "",
+    unit: row?.unit ?? null,
     searchable: row?.searchable ?? false,
     sort: row?.sort ?? 0
   };
@@ -292,11 +297,13 @@ function openSaleAttrDialog(mode: "create" | "edit", row?: SaleAttrItem) {
             ? createSaleAttr({
                 categoryId: selectedCategory.value!.id,
                 name: formInline.name,
+                unit: formInline.unit,
                 searchable: formInline.searchable,
                 sort: formInline.sort
               })
             : updateSaleAttr(row!.id, {
                 name: formInline.name,
+                unit: formInline.unit,
                 searchable: formInline.searchable,
                 sort: formInline.sort
               });
@@ -311,6 +318,26 @@ function openSaleAttrDialog(mode: "create" | "edit", row?: SaleAttrItem) {
           .catch(() => closeLoading());
       });
     }
+  });
+}
+
+/** 「可被搜尋的屬性值 > 編輯屬性」入口——只有 searchable=true 的屬性才需要管理標準聚合值。 */
+function openStandardValueDialog(
+  kind: "base" | "sale",
+  attr: BaseAttrItem | SaleAttrItem
+) {
+  addDialog({
+    title: `聚合值管理 - ${attr.name}`,
+    width: "40%",
+    draggable: true,
+    closeOnClickModal: false,
+    hideFooter: true,
+    contentRenderer: () =>
+      h(standardValueManager, {
+        kind,
+        attrId: attr.id,
+        attrName: attr.name
+      })
   });
 }
 
@@ -404,6 +431,7 @@ async function onBaseNodeDrop(
         return updateBaseAttr(attr.id, {
           attrGroupId: targetGroup.id,
           name: attr.name,
+          unit: attr.unit,
           searchable: attr.searchable,
           sort: index
         });
@@ -434,6 +462,7 @@ async function onSaleNodeDrop(_draggingNode: DragNode, dropNode: DragNode) {
       siblings.map((item, index) =>
         updateSaleAttr(item.id, {
           name: item.name,
+          unit: item.unit,
           searchable: item.searchable,
           sort: index
         })
@@ -570,6 +599,15 @@ onMounted(() => {
               </div>
               <div v-else>
                 <el-button
+                  v-if="data.raw.searchable"
+                  link
+                  type="primary"
+                  size="small"
+                  @click.stop="openStandardValueDialog('base', data.raw)"
+                >
+                  聚合值管理
+                </el-button>
+                <el-button
                   link
                   type="primary"
                   size="small"
@@ -634,6 +672,15 @@ onMounted(() => {
                 </el-tag>
               </div>
               <div>
+                <el-button
+                  v-if="data.searchable"
+                  link
+                  type="primary"
+                  size="small"
+                  @click.stop="openStandardValueDialog('sale', data)"
+                >
+                  聚合值管理
+                </el-button>
                 <el-button
                   link
                   type="primary"

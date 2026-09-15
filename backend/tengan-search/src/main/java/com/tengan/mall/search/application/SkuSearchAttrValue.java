@@ -20,17 +20,32 @@ public class SkuSearchAttrValue {
     @Field(type = FieldType.Keyword)
     private String attrName;
 
-    @Field(type = FieldType.Keyword)
+    /** 只給關鍵字全文搜尋用（比對原始行銷值，例如「鼠尾草綠色」）——精確篩選/聚合改用 facetValue。 */
+    @Field(type = FieldType.Text)
     private String attrValue;
+
+    /**
+     * 篩選/聚合真正拿來當 bucket key 的欄位：有綁定標準聚合值時是它的 label（同義字合併成一個桶），
+     * 沒綁定時退回「原始值+單位」自己獨立成一個選項。這個值在 tengan-product 端就算好了，這裡原樣落地。
+     */
+    @Field(type = FieldType.Keyword)
+    private String facetValue;
+
+    /** 標準聚合值的拖曳排序，未綁定固定用 Integer.MAX_VALUE 排最後。 */
+    @Field(type = FieldType.Integer)
+    private Integer facetSort;
 
     public SkuSearchAttrValue() {
     }
 
-    public SkuSearchAttrValue(String attrKey, Long attrId, String attrName, String attrValue) {
+    public SkuSearchAttrValue(String attrKey, Long attrId, String attrName, String attrValue, String facetValue,
+            Integer facetSort) {
         this.attrKey = attrKey;
         this.attrId = attrId;
         this.attrName = attrName;
         this.attrValue = attrValue;
+        this.facetValue = facetValue;
+        this.facetSort = facetSort;
     }
 
     public String getAttrKey() {
@@ -63,5 +78,21 @@ public class SkuSearchAttrValue {
 
     public void setAttrValue(String attrValue) {
         this.attrValue = attrValue;
+    }
+
+    public String getFacetValue() {
+        return facetValue;
+    }
+
+    public void setFacetValue(String facetValue) {
+        this.facetValue = facetValue;
+    }
+
+    public Integer getFacetSort() {
+        return facetSort;
+    }
+
+    public void setFacetSort(Integer facetSort) {
+        this.facetSort = facetSort;
     }
 }
