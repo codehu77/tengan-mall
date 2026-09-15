@@ -3,12 +3,13 @@
     <div
       class="flex flex-col h-full bg-card border border-border rounded-xl shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 overflow-hidden group"
     >
-      <!-- 商品圖片：固定高度，滿版鋪滿(cover)不留白邊；不同圖片比例都裁切塞進同一個框，Card 高度不受影響 -->
-      <div class="relative h-[170px] shrink-0 bg-background overflow-hidden">
+      <!-- 商品圖片：固定像素高度，跟上傳圖片寬高無關；用 object-contain 完整顯示置中，不裁切
+           (曾用 aspect-square 讓框跟著卡寬變正方形，但 Grid 計算列高時會被圖片原始尺寸干擾，框變不成正方形) -->
+      <div class="relative h-[200px] shrink-0 bg-card overflow-hidden">
         <img
           :src="product.skuDefaultImg"
           :alt="product.skuName"
-          class="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+          class="w-full h-full object-contain group-hover:scale-105 transition duration-300"
         />
         <div class="absolute top-2 left-2">
           <slot name="badge">
@@ -25,7 +26,7 @@
 
       <!-- 商品資訊：名稱／價格／原價／次要資訊都固定高度，同一排 Card 底部才會對齊 -->
       <div class="flex flex-col flex-1 p-3">
-        <p ref="nameEl" class="text-sm text-body leading-[1.4] h-10 mb-1.5 overflow-hidden break-all" :title="product.skuName">
+        <p ref="nameEl" class="flex items-end text-sm text-body leading-[1.4] h-10 mb-1.5 overflow-hidden break-all" :title="product.skuName">
           {{ displayName }}
         </p>
 
