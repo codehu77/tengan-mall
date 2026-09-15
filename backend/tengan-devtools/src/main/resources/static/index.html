@@ -70,14 +70,30 @@ const state = {
   brandId: null,
   baseAttrs: [],
   saleAttrs: [],
+  baseAttrStdValues: [],  // 當前分類的 base attr 標準聚合值清單（依 attrId 篩選給下拉選單用）
+  saleAttrStdValues: [],  // 當前分類的 sale attr 標準聚合值清單
   baseAttrValues: {},   // attrId -> value
+  baseAttrStdIds: {},   // attrId -> standardValueId（選填，下拉選單選的）
   selectedSaleAttrIds: [],  // 可複選，例如同時套用「顏色」+「容量」
   skuAttrValues: {},        // rowIndex -> { attrId: value }
+  skuAttrStdIds: {},        // rowIndex -> { attrId: standardValueId }
   skuAttrManualEdits: {},   // rowIndex -> Set<attrId>，記錄哪些格子被使用者手動改過，自動拆值不能覆蓋
 };
 
 function escapeHtml(s) {
   return (s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/** 下拉選單留空(選「未綁定」)時視為未綁定，送出 null 而不是空字串。 */
+function toStdId(v) {
+  if (v === undefined || v === null || String(v).trim() === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** 只列出啟用中的聚合值；只有屬性搜尋 searchable 的才有意義，交由呼叫端自己決定要不要顯示這個下拉。 */
+function stdValuesForAttr(list, attrId) {
+  return list.filter(v => v.attrId === attrId && v.enabled);
 }
 
 async function api(method, path, body) {
@@ -119,9 +135,13 @@ function resetState() {
   state.brandId = null;
   state.baseAttrs = [];
   state.saleAttrs = [];
+  state.baseAttrStdValues = [];
+  state.saleAttrStdValues = [];
   state.baseAttrValues = {};
+  state.baseAttrStdIds = {};
   state.selectedSaleAttrIds = [];
   state.skuAttrValues = {};
+  state.skuAttrStdIds = {};
   state.skuAttrManualEdits = {};
   state.lastUrl = '';
   renderStep1();
@@ -426,17 +446,23 @@ async function loadAttrsForCategory(categoryId) {
   const section = document.getElementById('attrs-section');
   section.innerHTML = '<div class="muted">載入規格屬性中…</div>';
   try {
-    const [baseAttrs, saleAttrs] = await Promise.all([
+    const [baseAttrs, saleAttrs, baseAttrStdValues, saleAttrStdValues] = await Promise.all([
       api('GET', `/api/categories/${categoryId}/base-attrs`),
       api('GET', `/api/categories/${categoryId}/sale-attrs`),
+      api('GET', `/api/categories/${categoryId}/base-attr-standard-values`),
+      api('GET', `/api/categories/${categoryId}/sale-attr-standard-values`),
     ]);
     state.baseAttrs = baseAttrs.items || [];
     state.saleAttrs = saleAttrs.items || [];
+    state.baseAttrStdValues = baseAttrStdValues.items || [];
+    state.saleAttrStdValues = saleAttrStdValues.items || [];
     state.baseAttrValues = {};
+    state.baseAttrStdIds = {};
     state.selectedSaleAttrIds = [];
     state.skuAttrValues = {};
+    state.skuAttrStdIds = {};
     state.skuAttrManualEdits = {};
-    state.skuRows.forEach((r, idx) => { state.skuAttrValues[idx] = {}; });
+    state.skuRows.forEach((r, idx) => { state.skuAttrValues[idx] = {}; state.skuAttrStdIds[idx] = {}; });
     renderAttrsSection();
     updateStep2NextEnabled();
   } catch (e) {
@@ -502,12 +528,22 @@ function renderAttrsSection() {
   section.innerHTML = `
     <label>規格屬性（Base Attr，選填）</label>
     ${state.baseAttrs.length === 0 ? '<div class="muted">這個分類沒有規格屬性</div>' : ''}
-    ${state.baseAttrs.map(a => `
+    ${state.baseAttrs.map(a => {
+      const stdOptions = stdValuesForAttr(state.baseAttrStdValues, a.id);
+      const currentStd = state.baseAttrStdIds[a.id] ?? '';
+      return `
       <div style="margin-bottom:6px;">
         <span class="muted">${escapeHtml(a.name)}</span>
         <input type="text" data-base-attr="${a.id}" value="${escapeHtml(state.baseAttrValues[a.id] ?? '')}" placeholder="填 ${escapeHtml(a.name)} 的值">
+        ${stdOptions.length > 0 ? `
+          <select data-base-attr-std="${a.id}">
+            <option value="" ${currentStd === '' ? 'selected' : ''}>（未綁定聚合值）</option>
+            ${stdOptions.map(std => `<option value="${std.id}" ${String(currentStd) === String(std.id) ? 'selected' : ''}>${escapeHtml(std.label)}</option>`).join('')}
+          </select>
+        ` : ''}
       </div>
-    `).join('')}
+    `;
+    }).join('')}
 
     <label>銷售屬性（Sale Attr）—— 可複選，例如同時勾「顏色」+「容量」，一個 SKU 就能同時對應兩個維度</label>
     <div>
@@ -533,10 +569,22 @@ function renderAttrsSection() {
           <tr>
             <td><input type="text" data-sku-name-idx="${r.idx}" value="${escapeHtml(r.name)}"></td>
             <td>$${escapeHtml(String(r.price))}</td>
-            ${selectedAttrs.map(a => `
-              <td><input type="text" data-sku-attr-idx="${r.idx}" data-sku-attr-id="${a.id}"
-                value="${escapeHtml((state.skuAttrValues[r.idx] && state.skuAttrValues[r.idx][a.id]) ?? '')}"></td>
-            `).join('')}
+            ${selectedAttrs.map(a => {
+              const stdOptions = stdValuesForAttr(state.saleAttrStdValues, a.id);
+              const currentStd = (state.skuAttrStdIds[r.idx] && state.skuAttrStdIds[r.idx][a.id]) ?? '';
+              return `
+              <td>
+                <input type="text" data-sku-attr-idx="${r.idx}" data-sku-attr-id="${a.id}"
+                  value="${escapeHtml((state.skuAttrValues[r.idx] && state.skuAttrValues[r.idx][a.id]) ?? '')}">
+                ${stdOptions.length > 0 ? `
+                  <select data-sku-attr-std-idx="${r.idx}" data-sku-attr-std-id="${a.id}">
+                    <option value="" ${currentStd === '' ? 'selected' : ''}>（未綁定）</option>
+                    ${stdOptions.map(std => `<option value="${std.id}" ${String(currentStd) === String(std.id) ? 'selected' : ''}>${escapeHtml(std.label)}</option>`).join('')}
+                  </select>
+                ` : ''}
+              </td>
+            `;
+            }).join('')}
             ${selectedAttrs.length > 1 ? `<td><button type="button" class="secondary" data-combine-idx="${r.idx}">組合成名稱</button></td>` : ''}
           </tr>
         `).join('')}
@@ -547,6 +595,11 @@ function renderAttrsSection() {
   section.querySelectorAll('[data-base-attr]').forEach(input => {
     input.addEventListener('input', e => {
       state.baseAttrValues[e.target.dataset.baseAttr] = e.target.value;
+    });
+  });
+  section.querySelectorAll('[data-base-attr-std]').forEach(select => {
+    select.addEventListener('change', e => {
+      state.baseAttrStdIds[e.target.dataset.baseAttrStd] = e.target.value;
     });
   });
   section.querySelectorAll('[data-sale-attr-toggle]').forEach(checkbox => {
@@ -568,6 +621,14 @@ function renderAttrsSection() {
       // 使用者自己手動改過這格，之後再勾/取消其他銷售屬性維度時，自動拆值不能再覆蓋這格
       if (!state.skuAttrManualEdits[idx]) state.skuAttrManualEdits[idx] = new Set();
       state.skuAttrManualEdits[idx].add(attrId);
+    });
+  });
+  section.querySelectorAll('[data-sku-attr-std-idx]').forEach(select => {
+    select.addEventListener('change', e => {
+      const idx = e.target.dataset.skuAttrStdIdx;
+      const attrId = Number(e.target.dataset.skuAttrStdId);
+      if (!state.skuAttrStdIds[idx]) state.skuAttrStdIds[idx] = {};
+      state.skuAttrStdIds[idx][attrId] = e.target.value;
     });
   });
   section.querySelectorAll('[data-combine-idx]').forEach(button => {
@@ -592,13 +653,22 @@ function buildImportRequest() {
   const mainImageUrl = includedSpuImages.includes(state.mainImageUrl) ? state.mainImageUrl : (includedSpuImages[0] || null);
   const baseAttrValues = Object.entries(state.baseAttrValues)
     .filter(([, v]) => v && v.trim() !== '')
-    .map(([attrId, value]) => ({ attrId: Number(attrId), value }));
+    .map(([attrId, value]) => ({
+      attrId: Number(attrId),
+      value,
+      standardValueId: toStdId(state.baseAttrStdIds[attrId]),
+    }));
 
   const skus = state.skuRows.map((row, idx) => ({ ...row, idx })).filter(r => r.included).map(r => {
     const values = state.skuAttrValues[r.idx] || {};
+    const stdIds = state.skuAttrStdIds[r.idx] || {};
     const saleAttrValues = Object.entries(values)
       .filter(([, v]) => v && String(v).trim() !== '')
-      .map(([attrId, value]) => ({ attrId: Number(attrId), value }));
+      .map(([attrId, value]) => ({
+        attrId: Number(attrId),
+        value,
+        standardValueId: toStdId(stdIds[attrId]),
+      }));
     return {
       name: r.name,
       price: Number(r.price),

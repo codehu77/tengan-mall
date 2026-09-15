@@ -1,11 +1,13 @@
 package com.tengan.mall.devtools.client;
 
 import com.tengan.mall.devtools.client.dto.BaseAttrList;
+import com.tengan.mall.devtools.client.dto.BaseAttrStandardValueList;
 import com.tengan.mall.devtools.client.dto.BrandList;
 import com.tengan.mall.devtools.client.dto.CategoryTree;
 import com.tengan.mall.devtools.client.dto.CreateSpuRequest;
 import com.tengan.mall.devtools.client.dto.CreateSpuResponse;
 import com.tengan.mall.devtools.client.dto.SaleAttrList;
+import com.tengan.mall.devtools.client.dto.SaleAttrStandardValueList;
 import com.tengan.mall.devtools.client.dto.SpuSkuList;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -55,6 +57,22 @@ public class ProductApiClient {
                 .header(HttpHeaders.AUTHORIZATION, bearerToken())
                 .retrieve()
                 .body(SaleAttrList.class);
+    }
+
+    public BaseAttrStandardValueList baseAttrStandardValues(Long categoryId) {
+        return productRestClient.get()
+                .uri("/internal/products/base-attrs/standard-values?categoryId={categoryId}", categoryId)
+                .header(HttpHeaders.AUTHORIZATION, bearerToken())
+                .retrieve()
+                .body(BaseAttrStandardValueList.class);
+    }
+
+    public SaleAttrStandardValueList saleAttrStandardValues(Long categoryId) {
+        return productRestClient.get()
+                .uri("/internal/products/sale-attrs/standard-values?categoryId={categoryId}", categoryId)
+                .header(HttpHeaders.AUTHORIZATION, bearerToken())
+                .retrieve()
+                .body(SaleAttrStandardValueList.class);
     }
 
     public CreateSpuResponse createSpu(CreateSpuRequest request) {

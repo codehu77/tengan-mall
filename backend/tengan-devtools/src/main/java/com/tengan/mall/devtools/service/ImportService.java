@@ -91,7 +91,8 @@ public class ImportService {
                 : reupload(input.imageUrl());
         List<SkuImage> images = uploadedImage == null ? List.of() : List.of(new SkuImage(uploadedImage, 0));
         List<SkuSaleAttrValue> saleAttrValues = input.saleAttrValues() == null ? List.of()
-                : input.saleAttrValues().stream().map(v -> new SkuSaleAttrValue(v.attrId(), v.value())).toList();
+                : input.saleAttrValues().stream()
+                        .map(v -> new SkuSaleAttrValue(v.attrId(), v.value(), v.standardValueId())).toList();
         return new SkuDraft(input.name(), input.price(), uploadedImage, 0, images, saleAttrValues,
                 input.purchaseLimitPerUser());
     }
@@ -100,7 +101,7 @@ public class ImportService {
         if (inputs == null) {
             return List.of();
         }
-        return inputs.stream().map(v -> new SpuBaseAttrValue(v.attrId(), v.value())).toList();
+        return inputs.stream().map(v -> new SpuBaseAttrValue(v.attrId(), v.value(), v.standardValueId())).toList();
     }
 
     private List<String> reuploadAll(List<String> sourceUrls) {

@@ -2,9 +2,11 @@ package com.tengan.mall.devtools.web;
 
 import com.tengan.mall.devtools.client.ProductApiClient;
 import com.tengan.mall.devtools.client.dto.BaseAttrList;
+import com.tengan.mall.devtools.client.dto.BaseAttrStandardValueList;
 import com.tengan.mall.devtools.client.dto.BrandList;
 import com.tengan.mall.devtools.client.dto.CategoryTree;
 import com.tengan.mall.devtools.client.dto.SaleAttrList;
+import com.tengan.mall.devtools.client.dto.SaleAttrStandardValueList;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,5 +41,15 @@ public class LookupController {
     @GetMapping("/categories/{categoryId}/sale-attrs")
     public SaleAttrList saleAttrs(@PathVariable Long categoryId) {
         return productApiClient.saleAttrs(categoryId);
+    }
+
+    @GetMapping("/categories/{categoryId}/base-attr-standard-values")
+    public BaseAttrStandardValueList baseAttrStandardValues(@PathVariable Long categoryId) {
+        return productApiClient.baseAttrStandardValues(categoryId);
+    }
+
+    @GetMapping("/categories/{categoryId}/sale-attr-standard-values")
+    public SaleAttrStandardValueList saleAttrStandardValues(@PathVariable Long categoryId) {
+        return productApiClient.saleAttrStandardValues(categoryId);
     }
 }
