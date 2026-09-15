@@ -76,7 +76,7 @@ function showCouponComingSoon() {
 
 // 直接把泛用搜尋端點當「銷量前 N 名」用（sort=sale，不帶 keyword/catId），不用新增後端端點。
 // 首頁熱門商品區塊不需要 search.vue 那支 toProduct 的秒殺價覆蓋邏輯，用一個簡化版本就好。
-const hotQuery = ref<ProductSearchQuery>({ sort: 'sale', order: 'desc', pageSize: 10 })
+const hotQuery = ref<ProductSearchQuery>({ sort: 'sale', order: 'desc', pageSize: 12 })
 const { data: hotData } = await useProductSearch(hotQuery)
 
 function toHotProduct(item: SearchItem): Product {
