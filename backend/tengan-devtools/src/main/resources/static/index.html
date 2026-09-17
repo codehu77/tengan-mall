@@ -520,6 +520,28 @@ function combineSkuName(idx) {
   }
 }
 
+/** 依規格「名稱」逐一比對 MOMO 抓下來的 specHints 跟目前分類的 Base Attr——名稱完全對得上
+ * （去頭尾空白）才填值，對不到的規格提示直接略過，不猜、不模糊比對。只填基本屬性值本身，
+ * 標準聚合值（baseAttrStdIds）一律留給使用者自己在下拉選單挑，這裡不動它。 */
+function autoFillBaseAttrsFromMomoSpecs() {
+  const hints = (state.scrape && state.scrape.specHints) || [];
+  if (hints.length === 0) {
+    alert('這個商品沒有抓到 MOMO 規格資料，無法自動填入');
+    return;
+  }
+  const hintByName = new Map(hints.map(h => [h.name.trim(), h.value.trim()]));
+  let filled = 0;
+  state.baseAttrs.forEach(a => {
+    const value = hintByName.get(a.name.trim());
+    if (value !== undefined && value !== '') {
+      state.baseAttrValues[a.id] = value;
+      filled++;
+    }
+  });
+  renderAttrsSection();
+  alert(filled > 0 ? `已依名稱對應填入 ${filled} 個規格屬性` : '沒有規格名稱對得上，未填入任何屬性');
+}
+
 function renderAttrsSection() {
   const section = document.getElementById('attrs-section');
   const includedSkus = state.skuRows.map((r, i) => ({ ...r, idx: i })).filter(r => r.included);
@@ -527,7 +549,9 @@ function renderAttrsSection() {
 
   section.innerHTML = `
     <label>規格屬性（Base Attr，選填）</label>
-    ${state.baseAttrs.length === 0 ? '<div class="muted">這個分類沒有規格屬性</div>' : ''}
+    ${state.baseAttrs.length === 0 ? '<div class="muted">這個分類沒有規格屬性</div>' : `
+      <button type="button" class="secondary" id="btn-autofill-base-attrs">依 MOMO 規格名稱自動填入</button>
+    `}
     ${state.baseAttrs.map(a => {
       const stdOptions = stdValuesForAttr(state.baseAttrStdValues, a.id);
       const currentStd = state.baseAttrStdIds[a.id] ?? '';
@@ -591,6 +615,9 @@ function renderAttrsSection() {
       </tbody>
     </table>
   `;
+
+  const autofillBtn = document.getElementById('btn-autofill-base-attrs');
+  if (autofillBtn) autofillBtn.addEventListener('click', autoFillBaseAttrsFromMomoSpecs);
 
   section.querySelectorAll('[data-base-attr]').forEach(input => {
     input.addEventListener('input', e => {
