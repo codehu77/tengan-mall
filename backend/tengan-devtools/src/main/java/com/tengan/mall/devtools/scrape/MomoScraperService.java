@@ -23,6 +23,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
+import org.jsoup.select.NodeTraversor;
+import org.jsoup.select.NodeVisitor;
 import org.springframework.stereotype.Service;
 
 /**
@@ -227,8 +232,42 @@ public class MomoScraperService {
         Document doc = Jsoup.parse(srcdoc);
         List<String> images = doc.select("img[src]").eachAttr("src").stream()
                 .map(this::normalizeImageUrl).toList();
-        String text = doc.body().text();
+        String text = textWithParagraphBreaks(doc.body());
         return new FeatureSection(images, text.isBlank() ? null : text);
+    }
+
+    /** 賣家貼的商品特色 HTML 本來就有段落結構（<p>/<div>/<br>），但 Jsoup 的 {@code Element.text()}
+     * 只回傳整個子樹攤平、用單一空白接起來的字串，會把段落分段整個吃掉，匯入後商品描述變成一大塊
+     * 沒有斷行的文字。這裡改成手動走訪節點樹，在區塊層級標籤的結尾（跟 <br>）插入換行字元，段落
+     * 結構才不會在擷取這一步就消失——下游 {@code ImportService.buildDescriptionHtml()} 會按這個
+     * 換行字元切開，各自包成獨立的 <p>。 */
+    private String textWithParagraphBreaks(Element root) {
+        StringBuilder sb = new StringBuilder();
+        NodeTraversor.traverse(new NodeVisitor() {
+            @Override
+            public void head(Node node, int depth) {
+                if (node instanceof TextNode textNode) {
+                    sb.append(textNode.text());
+                } else if (node instanceof Element el && "br".equals(el.tagName())) {
+                    sb.append('\n');
+                }
+            }
+
+            @Override
+            public void tail(Node node, int depth) {
+                if (node instanceof Element el && isBlockTag(el.tagName())) {
+                    sb.append('\n');
+                }
+            }
+        }, root);
+        return sb.toString();
+    }
+
+    private boolean isBlockTag(String tagName) {
+        return switch (tagName) {
+            case "p", "div", "li", "h1", "h2", "h3", "h4", "h5", "h6", "tr" -> true;
+            default -> false;
+        };
     }
 
     /** 商品特色區塊是賣家自己貼的 HTML，img src 常常寫成 protocol-relative（{@code //img...}）——

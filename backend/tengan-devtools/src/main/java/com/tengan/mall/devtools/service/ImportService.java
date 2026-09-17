@@ -116,7 +116,14 @@ public class ImportService {
     private String buildDescriptionHtml(String featureText, List<String> featureImageUrls) {
         StringBuilder html = new StringBuilder();
         if (featureText != null && !featureText.isBlank()) {
-            html.append("<p>").append(HtmlUtils.htmlEscape(featureText)).append("</p>");
+            // MomoScraperService 擷取特色文字時，已經把賣家原本的段落結構（<p>/<div>/<br>）轉成 \n
+            // 換行字元保留下來——這裡照原本的段落切開，每段各自包一個 <p>，不要合併成一大塊文字。
+            for (String paragraph : featureText.split("\n")) {
+                String trimmed = paragraph.strip();
+                if (!trimmed.isEmpty()) {
+                    html.append("<p>").append(HtmlUtils.htmlEscape(trimmed)).append("</p>");
+                }
+            }
         }
         for (String url : featureImageUrls) {
             // wangEditor（tengan-admin-web 後台編輯 description 用的富文字編輯器）只保證認得
