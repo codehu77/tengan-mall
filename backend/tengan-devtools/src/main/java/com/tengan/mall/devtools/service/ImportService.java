@@ -119,7 +119,14 @@ public class ImportService {
             html.append("<p>").append(HtmlUtils.htmlEscape(featureText)).append("</p>");
         }
         for (String url : featureImageUrls) {
-            html.append("<img src=\"").append(HtmlUtils.htmlEscape(url)).append("\" style=\"max-width:100%\">");
+            // wangEditor（tengan-admin-web 後台編輯 description 用的富文字編輯器）只保證認得
+            // editor.getHtml() 自己吐出來的格式，不是通用 HTML 解析器。除了 <img> 要有 alt/data-href
+            // 屬性，結構上也不能讓多張圖片直接裸連成一串——wizard.vue 的 CSS 註解記過 wangEditor
+            // 自己插入「連續多張圖、中間不夾文字」時，每張圖片是各自獨立包一個 <p>。裸連的 <img>
+            // 兄弟節點會在編輯器正規化文件結構時被當異常清掉（不需要真的去動圖片，任何一次編輯
+            // 動作觸發的重新整理就會發生），之前商品介紹圖片就是這樣消失的。
+            html.append("<p><img src=\"").append(HtmlUtils.htmlEscape(url))
+                    .append("\" alt=\"\" data-href=\"\" style=\"\"/></p>");
         }
         return html.isEmpty() ? null : html.toString();
     }
